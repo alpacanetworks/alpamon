@@ -1,0 +1,4 @@
+include README.md
+include alpamon/config/alpamon.conf
+include alpamon/config/tmpfile.conf
+include alpamon/config/alpamon.service
