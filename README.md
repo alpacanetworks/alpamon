@@ -126,14 +126,47 @@ debug = true
 
 Please refer to the credentials in the README of `alpacon-server` for development environment setup.
 
+You may also obtain the `id` and `key` from http://localhost:3000. After login, go to "Servers" menu and click "New server". Add proper information, and you will get a script including `ALPACON_URL`, `ALPAMON_ID`, and `ALPAMON_KEY`. Use this information when configuring `alpamon.conf`.
+
 ## Run
 
 ### Local environment
 
 Type `alpamon` to run. Make sure to be in the virtual environment.
 
-```
+```sh
 (env) $ alpamon
+```
+
+#### Deploy as a service
+
+For Linux systems supporting `systemd`, you can run `alpamon` as a systemd service. In this case, you need to adapt `alpamon/config/alpamon.service` for your environment.
+
+Specifically, `ExecStart` should be something like `/<your>/<home>/alpamon/env/bin/alpamon`. The actual path may vary depending on your virtual environment settings.
+
+Run the following commands to prepare system directories.
+
+```sh
+sudo cp alpamon/config/tmpfile.conf /usr/lib/tmpfiles.d/alpamon.conf
+sudo systemd-tmpfiles --create
+```
+
+Run the following commands to install a systemd service.
+
+```sh
+sudo cp alpamon/config/alpamon.service /lib/systemd/system/alpamon.service
+sudo systemctl daemon-reload
+sudo systemctl start alpamon.service
+sudo systemctl enable alpamon.service
+systemctl status alpamon.service
+```
+
+The result would look like the following. The status must be loaded and active (running).
+
+```
+● alpamon.service - alpamon agent for alpaca infra platform
+     Loaded: loaded (/lib/systemd/system/alpamon.service; enabled; vendor preset: enabled)
+     Active: active (running) since Thu 2023-09-28 23:48:55 KST; 4 days ago
 ```
 
 ### Docker
