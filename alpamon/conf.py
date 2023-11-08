@@ -12,7 +12,7 @@ settings = {
     'CA_CERT': None,
     'SSL_VERIFY': True,
     'SSL_OPT': {},
-    'REPORTER_THREADS': 4,
+    'HTTP_THREADS': 4,
 }
 
 
