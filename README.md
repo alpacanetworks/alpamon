@@ -41,7 +41,12 @@ $ sudo apt-get install osquery
 ```sh
 $ sudo -HE yum install python3 python3-pip
 $ sudo -HE pip3 install virtualenv
+$ curl -L https://pkg.osquery.io/rpm/GPG | sudo tee /etc/pki/rpm-gpg/RPM-GPG-KEY-osquery
+$ sudo yum-config-manager --add-repo https://pkg.osquery.io/rpm/osquery-s3-rpm.repo
+$ sudo yum-config-manager --enable osquery-s3-rpm-repo
+$ sudo yum install osquery
 ```
+For more about installing osquery, please refer to the [official documentation](https://osquery.io/downloads/official/5.10.2).
 
 ## Clone the source code
 
