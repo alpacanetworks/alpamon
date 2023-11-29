@@ -1,5 +1,10 @@
 import logging
 
+from alpamon import VERSION
+from alpamon.queryman import query
+from alpamon.utils import platform_like
+from alpamon.packager.python import PythonPackageManager
+
 
 logger = logging.getLogger(__name__)
 
@@ -54,3 +59,43 @@ COMMIT_DEFS = [
         'only': 'rhel',
     }
 ]
+
+
+def commit_information(session, keys=[]):
+    data = {
+        'version': VERSION,
+    }
+
+    if not keys or 'osquery_version' in keys:
+        (exitcode, result) = query('SELECT `version` FROM `osquery_info`')
+        data['osquery_version'] = result[0]['version'] if exitcode == 0 else None
+
+    if not keys or 'pypackages' in keys:
+        data['pypackages'] = PythonPackageManager.list_packages()
+
+    for entry in COMMIT_DEFS:
+        if keys and not entry['key'] in keys:
+            continue
+        if 'only' in entry and entry['only'] != platform_like:
+            continue
+        (exitcode, result) = query(entry['sql'])
+        if exitcode == 0:
+            data[entry['key']] = result if entry['multirow'] else result[0]
+        else:
+            logger.error('Failed to query information. sql: %s', entry['sql'])
+
+    session.put(
+        '/api/servers/servers/-/commit/',
+        json=data,
+        priority=80,
+        buffered=True,
+    )
+    session.post(
+        '/api/events/events/', json={
+            'reporter': 'alpamon',
+            'record': 'committed',
+            'description': 'Committed system information. version: %(version)s' % {
+                'version': VERSION,
+            },
+        }, priority=80, buffered=True,
+    )
