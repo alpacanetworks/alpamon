@@ -4,28 +4,24 @@ import os
 import pwd
 import grp
 
-
 logger = logging.getLogger(__name__)
 
 
 def demote(username, groupname):
-    # def result(): 
-    logger.debug('starting demotion')
-    logger.debug(username)
-    logger.debug(groupname)
+    def result():
+        if username is not None and groupname is not None:
+            try:
+                user_uid = pwd.getpwnam(username)[2]
+                user_gid = grp.getgrnam(groupname)[2]
+                os.setgid(user_gid)
+                os.setuid(user_uid)
 
-    if username is not None and groupname is not None:
-        try:  
-            user_uid = pwd.getpwnam(username)[2]
-            user_gid = grp.getgrnam(groupname)[2]
-            os.setgid(user_gid)
-            os.setuid(user_uid)
+                logger.debug('Demote permission to match %s, %s.', username, groupname)
+            except Exception as e:
+                logger.exception(e)
+                raise Exception('There is no corresponding account in this server')
 
-        except Exception as e:
-            logger.exception(e)
-            raise Exception('There is no corresponding account in this server')
-
-    logger.debug('finished demotion')
+    return result
 
 
 def runcmd(args, include_stderr=True, username=None, groupname=None):

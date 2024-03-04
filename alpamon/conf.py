@@ -13,6 +13,8 @@ settings = {
     'SSL_VERIFY': True,
     'SSL_OPT': {},
     'HTTP_THREADS': 4,
+    'ID': None,
+    'KEY': None,
 }
 
 
@@ -30,11 +32,11 @@ def validate_config(config):
         logger.error('Server url is invalid.')
         valid = False
 
-    if not config.get('server', 'id'):
-        logger.error('Server ID is empty.')
-        valid = False
-    if not config.get('server', 'key'):
-        logger.error('Server key is empty.')
+    if config.get('server', 'id') and config.get('server', 'key'):
+        settings['ID'] = config.get('server', 'id')
+        settings['KEY'] = config.get('server', 'key')
+    else:
+        logger.error("Server ID, KEY is empty")
         valid = False
 
     if settings['USE_SSL']:
