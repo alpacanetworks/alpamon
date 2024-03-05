@@ -1,12 +1,12 @@
 # Alpamon
 
-Alpamon is a server agent for Alpaca Infra Platform (AIP). Each server should have Alpamon installed to be controlled via AIP.
+Alpamon is a server agent for Alpaca Infra Platform. Each server should have Alpamon installed to be controlled via Alpacon.
 
-This document describes the procedures to install Alpamon in a development environment. This setup requires the Internet connection or proxy configuration.
+This guide outlines the step-by-step process for installing Alpamon within a development environment. The installation requires an active Internet connection or the appropriate configuration of a proxy server.
 
 ## Install system packages
 
-Alpamon runs on Python 3.4 or above. Python pip is required for package installation. This procedure assumes you are a standard user with `sudo` priviledge. Alpamon itself does not require root priviledge for development, but some of its features require `sudo`. For full tests, it is recommended to use docker.
+Alpamon runs on Python 3.4 or above. Python pip is required for package installation. This procedure assumes you are a standard user with `sudo` priviledge. Alpamon itself does not require root priviledge for the development, but some of its features require `sudo`. For full tests, it is recommended to use docker.
 
 ### Supported platforms
 
@@ -46,7 +46,8 @@ $ sudo yum-config-manager --add-repo https://pkg.osquery.io/rpm/osquery-s3-rpm.r
 $ sudo yum-config-manager --enable osquery-s3-rpm-repo
 $ sudo yum install osquery
 ```
-For more about installing osquery, please refer to the [official documentation](https://osquery.io/downloads/official/5.10.2).
+
+For now, we use `osquery` to collect system information. About installing osquery, You can find more resources from the [official documentation](https://osquery.readthedocs.io/en/latest/installation/install-linux/).
 
 ## Clone the source code
 
@@ -169,7 +170,7 @@ systemctl status alpamon.service
 The result would look like the following. The status must be loaded and active (running).
 
 ```
-● alpamon.service - alpamon agent for alpaca infra platform
+alpamon.service - alpamon agent for alpaca infra platform
      Loaded: loaded (/lib/systemd/system/alpamon.service; enabled; vendor preset: enabled)
      Active: active (running) since Thu 2023-09-28 23:48:55 KST; 4 days ago
 ```
@@ -196,7 +197,7 @@ $ ./tests/build.sh
 You can run containers for these images in Docker Desktop or using command line like below.
 
 ```
-$ docker run alpamon:ubuntu-22.04
+$ docker run --mount type=bind,source="$(pwd)",target=/opt/alpamon alpamon:ubuntu-22.04
 ```
 
 ## Notes
