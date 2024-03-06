@@ -406,7 +406,7 @@ class CommandRunner(threading.Thread):
                     'qsize': self.client.api_session.queue.qsize(),
                 },
                 'threads': list(map(lambda t: t.name, threading.enumerate())),
-                'reporters': self.client.api_session.get_reporter_stats(),
+                'stats': self.client.api_session.get_reporter_stats(),
             }))
 
         # file download
