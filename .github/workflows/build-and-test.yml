@@ -1,57 +1,21 @@
 name: Build and Test
 
-on: [push, pull_request]
+on: [ push, pull_request ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11"]
         container: ["ubuntu:trusty", "ubuntu:xenial", "ubuntu:bionic", "ubuntu:focal", "ubuntu:jammy", "ubuntu:latest", "ubuntu:devel"]
     container:
       image: ${{ matrix.container }}
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-          python-version: ${{ matrix.python-version }}
-    - name: Install dependencies and run tests
-      run: |
-        apt-get update -q && apt-get install -y --no-install-recommends python3-pip python3-setuptools
-        python3 -V
-        python3 setup.py install
-
-  build-wheel:
-    runs-on: ubuntu-latest
-    container:
-      image: ubuntu:jammy
-    steps:
-    - uses: actions/checkout@v4
-    - name: Build wheel package
-      run: |
-        apt-get update -q && apt-get install -y --no-install-recommends python3-pip python3-setuptools
-        python3 -V
-        python3 setup.py bdist_wheel
-    - name: Upload wheel artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: wheel-package
-        path: dist/*.whl
-
-  build-rpm:
-    runs-on: ubuntu-latest
-    container:
-      image: centos:7
-    steps:
-    - uses: actions/checkout@v4
-    - name: Build RPM package
-      run: |
-        yum install -y python3 python3-pip rpm-build
-        python3 setup.py bdist_rpm
-    - name: Upload RPM artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: rpm-package
-        path: dist/*.rpm
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        run: |
+          apt-get update -q && apt-get install -y --no-install-recommends python3-pip python3-setuptools
+          python3 -V
+      - name: Install dependencies
+        run: |
+          python3 setup.py install
