@@ -28,9 +28,10 @@ jobs:
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v3
         with:
-          name: alpamon-${{ github.ref_name }}-py3-none-any.whl
-          path: dist/alpamon-${{ github.ref_name }}-py3-none-any.whl
-
+          # name: alpamon-${{ github.ref_name }}-py3-none-any.whl
+          # path: dist/alpamon-${{ github.ref_name }}-py3-none-any.whl
+          name: alpamon-1.1.4-py3-none-any.whl
+          path: dist/alpamon-1.1.4-py3-none-any.whl
 
   release:
     runs-on: ubuntu-latest
@@ -43,7 +44,8 @@ jobs:
       - name: Download wheel artifact
         uses: actions/download-artifact@v3
         with:
-          name: alpamon-${{ github.ref_name }}-py3-none-any.whl
+          # name: alpamon-${{ github.ref_name }}-py3-none-any.whl
+          name: alpamon-1.1.4-py3-none-any.whl
 
       - name: List downloaded files
         run: ls
@@ -51,9 +53,8 @@ jobs:
       - name: Release to alpacon.io
         run: |
           alpacon login -s ${{ secrets.ALPACON_URL }} -t ${{ secrets.ALPACON_TOKEN }}
-          alpacon package python upload alpamon-${{ github.ref_name }}-py3-none-any.whl    
-
-
+          alpacon package python upload alpamon-1.1.4-py3-none-any.whl
+#           alpacon package python upload alpamon-${{ github.ref_name }}-py3-none-any.whl
 
 #  build-rpm:
 #    runs-on: ubuntu-latest
