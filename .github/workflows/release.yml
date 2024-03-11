@@ -65,6 +65,11 @@ jobs:
         with:
           name: alpamon-${{ github.ref_name }}-py3-none-any.whl
 
+      - name: Download rpm artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: alpamon-${{ github.ref_name }}-1.noarch.rpm
+
       - name: Release to alpacon.io
         run: |
           alpacon login -s ${{ secrets.ALPACON_URL }} -t ${{ secrets.ALPACON_TOKEN }}
