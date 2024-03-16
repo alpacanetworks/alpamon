@@ -27,7 +27,7 @@ CONFIG_FILES = [
     os.path.expanduser('~/.alpamon.conf')
 ]
 
-MIN_CONNECT_INTERVAL = 3
+MIN_CONNECT_INTERVAL = 5
 MAX_CONNECT_INTERVAL = 60
 
 
