@@ -1,0 +1,80 @@
+name: release
+on:
+  push:
+    # run only against tags
+    tags:
+      - "*"
+
+jobs:
+  build-wheel:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:jammy
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          apt-get update -q && apt-get install -y --no-install-recommends python3-pip python3-setuptools
+          python3 -V
+
+      - name: Build wheel package
+        run: |
+          python3 setup.py bdist_wheel
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: alpamon-${{ github.ref_name }}-py3-none-any.whl
+          path: dist/alpamon-${{ github.ref_name }}-py3-none-any.whl
+
+  build-rpm:
+    runs-on: ubuntu-latest
+    container:
+      image: centos:7
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          yum install -y python3 python3-pip rpm-build
+
+      - name: Build RPM package
+        run: |
+          python3 setup.py bdist_rpm
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: alpamon-${{ github.ref_name }}-1.noarch.rpm
+          path: dist/alpamon-${{ github.ref_name }}-1.noarch.rpm
+
+  release:
+    runs-on: ubuntu-latest
+    container:
+      image: alpacanetworks/alpacon-cli:latest
+      options: --entrypoint ""
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: List downloaded files
+        run: ls
+
+      - name: Download wheel artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: alpamon-${{ github.ref_name }}-py3-none-any.whl
+
+      - name: Download rpm artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: alpamon-${{ github.ref_name }}-1.noarch.rpm
+
+      - name: Release to alpacon.io
+        run: |
+          alpacon login -s ${{ secrets.ALPACON_URL }} -t ${{ secrets.ALPACON_TOKEN }}
+          alpacon package python upload alpamon-${{ github.ref_name }}-py3-none-any.whl
+          alpacon package python upload alpamon-${{ github.ref_name }}-1.noarch.rpm
+
+
+

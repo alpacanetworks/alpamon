@@ -1,0 +1,21 @@
+name: Build and Test
+
+on: [ push, pull_request ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        container: ["ubuntu:trusty", "ubuntu:xenial", "ubuntu:bionic", "ubuntu:focal", "ubuntu:jammy", "ubuntu:latest", "ubuntu:devel"]
+    container:
+      image: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        run: |
+          apt-get update -q && apt-get install -y --no-install-recommends python3-pip python3-setuptools
+          python3 -V
+      - name: Install dependencies
+        run: |
+          python3 setup.py install
