@@ -50,15 +50,13 @@ jobs:
           path: dist/alpamon-${{ github.ref_name }}-1.noarch.rpm
 
   release:
+    needs: [ build-wheel, build-rpm ]
     runs-on: ubuntu-latest
     container:
       image: alpacanetworks/alpacon-cli:latest
       options: --entrypoint ""
     steps:
       - uses: actions/checkout@v3
-
-      - name: List downloaded files
-        run: ls
 
       - name: Download wheel artifact
         uses: actions/download-artifact@v3
@@ -69,6 +67,9 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: alpamon-${{ github.ref_name }}-1.noarch.rpm
+
+      - name: List downloaded files
+        run: ls
 
       - name: Release to alpacon.io
         run: |
