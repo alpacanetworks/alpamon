@@ -38,10 +38,17 @@ def get_file_data(data):
 
     if data['type'] == 'url':
         url = data['content']
-        response = requests.get(
-            url,
-            headers={'Authorization': 'id="%s", key="%s"' % (settings['ID'], settings['KEY'])}
-        )
+        if url.startswith(settings['SERVER_URL']):
+            headers = {'Authorization': 'id="%s", key="%s"' % (settings['ID'], settings['KEY'])}
+        else:
+            headers = None
+        response = requests.get(url, headers=headers)
+        if int(response.status_code / 100) != 2:
+            logger.error(
+                'Failed to download content from URL: %s %s',
+                response.status_code, url
+            )
+            raise Exception('Downloading content failed.')
         content = response.content
     elif data['type'] == 'text':
         content = data['content'].encode()
