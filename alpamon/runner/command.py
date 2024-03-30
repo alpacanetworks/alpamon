@@ -204,9 +204,10 @@ class CommandRunner(threading.Thread):
             self.commit(keys=['packages'])
             return result
 
-        # upgrade alpamon
+        # upgrade a python package (e.g., alpamon)
         elif args[0] == 'upgrade':
-            (name, content) = get_python_package(self.client.api_session, 'alpamon')
+            package_name = args[1] if len(args) > 1 else 'alpamon'
+            (name, content) = get_python_package(self.client.api_session, package_name)
 
             logger.info('Installing %s...', name)
             result = PythonPackageManager.install_package_from_wheel(name, content)
