@@ -54,9 +54,8 @@ class WebSocketClient(WebSocketApp):
             # command request handler
             elif content['query'] == 'command':
                 command = content['command']
-                self.api_session.patch(
-                    '/api/events/commands/%(id)s/' % command,
-                    json={'acked_at': now()},
+                self.api_session.post(
+                    '/api/events/commands/%(id)s/ack/' % command,
                     priority=10,
                     buffered=True,
                 )

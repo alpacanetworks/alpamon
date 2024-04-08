@@ -584,12 +584,11 @@ class CommandRunner(threading.Thread):
 
         t_end = time.time()
         if result != None and self.command.get('id', None) != None:
-            self.client.api_session.patch(
-                '/api/events/commands/%(id)s/' % self.command, json={
+            self.client.api_session.post(
+                '/api/events/commands/%(id)s/fin/' % self.command, json={
                     'success': exitcode == 0,
                     'result': result,
                     'elapsed_time': (t_end-t_start),
-                    'handled_at': now(),
                 },
                 priority=10,
                 buffered=True,
