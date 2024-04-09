@@ -208,9 +208,29 @@ When testing `alpamon` on ubuntu docker image, install `curl`, `ca-certificates`
 apt update && apt install -y --no-install-recommends curl systemd ca-certificates
 ```
 
-## Distribute
+## Release
 
-For distribution, we use Python standard wheel file. You can build the package with the following command.
+### Regular release
+
+Regular releases are built by GitHub Actions. To make a release, you need two steps.
+
+#### Bump version in code
+
+Update `alpamon/__init__.py` to change the current version. We use [semantic versioning](https://semver.org/).
+
+#### Draft a release
+
+At GitHub, click "Draft a new release" button. Please be aware of the followings.
+
+- A tag can be created with syntax like `1.0.0`.
+- Release title should look like `v1.0.0`.
+- Include proper release notes.
+
+Regular releases are distributed automatically to Alpacon.
+
+### Manual release
+
+For manual release, we use Python standard wheel file. You can build the package with the following command.
 
 ```bash
 (env) $ ./setup.py bdist_wheel
