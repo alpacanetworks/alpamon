@@ -167,14 +167,6 @@ class CommandRunner(threading.Thread):
     def sync(self, keys=[]):
         sync_system_info(self.client.api_session, keys=keys)
 
-    @classmethod
-    def commit_async(cls, client, commissioned):
-        CommandRunner({
-            'id': None,
-            'shell': 'internal',
-            'line': 'sync' if commissioned else 'commit',
-        }, client).start()
-
     def handle_internal_cmd(self, command, data):
         args = shlex.split(command)
 
