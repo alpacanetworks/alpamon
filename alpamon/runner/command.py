@@ -18,7 +18,7 @@ from alpamon.packager.python import PythonPackageManager
 from alpamon.packager.system import SystemPackageManager
 from alpamon.packager.utils import get_python_package
 from alpamon.utils import platform_like, now
-from alpamon.runner.commit import commit_information, sync_system_info
+from alpamon.runner.commit import commit_system_info, sync_system_info
 
 
 logger = logging.getLogger(__name__)
@@ -162,7 +162,7 @@ class CommandRunner(threading.Thread):
             self.name = 'CommandRunner-%s' % command['id'].split('-')[-1]
 
     def commit(self, keys=[]):
-        commit_information(self.client.api_session, keys=keys)
+        commit_system_info(self.client.api_session, keys=keys)
 
     def sync(self, keys=[]):
         sync_system_info(self.client.api_session, keys=keys)
@@ -221,7 +221,10 @@ class CommandRunner(threading.Thread):
 
             logger.info('Installing %s...', name)
             result = PythonPackageManager.install_package_from_wheel(name, content)
-            self.sync(keys=['server', 'pypackages'])
+            if package_name == 'alpamon':
+                self.sync(keys=['server', 'pypackages'])
+            else:
+                self.sync(keys=['pypackages'])
             return result
 
         # commit

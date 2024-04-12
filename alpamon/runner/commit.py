@@ -1,5 +1,6 @@
 import logging
 from uuid import UUID
+from threading import Thread
 
 from alpamon import VERSION
 from alpamon.queryman import query
@@ -144,7 +145,7 @@ COMMIT_DEFS = {
 }
 
 
-def commit_information(session, keys=[]):
+def commit_system_info(session, keys=[]):
     data = {}
 
     if not keys:
@@ -311,3 +312,10 @@ def compare_data(key, entry, data, response):
         delete_dict = response_dict
 
     return create_list, update_list, delete_dict
+
+
+def commit_async(session, commissioned):
+    if commissioned:
+        Thread(target=sync_system_info, daemon=True, args=(session,)).start()
+    else:
+        Thread(target=commit_system_info, daemon=True, args=(session,)).start()
