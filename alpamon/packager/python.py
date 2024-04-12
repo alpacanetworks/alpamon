@@ -30,7 +30,10 @@ class PythonPackageManager:
         if exitcode != 0 or result.startswith('Error:'):
             return None
         try:
-            return json.loads(result)
+            return list(map(
+                lambda pkg: {'name': pkg['name'], 'version': pkg['version']},
+                json.loads(result)
+            ))
         except Exception as e:
             logger.debug(result)
             logger.exception(e)

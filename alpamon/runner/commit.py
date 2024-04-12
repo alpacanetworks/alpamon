@@ -1,4 +1,6 @@
 import logging
+from uuid import UUID
+from threading import Thread
 
 from alpamon import VERSION
 from alpamon.queryman import query
@@ -8,81 +10,172 @@ from alpamon.packager.python import PythonPackageManager
 
 logger = logging.getLogger(__name__)
 
-
-COMMIT_DEFS = [
-    {
-        'key': 'info',
+COMMIT_DEFS = {
+    'server': {
+        'sql': {
+            'osquery_version': 'SELECT `version` AS `osquery_version` FROM `osquery_info`',
+            'load': 'SELECT `average` AS `load` FROM `load_average` WHERE `period`="1m"',
+        },
+        'multirow': False,
+        'pk': 'version',
+        'url': '/api/servers/servers/',
+        'url_suffix': '-/fetch/',
+        'type': {
+            'load': float
+        }
+    },
+    'info': {
         'sql': 'SELECT `uuid`, `cpu_type`, `cpu_subtype`, `cpu_brand`, ''`cpu_physical_cores`, `cpu_logical_cores`, `physical_memory`, `hardware_vendor`, `hardware_model`, `hardware_version`, `hardware_serial`, `computer_name`, `hostname`, `local_hostname` FROM system_info',
         'multirow': False,
-    }, {
-        'key': 'os',
+        'pk': 'uuid',
+        'url': '/api/proc/info/',
+        'url_suffix': '-/fetch/',
+        'type': {
+            'cpu_logical_cores': int,
+            'cpu_physical_cores': int,
+            'physical_memory': int,
+            'uuid': UUID,
+        }
+    },
+    'os': {
         'sql': 'SELECT `name`, `version`, `major`, `minor`, `patch`, `build`, `platform`, `platform_like` FROM `os_version`',
         'multirow': False,
-    }, {
-        'key': 'time',
+        'pk': 'name',
+        'url': '/api/proc/os/',
+        'url_suffix': '-/fetch/',
+        'type': {
+            'major': int,
+            'minor': int,
+            'patch': int,
+        }
+    },
+    'time': {
         'sql': 'SELECT `datetime`, `local_timezone` AS `timezone`, `total_seconds` AS `uptime` FROM `time` INNER JOIN `uptime`',
         'multirow': False,
-    }, {
-        'key': 'load',
-        'sql': 'SELECT `period`, `average` FROM `load_average` WHERE `period`="1m"',
-        'multirow': False,
-    }, {
-        'key': 'groups',
+        'pk': 'timezone',
+        'url': '/api/proc/time/',
+        'url_suffix': '-/fetch/',
+        'type': {
+            'uptime': int,
+        }
+    },
+    'groups': {
         'sql': 'SELECT `gid_signed` AS `gid`, `groupname` FROM groups',
         'multirow': True,
-    }, {
-        'key': 'users',
+        'pk': 'gid',
+        'url': '/api/proc/groups/',
+        'url_suffix': 'fetch/',
+        'type': {
+            'gid': int,
+        }
+    },
+    'users': {
         'sql': 'SELECT `uid_signed` As `uid`, `gid_signed` AS `gid`, `username`, `description`, `directory`, `shell` FROM users',
         'multirow': True,
-    }, {
-        'key': 'interfaces',
+        'pk': 'uid',
+        'url': '/api/proc/users/',
+        'url_suffix': 'fetch/',
+        'type': {
+            'gid': int,
+            'uid': int,
+        }
+    },
+    'interfaces': {
         'sql': 'SELECT interface AS name, mac, type, flags, mtu, link_speed FROM interface_details',
         'multirow': True,
-    },{
-        'key': 'addresses',
+        'pk': 'name',
+        'url': '/api/proc/interfaces/',
+        'url_suffix': 'fetch/',
+        'type': {
+            'type': int,
+            'flags': int,
+            'mtu': int,
+            'link_speed': int,
+        }
+    },
+    'addresses': {
         'sql': 'SELECT `interface` AS `interface_name`, `address`, `mask`, `broadcast` FROM interface_addresses WHERE `address` NOT LIKE "fe80%"',
         'multirow': True,
-    }, {
-        'key': 'packages',
-        'sql': 'SELECT name, path AS source, version FROM homebrew_packages',
+        'pk': 'address',
+        'url': '/api/proc/addresses/',
+        'url_suffix': 'fetch/',
+        'type': {
+        }
+    },
+    'packages': {
+        'darwin': {
+            'sql': 'SELECT name, path AS source, version FROM homebrew_packages',
+            'multirow': True,
+            'only': 'darwin',
+            'pk': 'name',
+            'url': '/api/proc/packages/',
+            'url_suffix': 'fetch/',
+            'type': {
+            }
+        },
+        'debian': {
+            'sql': 'SELECT name, source, arch, version FROM deb_packages',
+            'multirow': True,
+            'only': 'debian',
+            'pk': 'name',
+            'url': '/api/proc/packages/',
+            'url_suffix': 'fetch/',
+            'type': {
+            }
+        },
+        'rhel': {
+            'sql': 'SELECT name, source, arch, version FROM rpm_packages',
+            'multirow': True,
+            'only': 'rhel',
+            'pk': 'name',
+            'url': '/api/proc/packages/',
+            'url_suffix': 'fetch/',
+            'type': {
+            }
+        }
+    },
+    'pypackages': {
         'multirow': True,
-        'only': 'darwin',
-    }, {
-        'key': 'packages',
-        'sql': 'SELECT name, source, arch, version FROM deb_packages',
-        'multirow': True,
-        'only': 'debian',
-    }, {
-        'key': 'packages',
-        'sql': 'SELECT name, source, arch, version FROM rpm_packages',
-        'multirow': True,
-        'only': 'rhel',
+        'pk': 'name',
+        'url': '/api/proc/pypackages/',
+        'url_suffix': 'fetch/',
+        'type': {
+        }
     }
-]
+}
 
 
-def commit_information(session, keys=[]):
-    data = {
-        'version': VERSION,
-    }
+def commit_system_info(session, keys=[]):
+    data = {}
 
-    if not keys or 'osquery_version' in keys:
-        (exitcode, result) = query('SELECT `version` FROM `osquery_info`')
-        data['osquery_version'] = result[0]['version'] if exitcode == 0 else None
+    if not keys:
+        keys = list(COMMIT_DEFS.keys())
 
-    if not keys or 'pypackages' in keys:
-        data['pypackages'] = PythonPackageManager.list_packages()
-
-    for entry in COMMIT_DEFS:
-        if keys and not entry['key'] in keys:
+    for key in keys:
+        if key not in list(COMMIT_DEFS.keys()):
             continue
-        if 'only' in entry and entry['only'] != platform_like:
-            continue
-        (exitcode, result) = query(entry['sql'])
-        if exitcode == 0:
-            data[entry['key']] = result if entry['multirow'] else result[0]
+
+        if key == 'packages':
+            entry = COMMIT_DEFS[key][platform_like]
         else:
-            logger.error('Failed to query information. sql: %s', entry['sql'])
+            entry = COMMIT_DEFS[key]
+
+        if key == 'server':
+            data['version'] = VERSION
+
+            (exitcode, osquery_version) = query(entry['sql']['osquery_version'])
+            data['osquery_version'] = osquery_version[0]['osquery_version'] if exitcode == 0 else None
+
+            (exitcode, load) = query(entry['sql']['load'])
+            data['load'] = load[0]['load'] if exitcode == 0 else None
+        elif key == 'pypackages':
+            data[key] = PythonPackageManager.list_packages()
+        else:
+            (exitcode, result) = query(entry['sql'])
+            if exitcode == 0:
+                data[key] = result if entry['multirow'] else result[0]
+            else:
+                logger.error('Failed to query information. sql: %s', entry['sql'])
 
     session.put(
         '/api/servers/servers/-/commit/',
@@ -99,3 +192,130 @@ def commit_information(session, keys=[]):
             },
         }, priority=80, buffered=True,
     )
+
+
+def sync_system_info(session, keys=[]):
+    if not keys:
+        keys = list(COMMIT_DEFS.keys())
+
+    for key in keys:
+        if key == 'packages':
+            entry = COMMIT_DEFS[key][platform_like]
+        else:
+            entry = COMMIT_DEFS[key]
+
+        if key == 'server':
+            (exitcode, osquery_result) = query(entry['sql']['osquery_version'])
+            osquery_version = osquery_result[0]['osquery_version'] if exitcode == 0 else None
+            (exitcode, load_result) = query(entry['sql']['load'])
+            load = load_result[0]['load'] if exitcode == 0 else None
+            data = {
+                'version': VERSION,
+                'osquery_version': osquery_version,
+                'load': load,
+            }
+            session.patch(
+                entry['url'] + '-/',
+                json=data,
+                priority=80,
+                buffered=True,
+            )
+            continue
+
+        elif key == 'pypackages':
+            data = PythonPackageManager.list_packages()
+        else:
+            (exitcode, result) = query(entry['sql'])
+            if exitcode == 0:
+                data = result
+            else:
+                logger.error('Failed to query information. sql: %s', entry['sql'])
+
+        for item in data:
+            for k, func in entry['type'].items():
+                item[k] = func(item[k])
+
+        if entry['multirow']:
+            response = session.get(entry['url'] + entry['url_suffix']).json()
+        else:
+            response = [session.get(entry['url'] + entry['url_suffix']).json()]
+
+        create_list, update_list, delete_dict = compare_data(key, entry, data, response)
+
+        if create_list:
+            session.post(
+                entry['url'],
+                json=create_list,
+                priority=80,
+                buffered=True,
+            )
+
+        for item in update_list:
+            session.patch(
+                entry['url'] + item[1]['id'] + '/',
+                json=item[0],
+                priority=80,
+                buffered=True,
+            )
+
+        for item in delete_dict.values():
+            session.delete(
+                entry['url'] + item['id'] + '/',
+                json=item['data'],
+                priority=80,
+                buffered=True,
+            )
+
+
+def compare_data(key, entry, data, response):
+    response_dict = {}
+    create_list = []
+    compare_list = []
+    update_list = []
+
+    for item in response:
+        if key == 'addresses' and not item['broadcast']:
+            item['broadcast'] = ''
+
+        if key == 'packages' and platform_like == 'darwin':
+            try:
+                del item['arch']
+            except KeyError:
+                pass
+
+        uuid = item.pop('id')
+        obj = {
+            'id': uuid,
+            'data': item
+        }
+        response_dict[item[entry['pk']]] = obj
+
+    for item in data:
+        if item[entry['pk']] in response_dict:
+            compare_list.append((item, response_dict[item[entry['pk']]]))
+            response_dict.pop(item[entry['pk']])
+        else:
+            create_list.append(item)
+
+    for item in compare_list:
+        if item[0] != item[1]['data']:
+            update_list.append(item)
+        else:
+            pass
+
+    if key in ['info', 'os', 'time']:
+        if create_list:
+            create_list = create_list[0]
+
+        delete_dict = {}
+    else:
+        delete_dict = response_dict
+
+    return create_list, update_list, delete_dict
+
+
+def commit_async(session, commissioned):
+    if commissioned:
+        Thread(target=sync_system_info, daemon=True, args=(session,)).start()
+    else:
+        Thread(target=commit_system_info, daemon=True, args=(session,)).start()
