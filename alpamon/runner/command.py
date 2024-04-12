@@ -227,7 +227,7 @@ class CommandRunner(threading.Thread):
         # sync system information
         elif args[0] == 'sync':
             self.sync(data.get('keys', []) if data else [])
-            return (0, 'Sync system infromation.')
+            return (0, 'Synchronized system infromation.')
 
         # adduser
         elif args[0] == 'adduser':
