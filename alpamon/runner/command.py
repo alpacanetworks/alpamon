@@ -18,7 +18,7 @@ from alpamon.packager.python import PythonPackageManager
 from alpamon.packager.system import SystemPackageManager
 from alpamon.packager.utils import get_python_package
 from alpamon.utils import platform_like, now
-from alpamon.runner.commit import commit_information
+from alpamon.runner.commit import commit_information, sync_system_info
 
 
 logger = logging.getLogger(__name__)
@@ -164,12 +164,15 @@ class CommandRunner(threading.Thread):
     def commit(self, keys=[]):
         commit_information(self.client.api_session, keys=keys)
 
+    def sync(self, keys=[]):
+        sync_system_info(self.client.api_session, keys=keys)
+
     @classmethod
-    def commit_async(cls, client):
+    def commit_async(cls, client, commissioned):
         CommandRunner({
             'id': None,
             'shell': 'internal',
-            'line': 'commit',
+            'line': 'sync' if commissioned else 'commit',
         }, client).start()
 
     def handle_internal_cmd(self, command, data):
@@ -190,7 +193,7 @@ class CommandRunner(threading.Thread):
                 result = PythonPackageManager.uninstall_package(args[2])
             else:
                 raise Exception('Invalid command: %s' % command)
-            self.commit(keys=['pypackages'])
+            self.sync(keys=['pypackages'])
             return result
 
         # manage system packages
@@ -208,7 +211,7 @@ class CommandRunner(threading.Thread):
                 result = SystemPackageManager.uninstall_package(args[2])
             else:
                 raise Exception('Invalid command: %s' % command)
-            self.commit(keys=['packages'])
+            self.sync(keys=['packages'])
             return result
 
         # upgrade a python package (e.g., alpamon)
@@ -218,13 +221,18 @@ class CommandRunner(threading.Thread):
 
             logger.info('Installing %s...', name)
             result = PythonPackageManager.install_package_from_wheel(name, content)
-            self.commit(keys=['packages'])
+            self.sync(keys=['server', 'pypackages'])
             return result
 
         # commit
         elif args[0] == 'commit':
             self.commit(data.get('keys', []) if data else [])
             return (0, 'Committed system information.')
+
+        # sync system information
+        elif args[0] == 'sync':
+            self.sync(data.get('keys', []) if data else [])
+            return (0, 'Sync system infromation.')
 
         # adduser
         elif args[0] == 'adduser':
@@ -287,7 +295,7 @@ class CommandRunner(threading.Thread):
             else:
                 raise NotImplementedError()
 
-            self.commit(keys=['groups', 'users'])
+            self.sync(keys=['groups', 'users'])
             return (0, 'Successfully added new user.')
 
         # addgroup
@@ -320,7 +328,7 @@ class CommandRunner(threading.Thread):
             else:
                 raise NotImplementedError()
 
-            self.commit(keys=['groups', 'users'])
+            self.sync(keys=['groups', 'users'])
             return (0, 'Successfully added new group.')
 
         # deluser
@@ -353,7 +361,7 @@ class CommandRunner(threading.Thread):
             else:
                 raise NotImplementedError()
 
-            self.commit(keys=['groups', 'users'])
+            self.sync(keys=['groups', 'users'])
             return (0, 'Successfully deleted the user.')
 
         # delgroup
@@ -398,7 +406,7 @@ class CommandRunner(threading.Thread):
             else:
                 raise NotImplementedError()
 
-            self.commit(keys=['groups', 'users'])
+            self.sync(keys=['groups', 'users'])
             return (0, 'Successfully deleted the group.')
 
         # ping

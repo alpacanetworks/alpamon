@@ -46,7 +46,7 @@ class WebSocketClient(WebSocketApp):
             if content['query'] == 'commit':
                 logger.debug('Commit requested.')
                 if check_osquery():
-                    CommandRunner.commit_async(self)
+                    CommandRunner.commit_async(self, content['commissioned'])
                 else:
                     logger.error('Package "osquery" not found. Please install it first...')
                     self.quit()
