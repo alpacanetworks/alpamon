@@ -19,32 +19,32 @@ Alpamon runs on Python 3.4 or above. Python pip is required for package installa
 ### macOS
 
 ```sh
-$ brew install python3
-$ brew install --cask osquery
-$ pip3 install virtualenv
+brew install python3
+brew install --cask osquery
+pip3 install virtualenv
 ```
 
 ### Ubuntu
 
 ```sh
-$ sudo -HE apt install python3 python3-pip
-$ sudo -HE pip3 install virtualenv
-$ export OSQUERY_KEY=1484120AC4E9F8A1A577AEEE97A80C63C9D8B80B
-$ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys $OSQUERY_KEY
-$ sudo add-apt-repository 'deb [arch=amd64] https://pkg.osquery.io/deb deb main'
-$ sudo apt-get update
-$ sudo apt-get install osquery
+sudo -HE apt install python3 python3-pip
+sudo -HE pip3 install virtualenv
+export OSQUERY_KEY=1484120AC4E9F8A1A577AEEE97A80C63C9D8B80B
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys $OSQUERY_KEY
+sudo add-apt-repository 'deb [arch=amd64] https://pkg.osquery.io/deb deb main'
+sudo apt-get update
+sudo apt-get install osquery
 ```
 
 ### CentOS
 
 ```sh
-$ sudo -HE yum install python3 python3-pip
-$ sudo -HE pip3 install virtualenv
-$ curl -L https://pkg.osquery.io/rpm/GPG | sudo tee /etc/pki/rpm-gpg/RPM-GPG-KEY-osquery
-$ sudo yum-config-manager --add-repo https://pkg.osquery.io/rpm/osquery-s3-rpm.repo
-$ sudo yum-config-manager --enable osquery-s3-rpm-repo
-$ sudo yum install osquery
+sudo -HE yum install python3 python3-pip
+sudo -HE pip3 install virtualenv
+curl -L https://pkg.osquery.io/rpm/GPG | sudo tee /etc/pki/rpm-gpg/RPM-GPG-KEY-osquery
+sudo yum-config-manager --add-repo https://pkg.osquery.io/rpm/osquery-s3-rpm.repo
+sudo yum-config-manager --enable osquery-s3-rpm-repo
+sudo yum install osquery
 ```
 
 For now, we use `osquery` to collect system information. About installing osquery, You can find more resources from the [official documentation](https://osquery.readthedocs.io/en/latest/installation/install-linux/).
@@ -52,7 +52,7 @@ For now, we use `osquery` to collect system information. About installing osquer
 ## Clone the source code
 
 ```sh
-$ git clone <repository url>
+git clone https://github.com/alpacanetworks/alpamon.git
 ```
 
 ## Install python virtualenv
@@ -60,10 +60,10 @@ $ git clone <repository url>
 Alpamon use `virtualenv` not to override the installed system packages. Create a virtual environment to run Alpamon and its subsidiary applications. It's recommended to create a directory in your home directory as `alpamon` and store all related packages in it. The actual path may vary depending on your system environment. You need to source `alpamon/env/bin/activate` before executing any command for alpamon.
 
 ```sh
-$ cd alpamon
-$ virtualenv env --python=python3
-$ source env/bin/activate
-(env) $ pip install -U pip
+cd alpamon
+virtualenv env --python=python3
+source env/bin/activate
+pip install -U pip
 ```
 
 ## Install alpamon package
@@ -71,13 +71,16 @@ $ source env/bin/activate
 Install alpamon in development mode. `pip` will install all the required packages automatically. Make sure you have network connectivity before executing following commands.
 
 ```sh
-(env) $ ./setup.py develop
+./setup.py develop
 ```
 
 Run `pip list` to list all packages installed in your virtual environment. The actual list may vary by the version. It's important to check that your client has been installed in development mode, and the location is also printed.
 
+```sh
+pip list
 ```
-(env) # pip list
+
+```
 Package            Version   Location                                
 ------------------ --------- ----------------------------------------
 certifi            2021.10.8 
@@ -141,7 +144,7 @@ You may also obtain the `id` and `key` from http://localhost:3000. After login, 
 Type `alpamon` to run. Make sure to be in the virtual environment.
 
 ```sh
-(env) $ alpamon
+alpamon
 ```
 
 #### Deploy as a service
@@ -189,7 +192,7 @@ You can also use docker to test alpamon in various Linux distributions. We use D
 Build docker images with the build script.
 
 ```
-$ ./tests/build.sh
+./tests/build.sh
 ```
 
 #### Run
@@ -197,7 +200,7 @@ $ ./tests/build.sh
 You can run containers for these images in Docker Desktop or using command line like below.
 
 ```
-$ docker run --mount type=bind,source="$(pwd)",target=/opt/alpamon alpamon:ubuntu-22.04
+docker run --mount type=bind,source="$(pwd)",target=/opt/alpamon alpamon:ubuntu-22.04
 ```
 
 ## Notes
@@ -233,7 +236,7 @@ Regular releases are distributed automatically to Alpacon.
 For manual release, we use Python standard wheel file. You can build the package with the following command.
 
 ```bash
-(env) $ ./setup.py bdist_wheel
+./setup.py bdist_wheel
 ```
 
 You may find the output from `dist/`. The file should look like `alpamon-1.0.0-py3-none-any.whl`.
