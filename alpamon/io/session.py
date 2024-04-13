@@ -5,7 +5,7 @@ from urllib3.util.retry import Retry
 import requests
 from requests.adapters import HTTPAdapter
 
-from alpamon.logger.reporter import Reporter
+from alpamon.io.reporter import Reporter
 
 
 class PriorityEntry:

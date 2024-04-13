@@ -4,7 +4,6 @@ import sys
 import configparser
 import logging
 import logging.config
-from threading import Thread
 from http.client import responses
 
 from pid import PidFile
@@ -13,7 +12,7 @@ from alpamon import VERSION
 from alpamon.conf import settings, validate_config
 from alpamon.client import WebSocketClient
 from alpamon.runner.commit import commit_async
-from alpamon.session import Session
+from alpamon.io.session import Session
 from alpamon.queryman import check_osquery
 from alpamon.packager.utils import install_osquery
 from alpamon.logger.server import LogServer
