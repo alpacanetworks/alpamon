@@ -40,6 +40,11 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'alpamon.io.reporter': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'PidFile': {
             'handlers': ['socket', 'file', 'console'],
             'level': 'INFO',

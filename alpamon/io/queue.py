@@ -41,5 +41,8 @@ class RequestQueue:
     def put(self, url, json=None, priority=10, **kwargs):
         return self.request('PUT', url, json=json, priority=priority, **kwargs)
 
+    def delete(self, url, json=None, priority=10, **kwargs):
+        return self.request('DELETE', url, json=json, priority=priority, **kwargs)
+
 
 rqueue = RequestQueue()
