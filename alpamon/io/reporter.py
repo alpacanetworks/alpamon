@@ -55,7 +55,7 @@ class Reporter(threading.Thread):
         else:
             self.counters['failure'] += 1
             if entry.retry > 0:
-                entry.due += 2**(RETRY_LIMIT-entry.retry)  # exponantial backoff
+                entry.due += 2**(RETRY_LIMIT-entry.retry)  # exponential backoff
                 entry.retry -= 1
                 rqueue.queue.put(entry)
             else:
