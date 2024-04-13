@@ -13,6 +13,7 @@ import requests
 from alpamon.conf import settings
 from alpamon.queryman import query
 from alpamon.io.queue import rqueue
+from alpamon.io.reporter import get_reporter_stats
 from alpamon.runner.shell import runcmd
 from alpamon.runner.pty import runpty_bg, terminals
 from alpamon.packager.python import PythonPackageManager
@@ -418,7 +419,7 @@ class CommandRunner(threading.Thread):
                     'qsize': rqueue.queue.qsize(),
                 },
                 'threads': list(map(lambda t: t.name, threading.enumerate())),
-                'stats': self.client.api_session.get_reporter_stats(),
+                'stats': get_reporter_stats(),
             }))
 
         # file download
