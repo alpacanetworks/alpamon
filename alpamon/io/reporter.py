@@ -3,6 +3,8 @@ import threading
 import logging
 import datetime
 
+from alpamon.io.queue import rqueue
+
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +59,7 @@ class Reporter(threading.Thread):
     def run(self):
         while True:
             try:
-                entry = self.session.queue.get()
+                entry = rqueue.queue.get()
             except:
                 continue
             self.query(entry)

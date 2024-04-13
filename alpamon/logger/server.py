@@ -6,6 +6,8 @@ import socketserver
 import struct
 import datetime
 
+from alpamon.io.queue import rqueue
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +28,7 @@ class LogRecordStreamHandler(socketserver.StreamRequestHandler):
 
     def handle_record(self, record):
         date = datetime.datetime.utcfromtimestamp(record.created)
-        self.server.session.post(
+        rqueue.post(
             '/api/history/logs/',
             json={
                 'date': '%sZ' % date.isoformat(),
@@ -42,7 +44,6 @@ class LogRecordStreamHandler(socketserver.StreamRequestHandler):
                 'msg': record.msg,
             },
             priority=90,
-            buffered=True,
         )
 
 

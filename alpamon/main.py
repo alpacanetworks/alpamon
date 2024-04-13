@@ -13,6 +13,7 @@ from alpamon.conf import settings, validate_config
 from alpamon.client import WebSocketClient
 from alpamon.runner.commit import commit_async
 from alpamon.io.session import Session
+from alpamon.io.queue import rqueue
 from alpamon.queryman import check_osquery
 from alpamon.packager.utils import install_osquery
 from alpamon.logger.server import LogServer
@@ -85,13 +86,13 @@ def main():
         data = check_session(session)
         session.start_reporters()
 
-        session.post('/api/events/events/', json={
+        rqueue.post('/api/events/events/', json={
             'reporter': 'alpamon',
             'record': 'started',
             'description': 'alpamon %(version)s started running.' % {
                 'version': VERSION,
             },
-        }, buffered=True)
+        })
 
         logserver = LogServer(session)
         

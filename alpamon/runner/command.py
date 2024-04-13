@@ -12,6 +12,7 @@ import requests
 
 from alpamon.conf import settings
 from alpamon.queryman import query
+from alpamon.io.queue import rqueue
 from alpamon.runner.shell import runcmd
 from alpamon.runner.pty import runpty_bg, terminals
 from alpamon.packager.python import PythonPackageManager
@@ -412,9 +413,9 @@ class CommandRunner(threading.Thread):
             return (0, json.dumps({
                 'now': now(),
                 'queue': {
-                    'maxsize': self.client.api_session.queue.maxsize,
-                    'full': self.client.api_session.queue.full(),
-                    'qsize': self.client.api_session.queue.qsize(),
+                    'maxsize': rqueue.queue.maxsize,
+                    'full': rqueue.queue.full(),
+                    'qsize': rqueue.queue.qsize(),
                 },
                 'threads': list(map(lambda t: t.name, threading.enumerate())),
                 'stats': self.client.api_session.get_reporter_stats(),
@@ -587,14 +588,13 @@ class CommandRunner(threading.Thread):
 
         t_end = time.time()
         if result != None and self.command.get('id', None) != None:
-            self.client.api_session.post(
+            rqueue.post(
                 '/api/events/commands/%(id)s/fin/' % self.command, json={
                     'success': exitcode == 0,
                     'result': result,
                     'elapsed_time': (t_end-t_start),
                 },
                 priority=10,
-                buffered=True,
             )
 
             # logger.debug('Sent response for command %s.', self.command['id'])

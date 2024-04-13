@@ -6,6 +6,7 @@ from websocket import WebSocketApp
 from alpamon.queryman import check_osquery
 from alpamon.runner.command import CommandRunner
 from alpamon.runner.commit import commit_async
+from alpamon.io.queue import rqueue
 
 
 logger = logging.getLogger(__name__)
@@ -55,10 +56,9 @@ class WebSocketClient(WebSocketApp):
             # command request handler
             elif content['query'] == 'command':
                 command = content['command']
-                self.api_session.post(
+                rqueue.post(
                     '/api/events/commands/%(id)s/ack/' % command,
                     priority=10,
-                    buffered=True,
                 )
 
                 # execute command from the request
