@@ -4,7 +4,7 @@ import logging
 import datetime
 
 from alpamon.conf import settings
-from alpamon.io.queue import rqueue
+from alpamon.io.queue import rqueue, RETRY_LIMIT
 from alpamon.io.session import Session
 
 
@@ -29,11 +29,6 @@ class Reporter(threading.Thread):
         }
 
     def query(self, entry):
-        if entry.expiry and datetime.datetime.utcnow() > entry.expiry:
-            self.counters['ignored'] += 1
-            return
-
-        success = True
         try:
             t1 = time.time()
             r = self.session.request(
@@ -42,18 +37,29 @@ class Reporter(threading.Thread):
                 json=entry.data,
             )
             t2 = time.time()
-            self.counters['delay'] = self.counters['delay']*0.9 + (t2-entry.time)*0.1
+            self.counters['delay'] = self.counters['delay']*0.9 + (t2-entry.due)*0.1
             self.counters['latency'] = self.counters['latency']*0.9 + (t2-t1)*0.1
-            if int(r.status_code / 100) != 2:
+
+            if int(r.status_code / 100) == 2:
+                success = True
+            else:
                 logger.debug(r.json())
                 success = False
         except Exception as e:
+            logger.error(entry.url)
+            logger.exception(e)
             success = False
 
         if success:
             self.counters['success'] += 1
         else:
             self.counters['failure'] += 1
+            if entry.retry > 0:
+                entry.due += 2**(RETRY_LIMIT-entry.retry)  # exponantial backoff
+                entry.retry -= 1
+                rqueue.queue.put(entry)
+            else:
+                self.counters['ignored'] += 1
 
     def run(self):
         while True:
@@ -61,7 +67,22 @@ class Reporter(threading.Thread):
                 entry = rqueue.queue.get()
             except:
                 continue
-            self.query(entry)
+
+            # ignore expired entries
+            if entry.expiry and entry.expiry < datetime.datetime.utcnow():
+                self.counters['ignored'] += 1
+
+            # if the entry is not on due, schedule it again and sleep for a second
+            elif entry.due and entry.due > time.time():
+                try:
+                    rqueue.queue.put(entry)
+                except:
+                    self.conuters['ignored'] += 1  # ignore if the queue is full
+                time.sleep(1)
+
+            # handle the entry
+            else:
+                self.query(entry)
 
 
 reporters = []

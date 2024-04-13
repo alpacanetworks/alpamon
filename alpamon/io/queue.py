@@ -2,14 +2,18 @@ import time
 from queue import PriorityQueue
 
 
+RETRY_LIMIT = 5
+
+
 class PriorityEntry:
     def __init__(self, priority, method, url, data, due=None, expiry=None):
         self.priority = priority
         self.method = method
         self.url = url
         self.data = data
-        self.due = time.time() if due is None else due
-        self.expiry = expiry
+        self.due = time.time() if due is None else due  # entries will not be handled until due
+        self.expiry = expiry      # expired entries are ignored
+        self.retry = RETRY_LIMIT  # remaning retry count
 
     def __lt__(self, other):
         if self.priority == other.priority:

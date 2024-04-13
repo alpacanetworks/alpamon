@@ -233,7 +233,10 @@ def sync_system_info(session, keys=[]):
 
         for item in data:
             for k, func in entry['type'].items():
-                item[k] = func(item[k])
+                if func == UUID:
+                    item[k] = str(func(item[k]))
+                else:
+                    item[k] = func(item[k])
 
         if entry['multirow']:
             response = session.get(entry['url'] + entry['url_suffix']).json()

@@ -19,7 +19,7 @@ class Session(requests.Session):
         })
 
         adapter = HTTPAdapter(
-            max_retries=Retry(total=1),
+            max_retries=Retry(total=3),
         )
         self.mount('http://', adapter)
         if settings['USE_SSL']:
