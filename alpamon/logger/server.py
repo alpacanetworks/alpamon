@@ -51,16 +51,15 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
     daemon_threads = True
 
-    def __init__(self, session, host='localhost',
+    def __init__(self, host='localhost',
             port=logging.handlers.DEFAULT_TCP_LOGGING_PORT,
             handler=LogRecordStreamHandler):
         socketserver.ThreadingTCPServer.__init__(self, (host, port), handler)
-        self.session = session
 
 
 class LogServer:
-    def __init__(self, session):
-        self.server = LogRecordSocketReceiver(session)
+    def __init__(self):
+        self.server = LogRecordSocketReceiver()
         self.thread = threading.Thread(
             target=self.server.serve_forever,
             name='LogServer',

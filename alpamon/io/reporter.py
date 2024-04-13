@@ -3,7 +3,9 @@ import threading
 import logging
 import datetime
 
+from alpamon.conf import settings
 from alpamon.io.queue import rqueue
+from alpamon.io.session import Session
 
 
 logger = logging.getLogger(__name__)
@@ -13,11 +15,11 @@ class Reporter(threading.Thread):
     name = 'Reporter'
     daemon = True
 
-    def __init__(self, session, index=None):
+    def __init__(self, index=None):
         super().__init__()
-        self.session = session
         if index != None:
             self.name = 'Reporter-%d' % index
+        self.session = Session()
         self.counters = {
             'success': 0,
             'failure': 0,
@@ -38,9 +40,6 @@ class Reporter(threading.Thread):
                 entry.method,
                 entry.url,
                 json=entry.data,
-                priority=entry.priority,
-                buffered=False,
-                timeout=10,
             )
             t2 = time.time()
             self.counters['delay'] = self.counters['delay']*0.9 + (t2-entry.time)*0.1
@@ -63,3 +62,17 @@ class Reporter(threading.Thread):
             except:
                 continue
             self.query(entry)
+
+
+reporters = []
+
+
+def start_reporters():
+    for i in range(settings['HTTP_THREADS']):
+        reporter = Reporter(i)
+        reporter.start()
+        reporters.append(reporter)
+
+
+def get_reporter_stats():
+    return list(map(lambda x: x.counters, reporters))
