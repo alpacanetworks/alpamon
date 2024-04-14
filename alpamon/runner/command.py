@@ -132,7 +132,7 @@ def run_fileupload_bg(session, name, data):
         try:
             with open(name, 'rb') as f:
                 # upload the file
-                session.post(data['content'], files={'content': f})
+                session.post(data['content'], files={'content': f}, timeout=(5, 600))
 
         except (PermissionError, IOError, FileNotFoundError) as e:
             os._exit(os.EX_UNAVAILABLE)

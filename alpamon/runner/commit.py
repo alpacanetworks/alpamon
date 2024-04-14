@@ -239,9 +239,9 @@ def sync_system_info(session, keys=[]):
                     item[k] = func(item[k])
 
         if entry['multirow']:
-            response = session.get(entry['url'] + entry['url_suffix']).json()
+            response = session.get(entry['url'] + entry['url_suffix'], timeout=10).json()
         else:
-            response = [session.get(entry['url'] + entry['url_suffix']).json()]
+            response = [session.get(entry['url'] + entry['url_suffix'], timeout=10).json()]
 
         create_list, update_list, delete_dict = compare_data(key, entry, data, response)
 

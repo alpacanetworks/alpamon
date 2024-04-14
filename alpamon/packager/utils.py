@@ -19,7 +19,7 @@ def get_system_package(session, name):
         'package__name': name,
         'platform': platform_like,
         'arch': arch,
-    })
+    }, timeout=5)
 
     if r.status_code != 200:
         raise Exception('Server responded %d.' % r.status_code)
@@ -32,7 +32,7 @@ def get_system_package(session, name):
     package = packages['results'][0]
 
     logger.debug('Downloading %s...', package['name'])
-    r = session.get(package['download_url'])
+    r = session.get(package['download_url'], timeout=(5, 600))
     if r.status_code != 200:
         raise Exception('Server responded %d.' % r.status_code)
 
@@ -43,7 +43,7 @@ def get_python_package(session, name):
     r = session.get('/api/packages/python/entries/', params={
         'package__name': name,
         'target': 'py3',
-    })
+    }, timeout=5)
     if r.status_code != 200:
         raise Exception('Server responded %d.' % r.status_code)
 
@@ -55,7 +55,7 @@ def get_python_package(session, name):
     package = packages['results'][0]
 
     logger.debug('Downloading %s...', package['name'])
-    r = session.get(package['download_url'])
+    r = session.get(package['download_url'], timeout=(5, 600))
     if r.status_code != 200:
         raise Exception('Server responded %d.' % r.status_code)
 

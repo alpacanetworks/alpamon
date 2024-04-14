@@ -35,6 +35,7 @@ class Reporter(threading.Thread):
                 entry.method,
                 entry.url,
                 json=entry.data,
+                timeout=5,
             )
             t2 = time.time()
             self.counters['delay'] = self.counters['delay']*0.9 + (t2-entry.due)*0.1
