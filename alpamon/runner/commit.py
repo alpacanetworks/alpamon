@@ -5,6 +5,7 @@ from threading import Thread
 from alpamon import VERSION
 from alpamon.queryman import query
 from alpamon.utils import platform_like
+from alpamon.io.queue import rqueue
 from alpamon.packager.python import PythonPackageManager
 
 
@@ -177,20 +178,20 @@ def commit_system_info(session, keys=[]):
             else:
                 logger.error('Failed to query information. sql: %s', entry['sql'])
 
-    session.put(
+    rqueue.put(
         '/api/servers/servers/-/commit/',
         json=data,
         priority=80,
-        buffered=True,
     )
-    session.post(
+    rqueue.post(
         '/api/events/events/', json={
             'reporter': 'alpamon',
             'record': 'committed',
             'description': 'Committed system information. version: %(version)s' % {
                 'version': VERSION,
             },
-        }, priority=80, buffered=True,
+        },
+        priority=80,
     )
 
 
@@ -214,11 +215,10 @@ def sync_system_info(session, keys=[]):
                 'osquery_version': osquery_version,
                 'load': load,
             }
-            session.patch(
+            rqueue.patch(
                 entry['url'] + '-/',
                 json=data,
                 priority=80,
-                buffered=True,
             )
             continue
 
@@ -233,37 +233,37 @@ def sync_system_info(session, keys=[]):
 
         for item in data:
             for k, func in entry['type'].items():
-                item[k] = func(item[k])
+                if func == UUID:
+                    item[k] = str(func(item[k]))
+                else:
+                    item[k] = func(item[k])
 
         if entry['multirow']:
-            response = session.get(entry['url'] + entry['url_suffix']).json()
+            response = session.get(entry['url'] + entry['url_suffix'], timeout=10).json()
         else:
-            response = [session.get(entry['url'] + entry['url_suffix']).json()]
+            response = [session.get(entry['url'] + entry['url_suffix'], timeout=10).json()]
 
         create_list, update_list, delete_dict = compare_data(key, entry, data, response)
 
         if create_list:
-            session.post(
+            rqueue.post(
                 entry['url'],
                 json=create_list,
                 priority=80,
-                buffered=True,
             )
 
         for item in update_list:
-            session.patch(
+            rqueue.patch(
                 entry['url'] + item[1]['id'] + '/',
                 json=item[0],
                 priority=80,
-                buffered=True,
             )
 
         for item in delete_dict.values():
-            session.delete(
+            rqueue.delete(
                 entry['url'] + item['id'] + '/',
                 json=item['data'],
                 priority=80,
-                buffered=True,
             )
 
 
