@@ -83,7 +83,7 @@ def main():
         
         print('alpamon %s starting.' % VERSION)
 
-        session = Session()
+        session = Session(settings, **creds)
         data = check_session(session)
 
         start_reporters()

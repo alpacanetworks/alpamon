@@ -19,7 +19,7 @@ class Reporter(threading.Thread):
         super().__init__()
         if index != None:
             self.name = 'Reporter-%d' % index
-        self.session = Session()
+        self.session = Session(settings, settings['ID'], settings['KEY'])
         self.counters = {
             'success': 0,
             'failure': 0,
