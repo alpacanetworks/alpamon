@@ -522,7 +522,7 @@ class CommandRunner(threading.Thread):
         else:
             raise Exception('Invalid command: %s' % command)
 
-    def handle_shell_cmd(self, command, user, group=None):
+    def handle_shell_cmd(self, command, user, group=None, env=None):
         spl = shlex.split(command)
         args = []
         exitcode = 0
@@ -532,26 +532,26 @@ class CommandRunner(threading.Thread):
 
         for arg in spl:
             if arg == '&&':
-                exitcode, result = runcmd(args, username=user, groupname=group)
+                exitcode, result = runcmd(args, username=user, groupname=group, env=env)
                 results += result
                 # stop executing if command fails
                 if exitcode != 0:
                     return exitcode, results
                 args = []
             elif arg == '||':
-                exitcode, result = runcmd(args, username=user, groupname=group)
+                exitcode, result = runcmd(args, username=user, groupname=group, env=env)
                 results += result
                 # execute next only if command fails
                 if exitcode == 0:
                     return exitcode, results
                 args = []
             elif arg == ';':
-                exitcode, result = runcmd(args, username=user, groupname=group)
+                exitcode, result = runcmd(args, username=user, groupname=group, env=env)
                 results += result
                 args = []
             elif arg.endswith(';'):
                 args.append(arg[:-1])
-                exitcode, result = runcmd(args, username=user, groupname=group)
+                exitcode, result = runcmd(args, username=user, groupname=group, env=env)
                 results += result
                 args = []
             else:
@@ -559,7 +559,7 @@ class CommandRunner(threading.Thread):
 
         if len(args) > 0:
             logger.debug('Running "%s"', ' '.join(args))
-            exitcode, result = runcmd(args, username=user, groupname=group)
+            exitcode, result = runcmd(args, username=user, groupname=group, env=env)
             results += result
         return exitcode, results
 
@@ -579,7 +579,8 @@ class CommandRunner(threading.Thread):
             exitcode, result = self.handle_shell_cmd(
                 self.command['line'],
                 self.command['user'],
-                self.command['group']
+                self.command['group'],
+                self.command.get('env', None),
             )
         elif self.command['shell'] == 'osquery':
             exitcode, result = query(self.command['line'], output='line')
