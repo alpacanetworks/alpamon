@@ -23,6 +23,8 @@ from alpamon.runner.commit import commit_information, sync_system_info
 
 logger = logging.getLogger(__name__)
 
+lock = threading.Lock()
+
 
 def deferred_runner(cmd, client):
     if cmd == 'restart':
@@ -165,7 +167,8 @@ class CommandRunner(threading.Thread):
         commit_information(self.client.api_session, keys=keys)
 
     def sync(self, keys=[]):
-        sync_system_info(self.client.api_session, keys=keys)
+        with lock:
+            sync_system_info(self.client.api_session, keys=keys)
 
     @classmethod
     def commit_async(cls, client, commissioned):
@@ -193,7 +196,7 @@ class CommandRunner(threading.Thread):
                 result = PythonPackageManager.uninstall_package(args[2])
             else:
                 raise Exception('Invalid command: %s' % command)
-            self.sync(keys=['pypackages'])
+            threading.Thread(target=self.sync(keys=['pypackages'])).start()
             return result
 
         # manage system packages
@@ -211,7 +214,7 @@ class CommandRunner(threading.Thread):
                 result = SystemPackageManager.uninstall_package(args[2])
             else:
                 raise Exception('Invalid command: %s' % command)
-            self.sync(keys=['packages'])
+            threading.Thread(target=self.sync(keys=['packages'])).start()
             return result
 
         # upgrade a python package (e.g., alpamon)
@@ -221,7 +224,7 @@ class CommandRunner(threading.Thread):
 
             logger.info('Installing %s...', name)
             result = PythonPackageManager.install_package_from_wheel(name, content)
-            self.sync(keys=['server', 'pypackages'])
+            threading.Thread(target=self.sync(keys=['server', 'pypackages'])).start()
             return result
 
         # commit
@@ -231,7 +234,7 @@ class CommandRunner(threading.Thread):
 
         # sync system information
         elif args[0] == 'sync':
-            self.sync(data.get('keys', []) if data else [])
+            threading.Thread(target=self.sync(data.get('keys', []) if data else [])).start()
             return (0, 'Sync system infromation.')
 
         # adduser
@@ -295,7 +298,7 @@ class CommandRunner(threading.Thread):
             else:
                 raise NotImplementedError()
 
-            self.sync(keys=['groups', 'users'])
+            threading.Thread(target=self.sync(keys=['groups', 'users'])).start
             return (0, 'Successfully added new user.')
 
         # addgroup
@@ -328,7 +331,7 @@ class CommandRunner(threading.Thread):
             else:
                 raise NotImplementedError()
 
-            self.sync(keys=['groups', 'users'])
+            threading.Thread(target=self.sync(keys=['groups', 'users'])).start()
             return (0, 'Successfully added new group.')
 
         # deluser
@@ -361,7 +364,7 @@ class CommandRunner(threading.Thread):
             else:
                 raise NotImplementedError()
 
-            self.sync(keys=['groups', 'users'])
+            threading.Thread(target=self.sync(keys=['groups', 'users'])).start()
             return (0, 'Successfully deleted the user.')
 
         # delgroup
@@ -406,7 +409,7 @@ class CommandRunner(threading.Thread):
             else:
                 raise NotImplementedError()
 
-            self.sync(keys=['groups', 'users'])
+            threading.Thread(targe=self.sync(keys=['groups', 'users'])).start()
             return (0, 'Successfully deleted the group.')
 
         # ping
