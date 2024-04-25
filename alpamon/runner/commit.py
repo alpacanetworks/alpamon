@@ -214,7 +214,7 @@ def sync_system_info(session, keys=[]):
                 'load': load,
             }
             session.patch(
-                entry['url'] + '-/',
+                entry['url'] + '-/fetch/',
                 json=data,
                 priority=80,
                 buffered=True,
