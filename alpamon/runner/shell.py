@@ -10,35 +10,48 @@ logger = logging.getLogger(__name__)
 def demote(username, groupname):
     def result():
         if username is not None and groupname is not None:
-            try:
-                user_uid = pwd.getpwnam(username)[2]
-                user_gid = grp.getgrnam(groupname)[2]
-                os.setgid(user_gid)
-                os.setuid(user_uid)
+            if os.getuid() == 0:
+                try:
+                    user_uid = pwd.getpwnam(username)[2]
+                    user_gid = grp.getgrnam(groupname)[2]
+                    os.setgid(user_gid)
+                    os.setuid(user_uid)
 
-                logger.debug('Demote permission to match %s, %s.', username, groupname)
-            except Exception as e:
-                logger.exception(e)
-                raise Exception('There is no corresponding account in this server')
+                    logger.debug('Demote permission to match %s, %s.', username, groupname)
+                except Exception as e:
+                    logger.exception(e)
+                    raise Exception('There is no corresponding account in this server')
+            else:
+                logger.warn('Alpamon is not running as root. Falling back to the current user.')
 
     return result
 
 
-def runcmd(args, include_stderr=True, username=None, groupname=None):
+def runcmd(args, include_stderr=True, username=None, groupname=None, env=None, timeout=3600):
     try:
+        # evaluate environment variables as they are not evaluated by `subprocess.check_output`
+        if env is not None:
+            for i in range(len(args)):
+                if args[i].startswith('$'):
+                    var = env.get(args[i][1:], None)
+                    if var is not None:
+                        args[i] = var
 
-        if (username == 'root'):            
-            logger.debug('execute with root priv')
+        if (username == 'root'):
+            logger.debug('Executing the command with root privilege.')
             result = subprocess.check_output(
                 args,
-                stderr=subprocess.STDOUT if include_stderr else subprocess.DEVNULL
+                stderr=subprocess.STDOUT if include_stderr else subprocess.DEVNULL,
+                env=env,
+                timeout=timeout,
             ).decode('utf-8')
-        
         else:
             result = subprocess.check_output(
                 args,
                 preexec_fn=demote(username, groupname),
-                stderr=subprocess.STDOUT if include_stderr else subprocess.DEVNULL
+                stderr=subprocess.STDOUT if include_stderr else subprocess.DEVNULL,
+                env=env,
+                timeout=timeout,
             ).decode('utf-8')
 
         return (0, result)

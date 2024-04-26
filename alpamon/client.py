@@ -3,9 +3,10 @@ import logging
 
 from websocket import WebSocketApp
 
-from alpamon.utils import now
 from alpamon.queryman import check_osquery
 from alpamon.runner.command import CommandRunner
+from alpamon.runner.commit import commit_async
+from alpamon.io.queue import rqueue
 
 
 logger = logging.getLogger(__name__)
@@ -44,9 +45,10 @@ class WebSocketClient(WebSocketApp):
         try:
             # commit request handler
             if content['query'] == 'commit':
+                # TODO: remove this handler in the future as it is deprecated
                 logger.debug('Commit requested.')
                 if check_osquery():
-                    CommandRunner.commit_async(self, content['commissioned'])
+                    commit_async(self.api_session, content['commissioned'])
                 else:
                     logger.error('Package "osquery" not found. Please install it first...')
                     self.quit()
@@ -54,10 +56,9 @@ class WebSocketClient(WebSocketApp):
             # command request handler
             elif content['query'] == 'command':
                 command = content['command']
-                self.api_session.post(
+                rqueue.post(
                     '/api/events/commands/%(id)s/ack/' % command,
                     priority=10,
-                    buffered=True,
                 )
 
                 # execute command from the request

@@ -12,19 +12,20 @@ import requests
 
 from alpamon.conf import settings
 from alpamon.queryman import query
+from alpamon.io.queue import rqueue
+from alpamon.io.reporter import get_reporter_stats
 from alpamon.runner.shell import runcmd
 from alpamon.runner.pty import runpty_bg, terminals
 from alpamon.packager.python import PythonPackageManager
 from alpamon.packager.system import SystemPackageManager
 from alpamon.packager.utils import get_python_package
 from alpamon.utils import platform_like, now
-from alpamon.runner.commit import commit_information, sync_system_info
+from alpamon.runner.commit import commit_system_info, sync_system_info
 
 
 logger = logging.getLogger(__name__)
 
 lock = threading.Lock()
-
 
 def deferred_runner(cmd, client):
     if cmd == 'restart':
@@ -132,7 +133,7 @@ def run_fileupload_bg(session, name, data):
         try:
             with open(name, 'rb') as f:
                 # upload the file
-                session.post(data['content'], files={'content': f})
+                session.post(data['content'], files={'content': f}, timeout=(5, 600))
 
         except (PermissionError, IOError, FileNotFoundError) as e:
             os._exit(os.EX_UNAVAILABLE)
@@ -164,19 +165,11 @@ class CommandRunner(threading.Thread):
             self.name = 'CommandRunner-%s' % command['id'].split('-')[-1]
 
     def commit(self, keys=[]):
-        commit_information(self.client.api_session, keys=keys)
+        commit_system_info(self.client.api_session, keys=keys)
 
     def sync(self, keys=[]):
         with lock:
             sync_system_info(self.client.api_session, keys=keys)
-
-    @classmethod
-    def commit_async(cls, client, commissioned):
-        CommandRunner({
-            'id': None,
-            'shell': 'internal',
-            'line': 'sync' if commissioned else 'commit',
-        }, client).start()
 
     def handle_internal_cmd(self, command, data):
         args = shlex.split(command)
@@ -224,7 +217,10 @@ class CommandRunner(threading.Thread):
 
             logger.info('Installing %s...', name)
             result = PythonPackageManager.install_package_from_wheel(name, content)
-            threading.Thread(target=self.sync(keys=['server', 'pypackages'])).start()
+            if package_name == 'alpamon':
+                threading.Thread(target=self.sync(keys=['server', 'pypackages'])).start()
+            else:
+                threading.Thread(target=self.sync(keys=['pypackages'])).start()
             return result
 
         # commit
@@ -235,7 +231,7 @@ class CommandRunner(threading.Thread):
         # sync system information
         elif args[0] == 'sync':
             threading.Thread(target=self.sync(data.get('keys', []) if data else [])).start()
-            return (0, 'Sync system infromation.')
+            return (0, 'Synchronized system infromation.')
 
         # adduser
         elif args[0] == 'adduser':
@@ -420,12 +416,12 @@ class CommandRunner(threading.Thread):
             return (0, json.dumps({
                 'now': now(),
                 'queue': {
-                    'maxsize': self.client.api_session.queue.maxsize,
-                    'full': self.client.api_session.queue.full(),
-                    'qsize': self.client.api_session.queue.qsize(),
+                    'maxsize': rqueue.queue.maxsize,
+                    'full': rqueue.queue.full(),
+                    'qsize': rqueue.queue.qsize(),
                 },
                 'threads': list(map(lambda t: t.name, threading.enumerate())),
-                'stats': self.client.api_session.get_reporter_stats(),
+                'stats': get_reporter_stats(),
             }))
 
         # file download
@@ -528,7 +524,7 @@ class CommandRunner(threading.Thread):
         else:
             raise Exception('Invalid command: %s' % command)
 
-    def handle_shell_cmd(self, command, user, group=None):
+    def handle_shell_cmd(self, command, user, group=None, env=None):
         spl = shlex.split(command)
         args = []
         exitcode = 0
@@ -538,26 +534,26 @@ class CommandRunner(threading.Thread):
 
         for arg in spl:
             if arg == '&&':
-                exitcode, result = runcmd(args, username=user, groupname=group)
+                exitcode, result = runcmd(args, username=user, groupname=group, env=env)
                 results += result
                 # stop executing if command fails
                 if exitcode != 0:
                     return exitcode, results
                 args = []
             elif arg == '||':
-                exitcode, result = runcmd(args, username=user, groupname=group)
+                exitcode, result = runcmd(args, username=user, groupname=group, env=env)
                 results += result
                 # execute next only if command fails
                 if exitcode == 0:
                     return exitcode, results
                 args = []
             elif arg == ';':
-                exitcode, result = runcmd(args, username=user, groupname=group)
+                exitcode, result = runcmd(args, username=user, groupname=group, env=env)
                 results += result
                 args = []
             elif arg.endswith(';'):
                 args.append(arg[:-1])
-                exitcode, result = runcmd(args, username=user, groupname=group)
+                exitcode, result = runcmd(args, username=user, groupname=group, env=env)
                 results += result
                 args = []
             else:
@@ -565,7 +561,7 @@ class CommandRunner(threading.Thread):
 
         if len(args) > 0:
             logger.debug('Running "%s"', ' '.join(args))
-            exitcode, result = runcmd(args, username=user, groupname=group)
+            exitcode, result = runcmd(args, username=user, groupname=group, env=env)
             results += result
         return exitcode, results
 
@@ -585,7 +581,8 @@ class CommandRunner(threading.Thread):
             exitcode, result = self.handle_shell_cmd(
                 self.command['line'],
                 self.command['user'],
-                self.command['group']
+                self.command['group'],
+                self.command.get('env', None),
             )
         elif self.command['shell'] == 'osquery':
             exitcode, result = query(self.command['line'], output='line')
@@ -595,14 +592,13 @@ class CommandRunner(threading.Thread):
 
         t_end = time.time()
         if result != None and self.command.get('id', None) != None:
-            self.client.api_session.post(
+            rqueue.post(
                 '/api/events/commands/%(id)s/fin/' % self.command, json={
                     'success': exitcode == 0,
                     'result': result,
                     'elapsed_time': (t_end-t_start),
                 },
                 priority=10,
-                buffered=True,
             )
 
             # logger.debug('Sent response for command %s.', self.command['id'])

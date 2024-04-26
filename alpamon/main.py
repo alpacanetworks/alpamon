@@ -11,7 +11,10 @@ from pid import PidFile
 from alpamon import VERSION
 from alpamon.conf import settings, validate_config
 from alpamon.client import WebSocketClient
-from alpamon.session import Session
+from alpamon.runner.commit import commit_async
+from alpamon.io.session import Session
+from alpamon.io.queue import rqueue
+from alpamon.io.reporter import start_reporters
 from alpamon.queryman import check_osquery
 from alpamon.packager.utils import install_osquery
 from alpamon.logger.server import LogServer
@@ -60,15 +63,9 @@ def check_session(session):
     timeout = MIN_CONNECT_INTERVAL
     while True:
         try:
-            r = session.post('/api/events/events/', json={
-                'reporter': 'alpamon',
-                'record': 'started',
-                'description': 'alpamon %(version)s started running.' % {
-                    'version': VERSION,
-                },
-            }, buffered=False, timeout=5)
+            r = session.get('/api/servers/servers/-/', timeout=5)
             if r.status_code in [200, 201]:
-                return True
+                return r.json()
             else:
                 print('%s %s. %s' % (r.status_code, responses[r.status_code], r.text))
         except Exception as e:
@@ -87,18 +84,28 @@ def main():
         print('alpamon %s starting.' % VERSION)
 
         session = Session(settings, **creds)
-        check_session(session)
+        data = check_session(session)
 
-        session.start_reporters()
-        logserver = LogServer(session)
-        
+        start_reporters()
+        rqueue.post('/api/events/events/', json={
+            'reporter': 'alpamon',
+            'record': 'started',
+            'description': 'alpamon %(version)s started running.' % {
+                'version': VERSION,
+            },
+        })
+
+        logserver = LogServer()
+
         if not check_osquery():
             try:
                 install_osquery(session)
             except Exception as e:
                 logger.exception(e)
                 return
-        
+
+        commit_async(session, data['commissioned'])
+
         retry_interval = MIN_CONNECT_INTERVAL
         while True:
             logger.debug('Connecting %s...', settings['WS_URL'])
