@@ -4,6 +4,7 @@ import os
 import pwd
 import grp
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +33,11 @@ def runcmd(args, include_stderr=True, username=None, groupname=None, env=None, t
         # evaluate environment variables as they are not evaluated by `subprocess.check_output`
         if env is not None:
             for i in range(len(args)):
-                if args[i].startswith('$'):
+                if args[i].startswith('${') and args[i].endswith('}'):
+                    var = env.get(args[i][2:-1], None)
+                    if var is not None:
+                        args[i] = var
+                elif args[i].startswith('$'):
                     var = env.get(args[i][1:], None)
                     if var is not None:
                         args[i] = var
