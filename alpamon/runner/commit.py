@@ -1,6 +1,6 @@
 import logging
 from uuid import UUID
-from threading import Thread
+from threading import Thread, Lock
 
 from alpamon import VERSION
 from alpamon.queryman import query
@@ -11,6 +11,9 @@ from alpamon.packager.python import PythonPackageManager
 
 logger = logging.getLogger(__name__)
 
+lock = Lock()
+
+
 COMMIT_DEFS = {
     'server': {
         'sql': {
@@ -20,7 +23,7 @@ COMMIT_DEFS = {
         'multirow': False,
         'pk': 'version',
         'url': '/api/servers/servers/',
-        'url_suffix': '-/fetch/',
+        'url_suffix': '-/sync/',
         'type': {
             'load': float
         }
@@ -30,7 +33,7 @@ COMMIT_DEFS = {
         'multirow': False,
         'pk': 'uuid',
         'url': '/api/proc/info/',
-        'url_suffix': '-/fetch/',
+        'url_suffix': '-/sync/',
         'type': {
             'cpu_logical_cores': int,
             'cpu_physical_cores': int,
@@ -43,7 +46,7 @@ COMMIT_DEFS = {
         'multirow': False,
         'pk': 'name',
         'url': '/api/proc/os/',
-        'url_suffix': '-/fetch/',
+        'url_suffix': '-/sync/',
         'type': {
             'major': int,
             'minor': int,
@@ -55,7 +58,7 @@ COMMIT_DEFS = {
         'multirow': False,
         'pk': 'timezone',
         'url': '/api/proc/time/',
-        'url_suffix': '-/fetch/',
+        'url_suffix': '-/sync/',
         'type': {
             'uptime': int,
         }
@@ -65,7 +68,7 @@ COMMIT_DEFS = {
         'multirow': True,
         'pk': 'gid',
         'url': '/api/proc/groups/',
-        'url_suffix': 'fetch/',
+        'url_suffix': 'sync/',
         'type': {
             'gid': int,
         }
@@ -75,7 +78,7 @@ COMMIT_DEFS = {
         'multirow': True,
         'pk': 'uid',
         'url': '/api/proc/users/',
-        'url_suffix': 'fetch/',
+        'url_suffix': 'sync/',
         'type': {
             'gid': int,
             'uid': int,
@@ -86,7 +89,7 @@ COMMIT_DEFS = {
         'multirow': True,
         'pk': 'name',
         'url': '/api/proc/interfaces/',
-        'url_suffix': 'fetch/',
+        'url_suffix': 'sync/',
         'type': {
             'type': int,
             'flags': int,
@@ -99,7 +102,7 @@ COMMIT_DEFS = {
         'multirow': True,
         'pk': 'address',
         'url': '/api/proc/addresses/',
-        'url_suffix': 'fetch/',
+        'url_suffix': 'sync/',
         'type': {
         }
     },
@@ -110,7 +113,7 @@ COMMIT_DEFS = {
             'only': 'darwin',
             'pk': 'name',
             'url': '/api/proc/packages/',
-            'url_suffix': 'fetch/',
+            'url_suffix': 'sync/',
             'type': {
             }
         },
@@ -120,7 +123,7 @@ COMMIT_DEFS = {
             'only': 'debian',
             'pk': 'name',
             'url': '/api/proc/packages/',
-            'url_suffix': 'fetch/',
+            'url_suffix': 'sync/',
             'type': {
             }
         },
@@ -130,7 +133,7 @@ COMMIT_DEFS = {
             'only': 'rhel',
             'pk': 'name',
             'url': '/api/proc/packages/',
-            'url_suffix': 'fetch/',
+            'url_suffix': 'sync/',
             'type': {
             }
         }
@@ -139,7 +142,7 @@ COMMIT_DEFS = {
         'multirow': True,
         'pk': 'name',
         'url': '/api/proc/pypackages/',
-        'url_suffix': 'fetch/',
+        'url_suffix': 'sync/',
         'type': {
         }
     }
@@ -196,6 +199,8 @@ def commit_system_info(session, keys=[]):
 
 
 def sync_system_info(session, keys=[]):
+    lock.acquire()
+
     if not keys:
         keys = list(COMMIT_DEFS.keys())
 
@@ -216,7 +221,7 @@ def sync_system_info(session, keys=[]):
                 'load': load,
             }
             rqueue.patch(
-                entry['url'] + '-/fetch/',
+                entry['url'] + '-/sync/',
                 json=data,
                 priority=80,
             )
@@ -265,6 +270,8 @@ def sync_system_info(session, keys=[]):
                 json=item['data'],
                 priority=80,
             )
+
+    lock.release()
 
 
 def compare_data(key, entry, data, response):
