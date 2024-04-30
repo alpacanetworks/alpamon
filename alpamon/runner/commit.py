@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 lock = Lock()
 
-
 COMMIT_DEFS = {
     'server': {
         'sql': {
@@ -199,79 +198,76 @@ def commit_system_info(session, keys=[]):
 
 
 def sync_system_info(session, keys=[]):
-    lock.acquire()
+    with lock:
+        if not keys:
+            keys = list(COMMIT_DEFS.keys())
 
-    if not keys:
-        keys = list(COMMIT_DEFS.keys())
-
-    for key in keys:
-        if key == 'packages':
-            entry = COMMIT_DEFS[key][platform_like]
-        else:
-            entry = COMMIT_DEFS[key]
-
-        if key == 'server':
-            (exitcode, osquery_result) = query(entry['sql']['osquery_version'])
-            osquery_version = osquery_result[0]['osquery_version'] if exitcode == 0 else None
-            (exitcode, load_result) = query(entry['sql']['load'])
-            load = load_result[0]['load'] if exitcode == 0 else None
-            data = {
-                'version': VERSION,
-                'osquery_version': osquery_version,
-                'load': load,
-            }
-            rqueue.patch(
-                entry['url'] + '-/sync/',
-                json=data,
-                priority=80,
-            )
-            continue
-
-        elif key == 'pypackages':
-            data = PythonPackageManager.list_packages()
-        else:
-            (exitcode, result) = query(entry['sql'])
-            if exitcode == 0:
-                data = result
+        for key in keys:
+            if key == 'packages':
+                entry = COMMIT_DEFS[key][platform_like]
             else:
-                logger.error('Failed to query information. sql: %s', entry['sql'])
+                entry = COMMIT_DEFS[key]
 
-        for item in data:
-            for k, func in entry['type'].items():
-                if func == UUID:
-                    item[k] = str(func(item[k]))
+            if key == 'server':
+                (exitcode, osquery_result) = query(entry['sql']['osquery_version'])
+                osquery_version = osquery_result[0]['osquery_version'] if exitcode == 0 else None
+                (exitcode, load_result) = query(entry['sql']['load'])
+                load = load_result[0]['load'] if exitcode == 0 else None
+                data = {
+                    'version': VERSION,
+                    'osquery_version': osquery_version,
+                    'load': load,
+                }
+                rqueue.patch(
+                    entry['url'] + '-/sync/',
+                    json=data,
+                    priority=80,
+                )
+                continue
+
+            elif key == 'pypackages':
+                data = PythonPackageManager.list_packages()
+            else:
+                (exitcode, result) = query(entry['sql'])
+                if exitcode == 0:
+                    data = result
                 else:
-                    item[k] = func(item[k])
+                    logger.error('Failed to query information. sql: %s', entry['sql'])
 
-        if entry['multirow']:
-            response = session.get(entry['url'] + entry['url_suffix'], timeout=10).json()
-        else:
-            response = [session.get(entry['url'] + entry['url_suffix'], timeout=10).json()]
+            for item in data:
+                for k, func in entry['type'].items():
+                    if func == UUID:
+                        item[k] = str(func(item[k]))
+                    else:
+                        item[k] = func(item[k])
 
-        create_list, update_list, delete_dict = compare_data(key, entry, data, response)
+            if entry['multirow']:
+                response = session.get(entry['url'] + entry['url_suffix'], timeout=10).json()
+            else:
+                response = [session.get(entry['url'] + entry['url_suffix'], timeout=10).json()]
 
-        if create_list:
-            rqueue.post(
-                entry['url'],
-                json=create_list,
-                priority=80,
-            )
+            create_list, update_list, delete_dict = compare_data(key, entry, data, response)
 
-        for item in update_list:
-            rqueue.patch(
-                entry['url'] + item[1]['id'] + '/',
-                json=item[0],
-                priority=80,
-            )
+            if create_list:
+                rqueue.post(
+                    entry['url'],
+                    json=create_list,
+                    priority=80,
+                )
 
-        for item in delete_dict.values():
-            rqueue.delete(
-                entry['url'] + item['id'] + '/',
-                json=item['data'],
-                priority=80,
-            )
+            for item in update_list:
+                rqueue.patch(
+                    entry['url'] + item[1]['id'] + '/',
+                    json=item[0],
+                    priority=80,
+                )
 
-    lock.release()
+            for item in delete_dict.values():
+                rqueue.delete(
+                    entry['url'] + item['id'] + '/',
+                    json=item['data'],
+                    priority=80,
+                )
 
 
 def compare_data(key, entry, data, response):
