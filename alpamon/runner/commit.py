@@ -307,9 +307,7 @@ def compare_data(key, entry, data, response):
             pass
 
     if key in ['info', 'os', 'time']:
-        if create_list:
-            create_list = create_list[0]
-
+        create_list = []
         delete_dict = {}
     else:
         delete_dict = response_dict
