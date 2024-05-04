@@ -14,7 +14,7 @@ def get_package_manager_cmd(request, source, name):
             if source == 'file':
                 return ['dpkg', '--install', name]
             elif source == 'internet':
-                return ['apt-get', 'install', '-y', name]
+                return ['apt-get', 'install', '-y', ' --no-install-recommends', name]
         elif request == 'uninstall':
             if source == 'file':
                 return ['dpkg', '--remove', name]
