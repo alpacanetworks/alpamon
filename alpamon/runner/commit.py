@@ -1,6 +1,6 @@
 import logging
 from uuid import UUID
-from threading import Thread
+from threading import Thread, Lock
 
 from alpamon import VERSION
 from alpamon.queryman import query
@@ -11,6 +11,8 @@ from alpamon.packager.python import PythonPackageManager
 
 logger = logging.getLogger(__name__)
 
+lock = Lock()
+
 COMMIT_DEFS = {
     'server': {
         'sql': {
@@ -20,7 +22,7 @@ COMMIT_DEFS = {
         'multirow': False,
         'pk': 'version',
         'url': '/api/servers/servers/',
-        'url_suffix': '-/fetch/',
+        'url_suffix': '-/sync/',
         'type': {
             'load': float
         }
@@ -30,7 +32,7 @@ COMMIT_DEFS = {
         'multirow': False,
         'pk': 'uuid',
         'url': '/api/proc/info/',
-        'url_suffix': '-/fetch/',
+        'url_suffix': '-/sync/',
         'type': {
             'cpu_logical_cores': int,
             'cpu_physical_cores': int,
@@ -43,7 +45,7 @@ COMMIT_DEFS = {
         'multirow': False,
         'pk': 'name',
         'url': '/api/proc/os/',
-        'url_suffix': '-/fetch/',
+        'url_suffix': '-/sync/',
         'type': {
             'major': int,
             'minor': int,
@@ -55,7 +57,7 @@ COMMIT_DEFS = {
         'multirow': False,
         'pk': 'timezone',
         'url': '/api/proc/time/',
-        'url_suffix': '-/fetch/',
+        'url_suffix': '-/sync/',
         'type': {
             'uptime': int,
         }
@@ -65,7 +67,7 @@ COMMIT_DEFS = {
         'multirow': True,
         'pk': 'gid',
         'url': '/api/proc/groups/',
-        'url_suffix': 'fetch/',
+        'url_suffix': 'sync/',
         'type': {
             'gid': int,
         }
@@ -75,7 +77,7 @@ COMMIT_DEFS = {
         'multirow': True,
         'pk': 'uid',
         'url': '/api/proc/users/',
-        'url_suffix': 'fetch/',
+        'url_suffix': 'sync/',
         'type': {
             'gid': int,
             'uid': int,
@@ -86,7 +88,7 @@ COMMIT_DEFS = {
         'multirow': True,
         'pk': 'name',
         'url': '/api/proc/interfaces/',
-        'url_suffix': 'fetch/',
+        'url_suffix': 'sync/',
         'type': {
             'type': int,
             'flags': int,
@@ -99,7 +101,7 @@ COMMIT_DEFS = {
         'multirow': True,
         'pk': 'address',
         'url': '/api/proc/addresses/',
-        'url_suffix': 'fetch/',
+        'url_suffix': 'sync/',
         'type': {
         }
     },
@@ -110,7 +112,7 @@ COMMIT_DEFS = {
             'only': 'darwin',
             'pk': 'name',
             'url': '/api/proc/packages/',
-            'url_suffix': 'fetch/',
+            'url_suffix': 'sync/',
             'type': {
             }
         },
@@ -120,7 +122,7 @@ COMMIT_DEFS = {
             'only': 'debian',
             'pk': 'name',
             'url': '/api/proc/packages/',
-            'url_suffix': 'fetch/',
+            'url_suffix': 'sync/',
             'type': {
             }
         },
@@ -130,7 +132,7 @@ COMMIT_DEFS = {
             'only': 'rhel',
             'pk': 'name',
             'url': '/api/proc/packages/',
-            'url_suffix': 'fetch/',
+            'url_suffix': 'sync/',
             'type': {
             }
         }
@@ -139,7 +141,7 @@ COMMIT_DEFS = {
         'multirow': True,
         'pk': 'name',
         'url': '/api/proc/pypackages/',
-        'url_suffix': 'fetch/',
+        'url_suffix': 'sync/',
         'type': {
         }
     }
@@ -196,75 +198,76 @@ def commit_system_info(session, keys=[]):
 
 
 def sync_system_info(session, keys=[]):
-    if not keys:
-        keys = list(COMMIT_DEFS.keys())
+    with lock:
+        if not keys:
+            keys = list(COMMIT_DEFS.keys())
 
-    for key in keys:
-        if key == 'packages':
-            entry = COMMIT_DEFS[key][platform_like]
-        else:
-            entry = COMMIT_DEFS[key]
-
-        if key == 'server':
-            (exitcode, osquery_result) = query(entry['sql']['osquery_version'])
-            osquery_version = osquery_result[0]['osquery_version'] if exitcode == 0 else None
-            (exitcode, load_result) = query(entry['sql']['load'])
-            load = load_result[0]['load'] if exitcode == 0 else None
-            data = {
-                'version': VERSION,
-                'osquery_version': osquery_version,
-                'load': load,
-            }
-            rqueue.patch(
-                entry['url'] + '-/',
-                json=data,
-                priority=80,
-            )
-            continue
-
-        elif key == 'pypackages':
-            data = PythonPackageManager.list_packages()
-        else:
-            (exitcode, result) = query(entry['sql'])
-            if exitcode == 0:
-                data = result
+        for key in keys:
+            if key == 'packages':
+                entry = COMMIT_DEFS[key][platform_like]
             else:
-                logger.error('Failed to query information. sql: %s', entry['sql'])
+                entry = COMMIT_DEFS[key]
 
-        for item in data:
-            for k, func in entry['type'].items():
-                if func == UUID:
-                    item[k] = str(func(item[k]))
+            if key == 'server':
+                (exitcode, osquery_result) = query(entry['sql']['osquery_version'])
+                osquery_version = osquery_result[0]['osquery_version'] if exitcode == 0 else None
+                (exitcode, load_result) = query(entry['sql']['load'])
+                load = load_result[0]['load'] if exitcode == 0 else None
+                data = {
+                    'version': VERSION,
+                    'osquery_version': osquery_version,
+                    'load': load,
+                }
+                rqueue.patch(
+                    entry['url'] + '-/sync/',
+                    json=data,
+                    priority=80,
+                )
+                continue
+
+            elif key == 'pypackages':
+                data = PythonPackageManager.list_packages()
+            else:
+                (exitcode, result) = query(entry['sql'])
+                if exitcode == 0:
+                    data = result
                 else:
-                    item[k] = func(item[k])
+                    logger.error('Failed to query information. sql: %s', entry['sql'])
 
-        if entry['multirow']:
-            response = session.get(entry['url'] + entry['url_suffix'], timeout=10).json()
-        else:
-            response = [session.get(entry['url'] + entry['url_suffix'], timeout=10).json()]
+            for item in data:
+                for k, func in entry['type'].items():
+                    if func == UUID:
+                        item[k] = str(func(item[k]))
+                    else:
+                        item[k] = func(item[k])
 
-        create_list, update_list, delete_dict = compare_data(key, entry, data, response)
+            if entry['multirow']:
+                response = session.get(entry['url'] + entry['url_suffix'], timeout=10).json()
+            else:
+                response = [session.get(entry['url'] + entry['url_suffix'], timeout=10).json()]
 
-        if create_list:
-            rqueue.post(
-                entry['url'],
-                json=create_list,
-                priority=80,
-            )
+            create_list, update_list, delete_dict = compare_data(key, entry, data, response)
 
-        for item in update_list:
-            rqueue.patch(
-                entry['url'] + item[1]['id'] + '/',
-                json=item[0],
-                priority=80,
-            )
+            if create_list:
+                rqueue.post(
+                    entry['url'],
+                    json=create_list,
+                    priority=80,
+                )
 
-        for item in delete_dict.values():
-            rqueue.delete(
-                entry['url'] + item['id'] + '/',
-                json=item['data'],
-                priority=80,
-            )
+            for item in update_list:
+                rqueue.patch(
+                    entry['url'] + item[1]['id'] + '/',
+                    json=item[0],
+                    priority=80,
+                )
+
+            for item in delete_dict.values():
+                rqueue.delete(
+                    entry['url'] + item['id'] + '/',
+                    json=item['data'],
+                    priority=80,
+                )
 
 
 def compare_data(key, entry, data, response):
@@ -304,9 +307,7 @@ def compare_data(key, entry, data, response):
             pass
 
     if key in ['info', 'os', 'time']:
-        if create_list:
-            create_list = create_list[0]
-
+        create_list = []
         delete_dict = {}
     else:
         delete_dict = response_dict
