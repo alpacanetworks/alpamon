@@ -21,6 +21,7 @@ from alpamon.packager.system import SystemPackageManager
 from alpamon.packager.utils import get_python_package
 from alpamon.utils import platform_like, now
 from alpamon.runner.commit import commit_system_info, sync_system_info
+from alpamon.runner.nms import call_nms_async
 
 
 logger = logging.getLogger(__name__)
@@ -502,6 +503,9 @@ class CommandRunner(threading.Thread):
                 'root',
                 'root'
             )
+
+        elif args[0] == 'nms':
+            call_nms_async(self.client.api_session, data)
 
         elif args[0] == 'help':
             return (0,
