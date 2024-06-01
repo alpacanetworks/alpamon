@@ -3,6 +3,9 @@ import logging
 import os
 import pwd
 import grp
+import sys
+
+from alpamon.runner.env import get_default_env
 
 
 logger = logging.getLogger(__name__)
@@ -30,8 +33,13 @@ def demote(username, groupname):
 
 def runcmd(args, include_stderr=True, username=None, groupname=None, env=None, timeout=3600):
     try:
-        # evaluate environment variables as they are not evaluated by `subprocess.check_output`
         if env is not None:
+            # set default environment variables
+            default_env = get_default_env()
+            for key in default_env:
+                env.setdefault(key, default_env[key])
+
+            # evaluate environment variables as they are not evaluated by `subprocess.check_output`
             for i in range(len(args)):
                 if args[i].startswith('${') and args[i].endswith('}'):
                     var = env.get(args[i][2:-1], None)
