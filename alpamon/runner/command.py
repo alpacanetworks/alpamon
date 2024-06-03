@@ -23,7 +23,6 @@ from alpamon.utils import platform_like, now
 from alpamon.runner.commit import commit_system_info, sync_system_info
 from alpamon.runner.nms import call_nms_async
 
-
 logger = logging.getLogger(__name__)
 
 
