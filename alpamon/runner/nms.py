@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 import requests
+import datetime
 from threading import Thread
 from websocket import WebSocketApp
 
@@ -10,6 +11,64 @@ from alpamon.conf import settings
 
 
 logger = logging.getLogger(__name__)
+
+
+class SwitchLogReciever(threading.Thread):
+    daemon = True
+
+    def __init__(self):
+        super().__init__()
+        self.session = requests.Session()
+
+
+class SNMPMessageReceiver(SwitchLogReciever):
+    def __init__(self):
+        super().__init__()
+        self.name = 'SNMPMessageReceiver'
+
+    def run(self):
+        try:
+            response = self.session.get(
+                "http://localhost:5000/snmp/batch",
+                stream=True,
+            )
+            response.raise_for_status()
+
+            for line in response.iter_lines():
+                if line:
+                    rqueue.post(
+                        '/api/nms/snmp/',
+                        json=line.decode('utf-8'),
+                        priority=80,
+                    )
+        except requests.exceptions.RequestException as e:
+            raise Exception(e)
+
+
+class SysLogReceiver(SwitchLogReciever):
+    def __init__(self):
+        super().__init__()
+        self.name = 'SysLogReceiver'
+
+    def run(self):
+        try:
+            response = self.session.get(
+                "http://localhost:5000/syslog/batch",
+                stream=True,
+            )
+            response.raise_for_status()
+
+            for line in response.iter_lines():
+                if line:
+                    rqueue.post(
+                        '/api/nms/syslog/',
+                        json=line.decode('utf-8'),
+                        priority=80,
+                    )
+        except requests.exceptions.RequestException as e:
+            raise Exception(e)
+        except Exception as e:
+            raise Exception(e)
 
 
 class LoggingClient(WebSocketApp):
@@ -80,11 +139,11 @@ def call_settings_api(session, data):
         result = response.json()
         body = {
             'device': result['device'],
-            'baud_rate': result['baudrate'],
-            'byte_size': result['bytesize'],
-            'parity': result['parity'],
-            'stop_bits': result['stopbits'],
-            'status': result['status'],
+            'is_open': result['is_open'],
+            'baud_rate': result['settings']['baudrate'],
+            'byte_size': result['settings']['bytesize'],
+            'parity': result['settings']['parity'],
+            'stop_bits': result['settings']['stopbits'],
         }
         rqueue.patch(
             f'/api/nms/switches/{switch_id}/',
@@ -128,7 +187,7 @@ def call_scripts_api(session, data):
     script_id = data.pop('id')
     user_id = data.pop('requested_by')
     response = requests.post(
-        'http://localhost:5000/commands',
+        'http://localhost:5000/scripts',
         data=data
     )
     if response.status_code == 200:
@@ -144,21 +203,48 @@ def call_scripts_api(session, data):
         rqueue.post(
             '/api/nms/script-results/',
             json=body,
-            priority=10,
+            priority=80,
         )
     else:
         raise Exception()
 
 
+def is_thread_exist(name):
+    thread_list = [thread.name for thread in threading.enumerate()]
+    if name in thread_list:
+        return True
+    else:
+        return False
+
+
 def call_nms_async(session, data):
     if data['key'] == 'settings':
-        Thread(target=call_settings_api, daemon=True, args=(session, data['body'])).start()
+        Thread(
+            target=call_settings_api,
+            daemon=True,
+            args=(session, data['body'])
+        ).start()
+
+        if not is_thread_exist('SNMPMessageReceiver'):
+            snmp_receiver = SNMPMessageReceiver()
+            snmp_receiver.start()
+
+        if not is_thread_exist('SysLogReceiver'):
+            syslog_receiver = SysLogReceiver()
+            syslog_receiver.start()
     elif data['key'] == 'commands':
-        Thread(target=call_commands_api, daemon=True, args=(session, data['body'])).start()
+        Thread(
+            target=call_commands_api,
+            daemon=True,
+            args=(session, data['body'])
+        ).start()
     elif data['key'] == 'scripts':
-        Thread(target=call_scripts_api, daemon=True, args=(session, data['body'])).start()
+        Thread(
+            target=call_scripts_api,
+            daemon=True,
+            args=(session, data['body'])
+        ).start()
     elif data['key'] == 'snmp/stream':
-        print(data)
         t = threading.Thread(
             target=runlogging,
             name='SNMPLoggingThread',
@@ -166,7 +252,6 @@ def call_nms_async(session, data):
         )
         t.daemon = True
         t.start()
-        print('end')
     elif data['key'] == 'syslog/stream':
         t = threading.Thread(
             target=runlogging,
@@ -175,10 +260,6 @@ def call_nms_async(session, data):
         )
         t.daemon = True
         t.start()
-    elif data['key'] == 'snmp/batch':
-        pass
-    elif data ['key'] == 'syslog/batch':
-        pass
     elif data['key'] == 'notification':
         pass
     else:
