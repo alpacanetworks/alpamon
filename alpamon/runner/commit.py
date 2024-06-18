@@ -241,12 +241,19 @@ def sync_system_info(session, keys=[]):
                     else:
                         item[k] = func(item[k])
 
-            if entry['multirow']:
-                response = session.get(entry['url'] + entry['url_suffix'], timeout=10).json()
+            response = session.get(entry['url'] + entry['url_suffix'], timeout=10)
+            if response.status_code == 200:
+                if entry['multirow']:
+                    remote_data = response.json()
+                else:
+                    remote_data = [response.json()]
+            elif response.status_code == 404:
+                remote_data = []
             else:
-                response = [session.get(entry['url'] + entry['url_suffix'], timeout=10).json()]
+                logger.error('HTTP %s: Failed to get data for %s.', response.status_code, key)
+                continue
 
-            create_list, update_list, delete_dict = compare_data(key, entry, data, response)
+            create_list, update_list, delete_dict = compare_data(key, entry, data, remote_data)
 
             if create_list:
                 rqueue.post(

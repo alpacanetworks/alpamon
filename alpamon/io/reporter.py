@@ -44,7 +44,10 @@ class Reporter(threading.Thread):
             if int(r.status_code / 100) == 2:
                 success = True
             else:
-                logger.debug(r.json())
+                if r.status_code == 400:
+                    logger.error('%s Bad Request: %s', r.status_code, r.json())
+                else:
+                    logger.debug('%s Error: %s', r.status_code, r.text)
                 success = False
         except Exception as e:
             logger.error(entry.url)
