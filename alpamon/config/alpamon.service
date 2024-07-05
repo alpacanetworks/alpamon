@@ -4,7 +4,7 @@ After=network.target syslog.target
 
 [Service]
 Type=simple
-ExecStart=/var/lib/alpamon/bin/alpamon
+ExecStart=/usr/local/bin/alpamon
 WorkingDirectory=/var/lib/alpamon
 Restart=always
 StandardOutput=null
