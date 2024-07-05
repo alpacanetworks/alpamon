@@ -2,7 +2,10 @@ import os
 import sys
 import shutil
 
-from pkg_resources import resource_filename
+if sys.version_info >= (3, 9):
+    import importlib.resources
+else:
+    from pkg_resources import resource_filename
 
 
 CONFIG_TARGET = '/etc/alpamon/alpamon.conf'
@@ -27,31 +30,14 @@ def get_editor():
     return (os.environ.get('VISUAL') or os.environ.get('EDITOR') or DEFAULT_EDITOR)
 
 
-def configure():
-    try:
-        os.mkdir('/etc/alpamon')
-        os.chmod('/etc/alpamon', 0o700)
-    except FileExistsError:
-        pass
-
-    # copy configuration file if not exists
-    if not os.path.exists(CONFIG_TARGET):
-        shutil.copyfile(
-            resource_filename(__name__, 'config/alpamon.conf'),
-            CONFIG_TARGET
-        )
-    
-    # open an editor for the configuration file
-    os.system('%s %s' % (get_editor(), CONFIG_TARGET))
+def get_resource_path(resource):
+    if sys.version_info >= (3, 9):
+        return importlib.resources.files('alpamon').joinpath(resource)
+    else:
+        return resource_filename(__name__, resource)
 
 
-def install():
-    print('Installing systemd service...')
-    shutil.copyfile(
-        resource_filename(__name__, 'config/tmpfile.conf'),
-        TMPFILE_TARGET
-    )
-    os.system('/bin/systemd-tmpfiles --create')
+def write_config():
     with open(CONFIG_TARGET, 'w') as f:
         f.write(CONFIG_TEMPLATE % {
             'url': os.environ.get('ALPACON_URL', 'https://alpacon.io'),
@@ -61,9 +47,35 @@ def install():
             'ca_cert': os.environ.get('ALPACON_CA_CERT', ''),
             'debug': os.environ.get('ALPAMON_DEBUG', 'true'),
         })
+
+
+def configure():
+    try:
+        os.mkdir('/etc/alpamon')
+        os.chmod('/etc/alpamon', 0o700)
+    except FileExistsError:
+        pass
+
+    # copy configuration file if not exists
+    if not os.path.exists(CONFIG_TARGET):
+        write_config()
     
+    # open an editor for the configuration file
+    os.system('%s %s' % (get_editor(), CONFIG_TARGET))
+
+
+def install():
+    print('Installing systemd service...')
     shutil.copyfile(
-        resource_filename(__name__, 'config/alpamon.service'),
+        get_resource_path('config/tmpfile.conf'),
+        TMPFILE_TARGET
+    )
+    os.system('/bin/systemd-tmpfiles --create')
+
+    write_config()
+
+    shutil.copyfile(
+        get_resource_path('config/alpamon.service'),
         SERVICE_TARGET
     )
     os.system('/bin/systemctl daemon-reload')
@@ -99,6 +111,7 @@ def usage():
     sys.stderr.write('%s install|uninstall|configure\n' % sys.argv[0])
     sys.stderr.flush()
 
+
 def main():
     if len(sys.argv) < 2:
         usage()
@@ -110,6 +123,7 @@ def main():
         uninstall()
     elif sys.argv[1] == 'configure':
         configure()
+
 
 if __name__ == '__main__':
     main()
