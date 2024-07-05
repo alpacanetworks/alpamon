@@ -1,6 +1,13 @@
 name: Build and Test
 
-on: [ push, pull_request ]
+on:
+  push:
+    branches: [main]
+    
+  pull_request:
+    types: [opened, ready_for_review]
+
+  workflow_call:
 
 jobs:
   test:
