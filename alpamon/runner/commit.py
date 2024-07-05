@@ -243,33 +243,30 @@ def sync_system_info(session, keys=[]):
 
             response = session.get(entry['url'] + entry['url_suffix'], timeout=10)
             if response.status_code == 200:
-                if entry['multirow']:
-                    remote_data = response.json()
-                else:
-                    remote_data = [response.json()]
+                remote_data = response.json()
             elif response.status_code == 404:
                 remote_data = []
             else:
                 logger.error('HTTP %s: Failed to get data for %s.', response.status_code, key)
                 continue
 
-            create_list, update_list, delete_dict = compare_data(key, entry, data, remote_data)
+            create_data, update_data, delete_data = compare_data(key, entry, data, remote_data)
 
-            if create_list:
+            if create_data:
                 rqueue.post(
                     entry['url'],
-                    json=create_list,
+                    json=create_data,
                     priority=80,
                 )
 
-            for item in update_list:
+            for item in update_data:
                 rqueue.patch(
                     entry['url'] + item[1]['id'] + '/',
                     json=item[0],
                     priority=80,
                 )
 
-            for item in delete_dict.values():
+            for item in delete_data.values():
                 rqueue.delete(
                     entry['url'] + item['id'] + '/',
                     json=item['data'],
@@ -279,47 +276,53 @@ def sync_system_info(session, keys=[]):
 
 def compare_data(key, entry, data, response):
     response_dict = {}
-    create_list = []
+    create_data = []
     compare_list = []
-    update_list = []
+    update_data = []
+    delete_data = {}
 
-    for item in response:
-        if key == 'addresses' and not item['broadcast']:
-            item['broadcast'] = ''
+    if entry['multirow']:
+        for item in response:
+            if key == 'addresses' and not item['broadcast']:
+                item['broadcast'] = ''
 
-        if key == 'packages' and platform_like == 'darwin':
-            try:
-                del item['arch']
-            except KeyError:
+            if key == 'packages' and platform_like == 'darwin':
+                try:
+                    del item['arch']
+                except KeyError:
+                    pass
+
+            uuid = item.pop('id')
+            obj = {
+                'id': uuid,
+                'data': item
+            }
+            response_dict[item[entry['pk']]] = obj
+
+        for item in data:
+            if item[entry['pk']] in response_dict:
+                compare_list.append((item, response_dict[item[entry['pk']]]))
+                response_dict.pop(item[entry['pk']])
+            else:
+                create_data.append(item)
+
+        for item in compare_list:
+            if item[0] != item[1]['data']:
+                update_data.append(item)
+            else:
                 pass
 
-        uuid = item.pop('id')
-        obj = {
-            'id': uuid,
-            'data': item
-        }
-        response_dict[item[entry['pk']]] = obj
-
-    for item in data:
-        if item[entry['pk']] in response_dict:
-            compare_list.append((item, response_dict[item[entry['pk']]]))
-            response_dict.pop(item[entry['pk']])
-        else:
-            create_list.append(item)
-
-    for item in compare_list:
-        if item[0] != item[1]['data']:
-            update_list.append(item)
-        else:
-            pass
-
-    if key in ['info', 'os', 'time']:
-        create_list = []
-        delete_dict = {}
+        delete_data = response_dict
     else:
-        delete_dict = response_dict
+        if not response:
+            create_data = data[0]
+        else:
+            uuid = response.pop('id')
+            obj = {'id': uuid}
+            if data != response:
+                update_data.append((data[0], obj))
 
-    return create_list, update_list, delete_dict
+    return create_data, update_data, delete_data
 
 
 def commit_async(session, commissioned):
