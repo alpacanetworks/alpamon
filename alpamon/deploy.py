@@ -25,6 +25,22 @@ ca_cert = %(ca_cert)s
 [logging]
 debug = %(debug)s''')
 
+SERVICE_TEMPLATE = ('''[Unit]
+Description=Alpamon Agent for Alpaca Infra Platform
+After=network.target syslog.target
+
+[Service]
+Type=simple
+ExecStart=%(exec)s
+WorkingDirectory=/var/lib/alpamon
+Restart=always
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target
+''')
+
 
 def get_editor():
     return (os.environ.get('VISUAL') or os.environ.get('EDITOR') or DEFAULT_EDITOR)
@@ -37,6 +53,19 @@ def get_resource_path(resource):
         return resource_filename(__name__, resource)
 
 
+def get_base_prefix_compat():
+    """Get base/real prefix, or sys.prefix if there is none."""
+    return (
+        getattr(sys, 'base_prefix', None)
+        or getattr(sys, 'real_prefix', None)
+        or sys.prefix
+    )
+
+
+def in_virtualenv():
+    return sys.prefix != get_base_prefix_compat()
+
+
 def write_config():
     with open(CONFIG_TARGET, 'w') as f:
         f.write(CONFIG_TEMPLATE % {
@@ -46,6 +75,19 @@ def write_config():
             'verify': os.environ.get('ALPACON_SSL_VERIFY', 'true'),
             'ca_cert': os.environ.get('ALPACON_CA_CERT', ''),
             'debug': os.environ.get('ALPAMON_DEBUG', 'true'),
+        })
+
+
+def write_service():
+    if in_virtualenv():
+        base_dir = sys.prefix
+    else:
+        base_dir = '/usr/local'
+    exec_start = os.path.join(base_dir, 'bin/alpamon')
+
+    with open(SERVICE_TARGET, 'w') as f:
+        f.write(SERVICE_TEMPLATE % {
+            'exec': exec_start,
         })
 
 
@@ -73,11 +115,8 @@ def install():
     os.system('/bin/systemd-tmpfiles --create')
 
     write_config()
+    write_service()
 
-    shutil.copyfile(
-        get_resource_path('config/alpamon.service'),
-        SERVICE_TARGET
-    )
     os.system('/bin/systemctl daemon-reload')
     os.system('/bin/systemctl start alpamon.service')
     os.system('/bin/systemctl enable alpamon.service')
