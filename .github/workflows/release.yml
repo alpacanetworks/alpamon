@@ -1,13 +1,18 @@
-name: release
+name: Release
 on:
   push:
     # run only against tags
     tags:
       - "*"
+  workflow_run:
+    workflows: ["Build and Test"]
+    types:
+      - completed
 
 jobs:
   build-wheel:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     container:
       image: ubuntu:jammy
     steps:
@@ -30,6 +35,7 @@ jobs:
 
   build-rpm:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     container:
       image: centos:7
     steps:
