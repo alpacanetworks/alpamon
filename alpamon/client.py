@@ -27,7 +27,7 @@ class WebSocketClient(WebSocketApp):
         self.closed = False
 
     def on_open(self):
-        logger.debug('Websocket connection established.')
+        logger.debug('Backhaul connection established.')
 
     def on_message(self, message):
         try:
@@ -91,7 +91,7 @@ class WebSocketClient(WebSocketApp):
 
     def on_close(self, close_status_code, close_msg):
         self.closed = True
-        logger.debug('Websocket connection closed. %s', close_msg if close_msg != None else '')
+        logger.debug('Backhaul connection closed. %s', close_msg if close_msg != None else '')
 
     def send_json(self, json_data):
         self.send(json.dumps(json_data))

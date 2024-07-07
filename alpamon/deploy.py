@@ -23,7 +23,8 @@ verify = %(verify)s
 ca_cert = %(ca_cert)s
 
 [logging]
-debug = %(debug)s''')
+debug = %(debug)s
+''')
 
 SERVICE_TEMPLATE = ('''[Unit]
 Description=Alpamon Agent for Alpaca Infra Platform

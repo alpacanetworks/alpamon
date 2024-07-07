@@ -108,7 +108,7 @@ def main():
 
         retry_interval = MIN_CONNECT_INTERVAL
         while True:
-            logger.debug('Connecting %s...', settings['WS_URL'])
+            logger.debug('Connecting alpacon backhaul: %s', settings['WS_URL'])
             client = WebSocketClient(session, ws_url=settings['WS_URL'], **creds)
             try:
                 client.run_forever(sslopt=settings['SSL_OPT'])
