@@ -6,7 +6,6 @@ import json
 
 from alpamon.runner.shell import runcmd
 
-
 logger = logging.getLogger(__name__)
 
 PIP_PATH = os.path.join(sys.prefix, 'bin', 'pip3')
@@ -30,10 +29,13 @@ class PythonPackageManager:
         if exitcode != 0 or result.startswith('Error:'):
             return None
         try:
-            return list(map(
-                lambda pkg: {'name': pkg['name'], 'version': pkg['version']},
-                json.loads(result)
-            ))
+            pip_list = []
+            for pkg in json.loads(result):
+                obj = {'name': pkg['name'], 'version': pkg['version']}
+                if obj not in pip_list:
+                    pip_list.append(obj)
+
+            return pip_list
         except Exception as e:
             logger.debug(result)
             logger.exception(e)
@@ -58,7 +60,7 @@ class PythonPackageManager:
             if os.path.exists(name):
                 os.remove(name)
             return (-1, 'Failed to write %s.' % name)
-        
+
         # install the decoded wheel
         exitcode, result = runcmd([PIP_PATH, 'install', '-U', name])
         if os.path.exists(name):
