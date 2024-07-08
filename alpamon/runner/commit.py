@@ -277,13 +277,14 @@ def sync_system_info(session, keys=[]):
 
 
 def compare_data(key, entry, data, response):
-    response_dict = {}
     create_data = []
-    compare_list = []
     update_data = []
     delete_data = {}
 
     if entry['multirow']:
+        response_dict = {}
+        compare_list = []
+
         for item in response:
             if key == 'addresses' and not item['broadcast']:
                 item['broadcast'] = ''
@@ -311,8 +312,6 @@ def compare_data(key, entry, data, response):
         for item in compare_list:
             if item[0] != item[1]['data']:
                 update_data.append(item)
-            else:
-                pass
 
         delete_data = response_dict
     else:
