@@ -65,8 +65,10 @@ def get_python_package(session, name):
 def install_osquery(session):
     (name, content) = get_system_package(session, 'osquery')
 
-    logger.info('Installing %s...', name)
+    logger.info('Installing required package: %s...', name)
 
     (result, error) = SystemPackageManager.install_package_from_file(name, content)
     if result != 0:
         raise Exception(error)
+
+    logger.info('Successfully installed package: %s', name)

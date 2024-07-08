@@ -10,7 +10,7 @@ def get_platform_like():
         result = distro.id()
         if result in ['ubuntu', 'debian']:
             result = 'debian'
-        elif result in ['centos', 'rhel']:
+        elif result in ['centos', 'rhel', 'amzn', 'fedora']:
             result = 'rhel'
         else:
             raise NotImplementedError('Platform %s not supported.' % result)

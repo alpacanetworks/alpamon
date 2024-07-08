@@ -1,6 +1,16 @@
 name: Build and Test
 
-on: [ push, pull_request ]
+on:
+  push:
+    branches: [main]
+    
+  pull_request:
+    types: [opened, ready_for_review]
+
+  workflow_call:
+
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   test:

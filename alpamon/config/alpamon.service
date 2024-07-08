@@ -1,5 +1,5 @@
 [Unit]
-Description=alpamon agent for alpaca infra platform
+Description=Alpamon Agent for Alpaca Infra Platform
 After=network.target syslog.target
 
 [Service]

@@ -149,6 +149,7 @@ COMMIT_DEFS = {
 
 
 def commit_system_info(session, keys=[]):
+    logger.info('Start committing system information.')
     data = {}
 
     if not keys:
@@ -195,6 +196,7 @@ def commit_system_info(session, keys=[]):
         },
         priority=80,
     )
+    logger.info('Finished committing system information.')
 
 
 def sync_system_info(session, keys=[]):
