@@ -14,6 +14,7 @@ Alpamon runs on Python 3.4 or above. Python pip is required for package installa
 - Debian 10 (Buster) or higher
 - RedHat Enterprise Linux 8, 9
 - CentOS 7
+- Amazon Linux
 - macOS (only for development purposes)
 
 ### macOS
