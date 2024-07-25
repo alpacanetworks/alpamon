@@ -10,6 +10,10 @@ else:
 
 DEFAULT_EDITOR = 'vi'
 
+CONFIG_TARGET = '/etc/alpamon/%(name)s.conf'
+TMPFILE_TARGET = '/usr/lib/tmpfiles.d/%(name)s.conf'
+SERVICE_TARGET = '/lib/systemd/system/%(name)s.service'
+
 CONFIG_TEMPLATE = ('''[server]
 url = %(url)s
 id = %(id)s
@@ -57,7 +61,7 @@ def in_virtualenv():
     return sys.prefix != get_base_prefix_compat()
 
 
-def usage():
+def print_usage():
     sys.stderr.write('%s install|uninstall|configure\n' % sys.argv[0])
     sys.stderr.flush()
 
@@ -65,16 +69,20 @@ def usage():
 class Service:
     def __init__(self, name):
         self.name = name
-        self.display_name = ' '.join(map(lambda x: x.capitalize(), name.split('-')))
+        self.display_name = ' '.join(map(lambda x: x.capitalize(), self.name.split('-')))
+
+        self.conf_file = CONFIG_TARGET % {'name': self.name }
+        self.tmp_file = TMPFILE_TARGET % {'name': self.name }
+        self.svc_file = SERVICE_TARGET % {'name': self.name }
 
     def get_resource_path(self, resource):
         if sys.version_info >= (3, 9):
-            return importlib.resources.files(self.name).joinpath(resource)
+            return importlib.resources.files(self.name.replace('-', '_')).joinpath(resource)
         else:
             return resource_filename(__name__, resource)
 
-    def write_config(self, target, template=CONFIG_TEMPLATE):
-        with open(target, 'w') as f:
+    def write_config(self, template=CONFIG_TEMPLATE):
+        with open(self.conf_file, 'w') as f:
             f.write(template % {
                 'url': os.environ.get('ALPACON_URL', 'https://alpacon.io'),
                 'id': os.environ.get('PLUGIN_ID', ''),
@@ -84,20 +92,20 @@ class Service:
                 'debug': os.environ.get('PLUGIN_DEBUG', 'true'),
             })
 
-    def write_service(self, target, template=SERVICE_TEMPLATE):
+    def write_service(self, template=SERVICE_TEMPLATE):
         if in_virtualenv():
             base_dir = sys.prefix
         else:
             base_dir = '/usr/local'
         exec_start = os.path.join(base_dir, 'bin', self.name)
 
-        with open(target, 'w') as f:
-            f.write(SERVICE_TEMPLATE % {
+        with open(self.svc_file, 'w') as f:
+            f.write(template % {
                 'exec': exec_start,
                 'display_name': self.display_name,
             })
 
-    def configure(target):
+    def configure(self, template=CONFIG_TEMPLATE):
         try:
             os.mkdir('/etc/alpamon')
             os.chmod('/etc/alpamon', 0o700)
@@ -105,21 +113,21 @@ class Service:
             pass
 
         # copy configuration file if not exists
-        if not os.path.exists(target):
-            self.write_config(target)
+        if not os.path.exists(self.conf_file):
+            self.write_config(template=template)
         
         # open an editor for the configuration file
-        os.system('%s %s' % (get_editor(), target))
+        os.system('%s %s' % (get_editor(), self.conf_file))
 
-    def install(self):
-        print('Installing systemd service...')
+    def install(self, template=CONFIG_TEMPLATE):
+        print('Installing systemd service for %s...' % self.display_name)
         shutil.copyfile(
             self.get_resource_path('config/tmpfile.conf'),
-            TMPFILE_TARGET
+            self.tmp_file
         )
         os.system('/bin/systemd-tmpfiles --create')
 
-        self.write_config()
+        self.write_config(template=template)
         self.write_service()
 
         os.system('/bin/systemctl daemon-reload')
@@ -132,11 +140,11 @@ class Service:
         )
 
     def uninstall(self):
-        print('Uninstalling systemd service...')
+        print('Uninstalling systemd service for %s...' % self.display_name)
         os.system('/bin/systemctl stop %s.service' % self.name)
         os.system('/bin/systemctl disable %s.service' % self.name)
-        os.remove(TMPFILE_TARGET)
-        os.remove(SERVICE_TARGET)
+        os.remove(self.tmp_file)
+        os.remove(self.svc_file)
         os.system('/bin/systemctl daemon-reload')
         print('Removing configuration files...')
         try:
@@ -148,5 +156,5 @@ class Service:
             os.rmdir('/etc/alpamon')
         except:
             pass
-        print('%s has been removed successfully!' % self.name)
+        print('%s has been removed successfully!' % self.display_name)
         print('Run "rm -rf /var/log/alpamon" to remove logs as well.')
