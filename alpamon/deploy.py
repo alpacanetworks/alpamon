@@ -1,20 +1,8 @@
-import sys
-
-from alpamon.service import Service, print_usage
+from alpamon.service import ServiceManager
 
 
 def main():
-    if len(sys.argv) < 2:
-        print_usage()
-        sys.exit(1)
-
-    service = Service('alpamon')
-    if sys.argv[1] == 'install':
-        service.install()
-    elif sys.argv[1] == 'uninstall':
-        service.uninstall()
-    elif sys.argv[1] == 'configure':
-        service.configure()
+    ServiceManager('alpamon').run()
 
 
 if __name__ == '__main__':

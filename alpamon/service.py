@@ -14,35 +14,6 @@ CONFIG_TARGET = '/etc/alpamon/%(name)s.conf'
 TMPFILE_TARGET = '/usr/lib/tmpfiles.d/%(name)s.conf'
 SERVICE_TARGET = '/lib/systemd/system/%(name)s.service'
 
-CONFIG_TEMPLATE = ('''[server]
-url = %(url)s
-id = %(id)s
-key = %(key)s
-
-[ssl]
-verify = %(verify)s
-ca_cert = %(ca_cert)s
-
-[logging]
-debug = %(debug)s
-''')
-
-SERVICE_TEMPLATE = ('''[Unit]
-Description=%(display_name)s for Alpaca Infra Platform
-After=network.target syslog.target
-
-[Service]
-Type=simple
-ExecStart=%(exec)s
-WorkingDirectory=/var/lib/alpamon
-Restart=always
-StandardOutput=null
-StandardError=null
-
-[Install]
-WantedBy=multi-user.target
-''')
-
 
 def get_editor():
     return (os.environ.get('VISUAL') or os.environ.get('EDITOR') or DEFAULT_EDITOR)
@@ -66,7 +37,7 @@ def print_usage():
     sys.stderr.flush()
 
 
-class Service:
+class ServiceManager:
     def __init__(self, name):
         self.name = name
         self.display_name = ' '.join(map(lambda x: x.capitalize(), self.name.split('-')))
@@ -81,7 +52,10 @@ class Service:
         else:
             return resource_filename(__name__, resource)
 
-    def write_config(self, template=CONFIG_TEMPLATE):
+    def write_config(self):
+        with self.get_resource_path('config/%s.conf' % self.name).open('r') as f:
+            template = f.read()
+
         with open(self.conf_file, 'w') as f:
             f.write(template % {
                 'url': os.environ.get('ALPACON_URL', 'https://alpacon.io'),
@@ -92,12 +66,15 @@ class Service:
                 'debug': os.environ.get('PLUGIN_DEBUG', 'true'),
             })
 
-    def write_service(self, template=SERVICE_TEMPLATE):
+    def write_service(self):
         if in_virtualenv():
             base_dir = sys.prefix
         else:
             base_dir = '/usr/local'
         exec_start = os.path.join(base_dir, 'bin', self.name)
+
+        with self.get_resource_path('config/%s.service' % self.name).open('r') as f:
+            template = f.read()
 
         with open(self.svc_file, 'w') as f:
             f.write(template % {
@@ -105,7 +82,7 @@ class Service:
                 'display_name': self.display_name,
             })
 
-    def configure(self, template=CONFIG_TEMPLATE):
+    def configure(self):
         try:
             os.mkdir('/etc/alpamon')
             os.chmod('/etc/alpamon', 0o700)
@@ -114,12 +91,12 @@ class Service:
 
         # copy configuration file if not exists
         if not os.path.exists(self.conf_file):
-            self.write_config(template=template)
-        
+            self.write_config()
+
         # open an editor for the configuration file
         os.system('%s %s' % (get_editor(), self.conf_file))
 
-    def install(self, template=CONFIG_TEMPLATE):
+    def install(self):
         print('Installing systemd service for %s...' % self.display_name)
         shutil.copyfile(
             self.get_resource_path('config/tmpfile.conf'),
@@ -127,7 +104,7 @@ class Service:
         )
         os.system('/bin/systemd-tmpfiles --create')
 
-        self.write_config(template=template)
+        self.write_config()
         self.write_service()
 
         os.system('/bin/systemctl daemon-reload')
@@ -158,3 +135,15 @@ class Service:
             pass
         print('%s has been removed successfully!' % self.display_name)
         print('Run "rm -rf /var/log/alpamon" to remove logs as well.')
+
+    def run(self):
+        if len(sys.argv) < 2:
+            print_usage()
+            sys.exit(1)
+
+        if sys.argv[1] == 'install':
+            self.install()
+        elif sys.argv[1] == 'uninstall':
+            self.uninstall()
+        elif sys.argv[1] == 'configure':
+            self.configure()

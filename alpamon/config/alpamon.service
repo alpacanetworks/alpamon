@@ -1,10 +1,10 @@
 [Unit]
-Description=Alpamon Agent for Alpaca Infra Platform
+Description=%(display_name)s for Alpaca Infra Platform
 After=network.target syslog.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/alpamon
+ExecStart=%(exec)s
 WorkingDirectory=/var/lib/alpamon
 Restart=always
 StandardOutput=null
