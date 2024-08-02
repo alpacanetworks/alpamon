@@ -53,7 +53,7 @@ class ServiceManager:
             return resource_filename(__name__, resource)
 
     def write_config(self):
-        with self.get_resource_path('config/%s.conf' % self.name).open('r') as f:
+        with open(self.get_resource_path('config/%s.conf' % self.name), 'r') as f:
             template = f.read()
 
         with open(self.conf_file, 'w') as f:
@@ -73,7 +73,7 @@ class ServiceManager:
             base_dir = '/usr/local'
         exec_start = os.path.join(base_dir, 'bin', self.name)
 
-        with self.get_resource_path('config/%s.service' % self.name).open('r') as f:
+        with open(self.get_resource_path('config/%s.service' % self.name), 'r') as f:
             template = f.read()
 
         with open(self.svc_file, 'w') as f:
