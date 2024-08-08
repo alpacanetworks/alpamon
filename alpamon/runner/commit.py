@@ -271,7 +271,6 @@ def sync_system_info(session, keys=[]):
             for item in delete_data.values():
                 rqueue.delete(
                     entry['url'] + item['id'] + '/',
-                    json=item['data'],
                     priority=80,
                 )
 
