@@ -22,6 +22,10 @@ var RootCmd = &cobra.Command{
 	},
 }
 
+func init() {
+	RootCmd.AddCommand(installCmd)
+}
+
 func runAgent() {
 	// platform
 	utils.InitPlatform()

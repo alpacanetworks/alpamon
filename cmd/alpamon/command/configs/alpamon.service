@@ -1,0 +1,14 @@
+[Unit]
+Description= Secure Server Agent for Alpaca Infra Platform
+After=network.target syslog.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/alpamon
+WorkingDirectory=/var/lib/alpamon
+Restart=always
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target
