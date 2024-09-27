@@ -1,0 +1,45 @@
+project_name: alpamon
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - main: ./cmd/alpamon
+    binary: alpamon
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm
+      - arm64
+
+checksum:
+  name_template: "{{ .ProjectName }}-{{ .Version }}-checksums.sha256"
+
+archives:
+  - id: alpamon
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+
+nfpms:
+  - package_name: alpamon
+    maintainer: Younghwan Kim <yh.kim@alpacax.com>
+    description: Alpamon
+    homepage: https://github.com/alpacanetworks/alpamon-go
+    license: MIT
+    vendor: Alpaca Networks
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/local/bin/
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
