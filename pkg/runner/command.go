@@ -81,6 +81,7 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		}
 	}
 
+	var cmd string
 	switch args[0] {
 	case "commit":
 		cr.commit()
@@ -133,8 +134,16 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 			return 0, fmt.Sprintf("Resized terminal for %s to %dx%d.", cr.data.SessionID, cr.data.Cols, cr.data.Rows)
 		}
 		return 1, "Invalid session ID"
-	//case "restart":
-	//case "quit":
+	case "restart":
+		time.AfterFunc(1*time.Second, func() {
+			cr.wsClient.restart()
+		})
+		return 0, "Alpamon will restart in 1 second."
+	case "quit":
+		time.AfterFunc(1*time.Second, func() {
+			cr.wsClient.quit()
+		})
+		return 0, "Alpamon will quit in 1 second."
 	case "reboot":
 		log.Info().Msg("Reboot requested.")
 		return cr.handleShellCmd("reboot", "root", "root", nil)
@@ -145,19 +154,18 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 
 	case "update":
 		log.Info().Msg("Upgrade system requested.")
-		var line string
 		if utils.PlatformLike == "debian" {
-			line = "apt-get update && apt-get upgrade -y && apt-get autoremove -y"
+			cmd = "apt-get update && apt-get upgrade -y && apt-get autoremove -y"
 		} else if utils.PlatformLike == "rhel" {
-			line = "yum update -y"
+			cmd = "yum update -y"
 		} else if utils.PlatformLike == "darwin" {
-			line = "brew upgrade"
+			cmd = "brew upgrade"
 		} else {
 			return 1, fmt.Sprintf("Platform '%s' not supported.", utils.PlatformLike)
 		}
 
-		log.Debug().Msgf("Running '%s'...", line)
-		return cr.handleShellCmd(line, "root", "root", nil)
+		log.Debug().Msgf("Running '%s'...", cmd)
+		return cr.handleShellCmd(cmd, "root", "root", nil)
 
 	case "help":
 		helpMessage := `

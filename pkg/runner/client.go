@@ -21,10 +21,11 @@ const (
 )
 
 type WebsocketClient struct {
-	conn          *websocket.Conn
-	requestHeader http.Header
-	apiSession    *scheduler.Session
-	quitChan      chan struct{}
+	conn             *websocket.Conn
+	requestHeader    http.Header
+	apiSession       *scheduler.Session
+	RestartRequested bool
+	quitChan         chan struct{}
 }
 
 func NewWebsocketClient(session *scheduler.Session) *WebsocketClient {
@@ -34,9 +35,10 @@ func NewWebsocketClient(session *scheduler.Session) *WebsocketClient {
 	}
 
 	return &WebsocketClient{
-		requestHeader: headers,
-		apiSession:    session,
-		quitChan:      make(chan struct{}),
+		requestHeader:    headers,
+		apiSession:       session,
+		RestartRequested: false,
+		quitChan:         make(chan struct{}),
 	}
 }
 
@@ -119,6 +121,11 @@ func (wc *WebsocketClient) close() {
 func (wc *WebsocketClient) quit() {
 	wc.close()
 	close(wc.quitChan)
+}
+
+func (wc *WebsocketClient) restart() {
+	wc.RestartRequested = true
+	wc.quit()
 }
 
 func (wc *WebsocketClient) commandRequestHandler(message []byte) {

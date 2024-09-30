@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"os"
+	"syscall"
 )
 
 var RootCmd = &cobra.Command{
@@ -60,6 +61,26 @@ func runAgent() {
 	// Websocket Client
 	wsClient := runner.NewWebsocketClient(session)
 	wsClient.RunForever()
+
+	if wsClient.RestartRequested {
+		if err = os.Remove(pidFilePath); err != nil {
+			log.Error().Err(err).Msg("Failed to remove PID file")
+			return
+		}
+
+		executable, err := os.Executable()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get executable path")
+			return
+		}
+
+		args := os.Args
+
+		err = syscall.Exec(executable, args, os.Environ())
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to restart the program")
+		}
+	}
 
 	log.Debug().Msg("Bye.")
 }
