@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"text/template"
 )
 
@@ -87,6 +88,10 @@ var installCmd = &cobra.Command{
 }
 
 func writeConfig() error {
+	if isConfigValid(configTarget) {
+		return nil
+	}
+
 	tmplData, err := configFiles.ReadFile(configTemplatePath)
 	if err != nil {
 		return fmt.Errorf("failed to read template file (%s): %v", configTemplatePath, err)
@@ -106,6 +111,10 @@ func writeConfig() error {
 		Debug:  utils.GetEnvOrDefault("PLUGIN_DEBUG", "true"),
 	}
 
+	if configData.URL == "" || configData.ID == "" || configData.Key == "" {
+		return fmt.Errorf("environment variables ALPACON_URL, PLUGIN_ID, PLUGIN_KEY must be set")
+	}
+
 	tmpFile, err := os.CreateTemp("", "alpamon.conf")
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %v", err)
@@ -118,6 +127,11 @@ func writeConfig() error {
 		return fmt.Errorf("failed to execute template: %v", err)
 	}
 
+	err = os.MkdirAll(filepath.Dir(configTarget), 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create config directory: %v", err)
+	}
+
 	err = os.Rename(tmpFile.Name(), configTarget)
 	if err != nil {
 		return fmt.Errorf("failed to move temp file to target: %v", err)
@@ -127,6 +141,10 @@ func writeConfig() error {
 }
 
 func writeService() error {
+	if isConfigValid(serviceTarget) {
+		return nil
+	}
+
 	err := copyEmbeddedFile(serviceTemplatePath, serviceTarget)
 	if err != nil {
 		return fmt.Errorf("failed to write target file: %v", err)
@@ -153,4 +171,12 @@ func copyEmbeddedFile(srcPath, dstPath string) error {
 	}
 
 	return nil
+}
+
+func isConfigValid(path string) bool {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return fileInfo.Size() > 0
 }
