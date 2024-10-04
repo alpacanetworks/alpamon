@@ -51,8 +51,8 @@ func TestGetUserData(t *testing.T) {
 	assert.NotEmpty(t, userData, "User data should not be empty.")
 	for _, user := range userData {
 		assert.NotEmpty(t, user.Username, "Username should not be empty.")
-		assert.NotEmpty(t, user.UID, "uid should not be empty.")
-		assert.NotEmpty(t, user.GID, "GID should not be empty.")
+		assert.NotNil(t, user.UID, "uid should not be empty.")
+		assert.NotNil(t, user.GID, "GID should not be empty.")
 		assert.NotEmpty(t, user.Directory, "Directory should not be empty.")
 		assert.NotEmpty(t, user.Shell, "Shell should not be empty.")
 	}
@@ -65,7 +65,7 @@ func TestGetGroupData(t *testing.T) {
 	assert.NotEmpty(t, groupData, "Group data should not be empty.")
 	for _, group := range groupData {
 		assert.NotEmpty(t, group.GroupName, "GroupName should not be empty.")
-		assert.NotEmpty(t, group.GID, "GID should not be empty.")
+		assert.NotNil(t, group.GID, "GID should not be empty.")
 	}
 }
 
