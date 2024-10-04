@@ -1,5 +1,5 @@
 [Unit]
-Description= Secure Server Agent for Alpaca Infra Platform
+Description= Secure Server Agent for Alpamon
 After=network.target syslog.target
 
 [Service]

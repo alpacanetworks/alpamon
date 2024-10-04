@@ -17,7 +17,7 @@ import (
 
 var RootCmd = &cobra.Command{
 	Use:   "alpamon",
-	Short: "Secure Server Agent for Alpaca Infra Platform",
+	Short: "Secure Server Agent for Alpacon",
 	Run: func(cmd *cobra.Command, args []string) {
 		runAgent()
 	},

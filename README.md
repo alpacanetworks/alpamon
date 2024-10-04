@@ -1,7 +1,7 @@
 # alpamon-go
-New Go-based Secure Server Agent for Alpaca Infra Platform
+New Go-based Secure Server Agent for Alpacon
 
-**Alpamon** is a server agent for **Alpaca Infra Platform**. Each server should have Alpamon installed to be controlled via Alpacon.
+**Alpamon** is a server agent for **Alpacon**. Each server should have Alpamon installed to be controlled via Alpacon.
 
 This guide outlines the step-by-step process for installing Alpamon within a development environment. The installation requires an active Internet connection or the appropriate configuration of a proxy server.
 
@@ -114,7 +114,7 @@ systemctl status alpamon.service
 The result would look like the following. The status must be loaded and active (running).
 
 ```
-alpamon.service - alpamon agent for alpaca infra platform
+alpamon.service - alpamon agent for Alpacon
      Loaded: loaded (/lib/systemd/system/alpamon.service; enabled; vendor preset: enabled)
      Active: active (running) since Thu 2023-09-28 23:48:55 KST; 4 days ago
 ```
