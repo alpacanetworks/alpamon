@@ -150,7 +150,7 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 		} else if statusCode == http.StatusNotFound {
 			remoteData = nil
 		} else {
-			log.Error().Err(err).Msgf("HTTP %s: Failed to get data for %s", statusCode, key)
+			log.Error().Err(err).Msgf("HTTP %d: Failed to get data for %s", statusCode, key)
 			continue
 		}
 

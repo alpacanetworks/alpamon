@@ -147,11 +147,9 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 	case "reboot":
 		log.Info().Msg("Reboot requested.")
 		return cr.handleShellCmd("reboot", "root", "root", nil)
-
 	case "shutdown":
 		log.Info().Msg("Shutdown requested.")
 		return cr.handleShellCmd("shutdown", "root", "root", nil)
-
 	case "update":
 		log.Info().Msg("Upgrade system requested.")
 		if utils.PlatformLike == "debian" {
@@ -166,7 +164,6 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 
 		log.Debug().Msgf("Running '%s'...", cmd)
 		return cr.handleShellCmd(cmd, "root", "root", nil)
-
 	case "help":
 		helpMessage := `
 		Available commands:
@@ -552,7 +549,7 @@ func getFileData(data CommandData) ([]byte, error) {
 		defer func() { _ = resp.Body.Close() }()
 
 		if (resp.StatusCode / 100) != 2 {
-			log.Error().Msgf("Failed to download content from URL: %s %s", resp.StatusCode, url)
+			log.Error().Msgf("Failed to download content from URL: %d %s", resp.StatusCode, url)
 			return nil, errors.New("Downloading content failed.")
 		}
 		content, err = io.ReadAll(resp.Body)
