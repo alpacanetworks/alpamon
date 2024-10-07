@@ -8,6 +8,8 @@ before:
 builds:
   - main: ./cmd/alpamon
     binary: alpamon
+    ldflags:
+      - -X version.Version={{.Version}}
     env:
       - CGO_ENABLED=0
     goos:
@@ -36,6 +38,10 @@ nfpms:
       - deb
       - rpm
     bindir: /usr/local/bin/
+
+    scripts:
+      postinstall: "scripts/postinstall.sh"
+      postremove: "scripts/postremove.sh"
 
 changelog:
   sort: asc
