@@ -226,7 +226,7 @@ func (cr *CommandRunner) handleShellCmd(command, user, group string, env map[str
 			results += result
 			args = []string{}
 		default:
-			if strings.HasPrefix(arg, ";") {
+			if strings.HasSuffix(arg, ";") {
 				args = append(args, strings.TrimSuffix(arg, ";"))
 				exitCode, result = runCmd(args, user, group, env, 0)
 				results += result
