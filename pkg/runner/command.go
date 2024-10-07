@@ -83,6 +83,18 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 
 	var cmd string
 	switch args[0] {
+	case "upgrade":
+		if utils.PlatformLike == "debian" {
+			cmd = "curl -s https://packagecloud.io/install/repositories/alpacanetworks/alpamon/script.deb.sh?any=true | sudo bash && " +
+				"apt-get upgrade alpamon -y"
+		} else if utils.PlatformLike == "rhel" {
+			cmd = "curl -s https://packagecloud.io/install/repositories/alpacanetworks/alpamon/script.rpm.sh?any=true | sudo bash && " +
+				"yum update alpamon -y"
+		} else {
+			return 1, fmt.Sprintf("Platform '%s' not supported.", utils.PlatformLike)
+		}
+		log.Debug().Msgf("Upgrading Alpamon using command: '%s'...", cmd)
+		return cr.handleShellCmd(cmd, "root", "root", nil)
 	case "commit":
 		cr.commit()
 		return 0, "Committed system information."
