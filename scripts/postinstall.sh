@@ -7,6 +7,7 @@ main() {
   check_systemd_status
   check_alpamon_binary
   install_alpamon
+  start_systemd_service
 }
 
 check_root_permission() {
@@ -38,6 +39,17 @@ install_alpamon() {
     exit 1
   fi
   echo "Alpamon has been successfully installed."
+}
+
+start_systemd_service() {
+  echo "Starting systemd service for Alpamon..."
+
+  systemctl daemon-reload || true
+  systemctl restart alpamon.service || true
+  systemctl enable alpamon.service || true
+  systemctl --no-pager status alpamon.service || true
+
+  echo "Alpamon has been installed as a systemd service and will be launched automatically on system boot."
 }
 
 set -ue

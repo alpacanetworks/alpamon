@@ -60,29 +60,6 @@ var installCmd = &cobra.Command{
 			return err
 		}
 
-		output, err = exec.Command("systemctl", "daemon-reload").CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("%w\n%s", err, string(output))
-		}
-
-		output, err = exec.Command("systemctl", "start", "alpamon.service").CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("%w\n%s", err, string(output))
-		}
-
-		output, err = exec.Command("systemctl", "enable", "alpamon.service").CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("%w\n%s", err, string(output))
-		}
-
-		output, err = exec.Command("systemctl", "--no-pager", "status", "alpamon.service").CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("%w\n%s", err, string(output))
-		}
-
-		fmt.Println("Alpamon has been installed as a systemd service and will be launched automatically on system boot.")
-		fmt.Printf("Service status:\n%s", string(output))
-
 		return nil
 	},
 }
