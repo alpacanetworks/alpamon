@@ -92,9 +92,18 @@ func runCmd(args []string, username, groupname string, env map[string]string, ti
 	var cmd *exec.Cmd
 	if username == "root" {
 		log.Debug().Msg("Executing the command with root privilege.")
-		cmd = exec.CommandContext(ctx, args[0], args[1:]...)
+		if containsShellOperator(args) {
+			cmd = exec.CommandContext(ctx, "bash", "-c", strings.Join(args, " "))
+		} else {
+			cmd = exec.CommandContext(ctx, args[0], args[1:]...)
+		}
+
 	} else {
-		cmd = exec.CommandContext(ctx, args[0], args[1:]...)
+		if containsShellOperator(args) {
+			cmd = exec.CommandContext(ctx, "bash", "-c", strings.Join(args, " "))
+		} else {
+			cmd = exec.CommandContext(ctx, args[0], args[1:]...)
+		}
 		sysProcAttr, err := demote(username, groupname)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to demote user.")
@@ -117,4 +126,14 @@ func runCmd(args []string, username, groupname string, env map[string]string, ti
 	}
 
 	return 0, string(output)
+}
+
+// && and || operators are handled separately in handleShellCmd
+func containsShellOperator(args []string) bool {
+	for _, arg := range args {
+		if strings.Contains(arg, "|") || strings.Contains(arg, ">") {
+			return true
+		}
+	}
+	return false
 }
