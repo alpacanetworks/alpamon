@@ -38,7 +38,7 @@ var installCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install Alpamon agent as a service",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("Installing systemd service for alpamon...")
+		fmt.Println("Running Alpamon install command...")
 
 		err := copyEmbeddedFile(tmpFilePath, tmpFileTarget)
 		if err != nil {
@@ -60,6 +60,7 @@ var installCmd = &cobra.Command{
 			return err
 		}
 
+		fmt.Println("Alpamon has been successfully installed.")
 		return nil
 	},
 }

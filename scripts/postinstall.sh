@@ -32,13 +32,11 @@ check_alpamon_binary() {
 }
 
 install_alpamon() {
-  echo "Running Alpamon install command..."
   "$ALPAMON_BIN" install
   if [ $? -ne 0 ]; then
     echo "Error: Alpamon install command failed."
     exit 1
   fi
-  echo "Alpamon has been successfully installed."
 }
 
 start_systemd_service() {
