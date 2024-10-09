@@ -90,7 +90,6 @@ func (pc *PtyClient) RunPtyBackground() {
 
 	<-ctx.Done()
 	pc.close()
-	return
 }
 
 func (pc *PtyClient) readFromWebsocket(ctx context.Context, cancel context.CancelFunc) {
@@ -202,8 +201,8 @@ func (pc *PtyClient) getPtyUserAndEnv() (uid, gid int, groupIds []string, env ma
 	var usr *user.User
 	env = getDefaultEnv()
 
-	currentUid := os.Geteuid()
-	if currentUid != 0 || pc.username == "" {
+	currentUID := os.Geteuid()
+	if currentUID != 0 || pc.username == "" {
 		usr, err = user.Current()
 		if err != nil {
 			return 0, 0, nil, env, fmt.Errorf("failed to get current user: %w", err)
@@ -234,16 +233,4 @@ func (pc *PtyClient) getPtyUserAndEnv() (uid, gid int, groupIds []string, env ma
 	}
 
 	return uid, gid, groupIds, env, nil
-}
-
-func convertGroupIds(groupIds []string) []uint32 {
-	var gids []uint32
-	for _, gidStr := range groupIds {
-		gid, err := strconv.Atoi(gidStr)
-		if err != nil {
-			continue
-		}
-		gids = append(gids, uint32(gid))
-	}
-	return gids
 }

@@ -41,7 +41,7 @@ func TestGetTimeData(t *testing.T) {
 
 	assert.NotEmpty(t, timeData.Datetime, "Datetime should not be empty.")
 	assert.NotEmpty(t, timeData.Timezone, "Timezone should not be empty.")
-	assert.True(t, timeData.Uptime >= 0, "Uptime should be non-negative.")
+	assert.NotNil(t, timeData.Uptime, "Uptime should not be nil.")
 }
 
 func TestGetUserData(t *testing.T) {

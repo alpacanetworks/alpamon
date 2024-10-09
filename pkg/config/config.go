@@ -76,9 +76,7 @@ func validateConfig(config Config) (bool, Settings) {
 	valid := true
 	val := config.Server.URL
 	if strings.HasPrefix(val, "http://") || strings.HasPrefix(val, "https://") {
-		if strings.HasSuffix(val, "/") {
-			val = val[:len(val)-1]
-		}
+		val = strings.TrimSuffix(val, "/")
 		settings.ServerURL = val
 		settings.WSPath = strings.Replace(val, "http", "ws", 1) + settings.WSPath
 		settings.UseSSL = strings.HasPrefix(val, "https://")

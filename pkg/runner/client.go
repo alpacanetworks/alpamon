@@ -91,19 +91,13 @@ func (wc *WebsocketClient) connect() {
 
 	if err != nil {
 		log.Error().Err(err).Msgf("Could not connect to %s: terminated unexpectedly", config.GlobalSettings.WSPath)
-		return
 	}
-
-	return
 }
 
 func (wc *WebsocketClient) closeAndReconnect() {
 	wc.close()
 	wc.connect()
 }
-
-// TODO
-func (wc *WebsocketClient) writeJSON(v interface{}) {}
 
 // Cleanly close the websocket connection by sending a close message
 // Do not close quitChan, as the purpose here is to disconnect the WebSocket,

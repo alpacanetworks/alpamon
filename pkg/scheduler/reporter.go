@@ -81,20 +81,20 @@ func (r *Reporter) query(entry PriorityEntry) {
 	}
 
 	if success {
-		r.counters.success += 1
+		r.counters.success++
 	} else {
-		r.counters.failure += 1
+		r.counters.failure++
 		if entry.retry > 0 {
 			backoff := time.Duration(math.Pow(2, float64(RetryLimit-entry.retry))) * time.Second
 			entry.due = entry.due.Add(backoff)
-			entry.retry -= 1
+			entry.retry--
 			err = Rqueue.queue.Offer(entry)
 			if err != nil {
-				r.counters.ignored += 1
+				r.counters.ignored++
 				time.Sleep(1 * time.Second)
 			}
 		} else {
-			r.counters.ignored += 1
+			r.counters.ignored++
 		}
 	}
 }
@@ -112,11 +112,11 @@ func (r *Reporter) Run() {
 		}
 
 		if !entry.expiry.IsZero() && entry.expiry.Before(time.Now()) {
-			r.counters.ignored += 1
+			r.counters.ignored++
 		} else if !entry.due.IsZero() && entry.due.After(time.Now()) {
 			err = Rqueue.queue.Offer(entry)
 			if err != nil {
-				r.counters.ignored += 1
+				r.counters.ignored++
 				time.Sleep(1 * time.Second)
 			}
 		} else {

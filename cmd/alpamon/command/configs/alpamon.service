@@ -1,5 +1,5 @@
 [Unit]
-Description= Secure Server Agent for Alpamon
+Description= Secure Server Agent for Alpacon
 After=network.target syslog.target
 
 [Service]

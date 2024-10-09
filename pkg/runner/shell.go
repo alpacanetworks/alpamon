@@ -114,10 +114,8 @@ func runCmd(args []string, username, groupname string, env map[string]string, ti
 		}
 	}
 
-	if env != nil {
-		for key, value := range env {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
-		}
+	for key, value := range env {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 	}
 
 	output, err := cmd.Output()

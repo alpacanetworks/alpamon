@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/alpacanetworks/alpamon-go/cmd/alpamon/command"
 	"os"
+
+	"github.com/alpacanetworks/alpamon-go/cmd/alpamon/command"
 )
 
 func main() {
