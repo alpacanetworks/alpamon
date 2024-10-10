@@ -1,0 +1,39 @@
+name: Lint
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "tests/**"
+      - "scripts/**"
+
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: 1.22.5
+
+jobs:
+  linter:
+    name: golangci-lint
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        go-version: ['1.22.5']
+        os: [ubuntu-latest]
+    env:
+      CGO_ENABLED: 0
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: GolangCI-Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          args: --timeout=5m
