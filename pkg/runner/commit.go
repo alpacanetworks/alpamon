@@ -9,11 +9,13 @@ import (
 	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/alpacanetworks/alpamon-go/pkg/version"
+	rpmdb "github.com/knqyf263/go-rpmdb/pkg"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/load"
 	"github.com/shirou/gopsutil/v4/mem"
+
 	"io"
 	"net"
 	"net/http"
@@ -33,6 +35,7 @@ const (
 	groupFilePath  = "/etc/group"
 
 	dpkgFilePath = "/var/lib/dpkg/status"
+	rpmFilePath  = "/var/lib/rpm/Packages"
 
 	IFF_UP          = 1 << 0 // Interface is up
 	IFF_LOOPBACK    = 1 << 3 // Loopback interface
@@ -518,65 +521,98 @@ func calculateBroadcastAddress(ip net.IP, mask net.IPMask) string {
 	return broadcast.String()
 }
 
-// TODO : RPM Package
-
 // Based on a function from the Datadog Agent.
 // Original source : https://github.com/DataDog/datadog-agent
 // License : Apache-2.0 license
 func getSystemPackages() ([]SystemPackageData, error) {
 	if utils.PlatformLike == "debian" {
-		fd, err := os.Open(dpkgFilePath)
-		if err != nil {
-			log.Debug().Err(err).Msg("Failed to open dpkg file")
-			return nil, err
-		}
-		defer func() { _ = fd.Close() }()
-
-		var packages []SystemPackageData
-		scanner := bufio.NewScanner(fd)
-		scanner.Split(utils.ScanBlock)
-
-		pkgNamePrefix := []byte("Package:")
-		for scanner.Scan() {
-			chunk := scanner.Bytes()
-			lines := bytes.Split(chunk, []byte("\n"))
-
-			var pkgName string
-			for _, line := range lines {
-				if bytes.HasPrefix(line, pkgNamePrefix) {
-					pkgName = string(bytes.TrimSpace(line[len(pkgNamePrefix):]))
-					break
-				}
-			}
-
-			if pkgName == "" {
-				continue
-			}
-
-			reader := textproto.NewReader(bufio.NewReader(bytes.NewReader(chunk)))
-			header, err := reader.ReadMIMEHeader()
-			if err != nil && !errors.Is(err, io.EOF) {
-				return nil, err
-			}
-
-			pkg := SystemPackageData{
-				Name:    header.Get("Package"),
-				Version: header.Get("Version"),
-				Source:  header.Get("Source"),
-				Arch:    header.Get("Architecture"),
-			}
-
-			packages = append(packages, pkg)
-		}
-
-		if err := scanner.Err(); err != nil {
-			return nil, err
-		}
-
-		return packages, nil
+		return getDpkgPackage()
+	} else if utils.PlatformLike == "rhel" {
+		return getRpmPackage()
 	}
 
 	return []SystemPackageData{}, nil
+}
+
+func getDpkgPackage() ([]SystemPackageData, error) {
+	fd, err := os.Open(dpkgFilePath)
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to open dpkg file")
+		return nil, err
+	}
+	defer func() { _ = fd.Close() }()
+
+	var packages []SystemPackageData
+	scanner := bufio.NewScanner(fd)
+	scanner.Split(utils.ScanBlock)
+
+	pkgNamePrefix := []byte("Package:")
+	for scanner.Scan() {
+		chunk := scanner.Bytes()
+		lines := bytes.Split(chunk, []byte("\n"))
+
+		var pkgName string
+		for _, line := range lines {
+			if bytes.HasPrefix(line, pkgNamePrefix) {
+				pkgName = string(bytes.TrimSpace(line[len(pkgNamePrefix):]))
+				break
+			}
+		}
+
+		if pkgName == "" {
+			continue
+		}
+
+		reader := textproto.NewReader(bufio.NewReader(bytes.NewReader(chunk)))
+		header, err := reader.ReadMIMEHeader()
+		if err != nil && !errors.Is(err, io.EOF) {
+			return nil, err
+		}
+
+		pkg := SystemPackageData{
+			Name:    header.Get("Package"),
+			Version: header.Get("Version"),
+			Source:  header.Get("Source"),
+			Arch:    header.Get("Architecture"),
+		}
+
+		packages = append(packages, pkg)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return packages, nil
+}
+
+func getRpmPackage() ([]SystemPackageData, error) {
+	db, err := rpmdb.Open(rpmFilePath)
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to open rpm file")
+		return nil, err
+	}
+
+	defer func() { _ = db.Close() }()
+
+	pkgList, err := db.ListPackages()
+	if err != nil {
+		return nil, err
+	}
+
+	var packages []SystemPackageData
+	for _, pkg := range pkgList {
+		rpmPkg := SystemPackageData{
+			Name:    pkg.Name,
+			Version: pkg.Version,
+			Source:  pkg.SourceRpm,
+			Arch:    pkg.Arch,
+		}
+
+		packages = append(packages, rpmPkg)
+	}
+
+	return packages, nil
 }
 
 func dispatchComparison(entry commitDef, currentData, remoteData any) {
