@@ -5,11 +5,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/config"
-	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/rs/zerolog/log"
-	"gopkg.in/go-playground/validator.v9"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -19,6 +14,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/alpacanetworks/alpamon-go/pkg/config"
+	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/rs/zerolog/log"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 func NewCommandRunner(wsClient *WebsocketClient, command Command, data CommandData) *CommandRunner {
@@ -136,7 +137,23 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		go ptyClient.RunPtyBackground()
 
 		return 0, "Spawned a pty terminal."
+	case "openftp":
+		data := openFtpData{
+			SessionID:     cr.data.SessionID,
+			URL:           cr.data.URL,
+			Username:      cr.data.Username,
+			Groupname:     cr.data.Groupname,
+			HomeDirectory: cr.data.HomeDirectory,
+		}
+		err := cr.validateData(data)
+		if err != nil {
+			return 1, fmt.Sprintf("openftp: Not enough information. %s", err.Error())
+		}
 
+		ftpClient := NewFtpClient(cr.data)
+		go ftpClient.RunFtpBackground()
+
+		return 0, "Spawned a ftp terminal."
 	case "resizepty":
 		if terminals[cr.data.SessionID] != nil {
 			err := terminals[cr.data.SessionID].resize(cr.data.Rows, cr.data.Cols)

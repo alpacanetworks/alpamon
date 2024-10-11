@@ -78,3 +78,11 @@ type openPtyData struct {
 	Rows          uint16 `validate:"required"`
 	Cols          uint16 `validate:"required"`
 }
+
+type openFtpData struct {
+	SessionID     string `validate:"required"`
+	URL           string `validate:"required"`
+	Username      string `validate:"required"`
+	Groupname     string `validate:"required"`
+	HomeDirectory string `validate:"required"`
+}
