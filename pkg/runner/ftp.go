@@ -250,8 +250,8 @@ func (fc *FtpClient) parsePath(path string) string {
 		absPath = filepath.Join(fc.homeDirectory, path)
 	}
 
-	cleanPath := filepath.Clean(absPath)
-	return cleanPath
+	parsedPath := filepath.Clean(absPath)
+	return parsedPath
 }
 
 func (fc *FtpClient) list(rootdir string, depth int) (map[string]interface{}, error) {
