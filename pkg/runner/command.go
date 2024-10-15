@@ -8,16 +8,19 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/go-playground/validator.v9"
 )
@@ -485,7 +488,22 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 		return 1, err.Error()
 	}
 
-	cmd := exec.Command("cat", fileName)
+	paths, bulk, recursive, err := parsePaths(cr.data.Paths)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to parse paths")
+		return 1, err.Error()
+	}
+
+	name, err := makeArchive(paths, bulk, recursive, sysProcAttr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create archive")
+		return 1, err.Error()
+	}
+	if bulk || recursive {
+		defer os.Remove(name)
+	}
+
+	cmd := exec.Command("cat", name)
 	cmd.SysProcAttr = sysProcAttr
 
 	output, err := cmd.Output()
@@ -497,10 +515,11 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
 
-	fileWriter, err := writer.CreateFormFile("content", filepath.Base(fileName))
+	fileWriter, err := writer.CreateFormFile("content", filepath.Base(name))
 	if err != nil {
 		return 1, err.Error()
 	}
+
 	_, err = fileWriter.Write(output)
 	if err != nil {
 		return 1, err.Error()
@@ -602,4 +621,64 @@ func getFileData(data CommandData) ([]byte, error) {
 	}
 
 	return content, nil
+}
+
+func parsePaths(pathList []string) ([]string, bool, bool, error) {
+	paths := make([]string, len(pathList))
+	for i, path := range pathList {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return nil, false, false, err
+		}
+		paths[i] = absPath
+	}
+
+	bulk := len(pathList) > 1
+	recursive := true
+
+	if !bulk {
+		fileInfo, err := os.Stat(paths[0])
+		if err != nil {
+			return nil, false, false, err
+		}
+		recursive = fileInfo.IsDir()
+	}
+
+	return paths, bulk, recursive, nil
+}
+
+func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysProcAttr) (string, error) {
+	if bulk {
+		archiveName := uuid.New().String() + ".zip"
+		cmd := exec.Command("zip", "-r", archiveName)
+		cmd.SysProcAttr = sysProcAttr
+		cmd.Args = append(cmd.Args, paths...)
+		err := cmd.Run()
+		if err != nil {
+			log.Debug().Err(err).Msg("asdf")
+			return "", err
+		}
+
+		return archiveName, nil
+	}
+
+	path := paths[0]
+	if recursive {
+		archiveName := path + ".zip"
+		command := fmt.Sprintf("cd %s && zip -r %s %s",
+			strings.ReplaceAll(filepath.Dir(path), " ", "\\ "),
+			strings.ReplaceAll(archiveName, " ", "\\ "),
+			strings.ReplaceAll(filepath.Base(path), " ", "\\ "))
+
+		cmd := exec.Command("sh", "-c", command)
+		cmd.SysProcAttr = sysProcAttr
+		err := cmd.Run()
+		if err != nil {
+			return "", err
+		}
+
+		return archiveName, nil
+	}
+
+	return path, nil
 }

@@ -33,6 +33,8 @@ type CommandData struct {
 	Groups        []uint64 `json:"groups"`
 	Type          string   `json:"type"`
 	Content       string   `json:"content"`
+	Path          string   `json:"path"`
+	Paths         []string `json:"paths"`
 	Keys          []string `json:"keys"`
 }
 
