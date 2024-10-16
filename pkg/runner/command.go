@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/base64"
 	"errors"
@@ -544,28 +545,37 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 func (cr *CommandRunner) runFileDownload(fileName string) (exitCode int, result string) {
 	log.Debug().Msgf("Downloading file to %s. (username: %s, groupname: %s)", fileName, cr.data.Username, cr.data.Groupname)
 
+	var code int
+	var message string
 	sysProcAttr, err := demote(cr.data.Username, cr.data.Groupname)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to demote user.")
 		return 1, err.Error()
 	}
 
-	content, err := getFileData(cr.data)
-	if err != nil {
-		return 1, err.Error()
+	if len(cr.data.Files) == 0 {
+		code, message = fileDownload(cr.data, sysProcAttr)
+	} else {
+		for _, file := range cr.data.Files {
+			cmdData := CommandData{
+				Username:  file.Username,
+				Groupname: file.Groupname,
+				Type:      file.Type,
+				Content:   file.Content,
+				Path:      file.Path,
+			}
+			code, message = fileDownload(cmdData, sysProcAttr)
+			if code != 0 {
+				break
+			}
+		}
 	}
 
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("tee -a %s > /dev/null", fileName))
-	cmd.SysProcAttr = sysProcAttr
-	cmd.Stdin = bytes.NewReader(content)
-
-	output, err := cmd.Output()
-	if err != nil {
-		log.Error().Err(err).Msgf("Failed to write file: %s", output)
-		return 1, "You do not have permission to read on the directory. or directory does not exist"
+	if code != 0 {
+		return code, message
+	} else {
+		return 0, fmt.Sprintf("Successfully downloaded %s.", fileName)
 	}
-
-	return 0, fmt.Sprintf("Successfully downloaded %s.", fileName)
 }
 
 func (cr *CommandRunner) validateData(data interface{}) error {
@@ -681,4 +691,40 @@ func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysP
 	}
 
 	return path, nil
+}
+
+func fileDownload(data CommandData, sysProcAttr *syscall.SysProcAttr) (exitCode int, result string) {
+	var cmd *exec.Cmd
+	content, err := getFileData(data)
+	if err != nil {
+		return 1, err.Error()
+	}
+
+	isZip := isZipFile(content)
+	if isZip {
+		command := fmt.Sprintf("tee -a %s > /dev/null | unzip -n %s -d %s; rm %s",
+			data.Path,
+			data.Path,
+			filepath.Dir(data.Path),
+			data.Path)
+		cmd = exec.Command("sh", "-c", command)
+	} else {
+		cmd = exec.Command("sh", "-c", fmt.Sprintf("tee -a %s > /dev/null", data.Path))
+	}
+	cmd.SysProcAttr = sysProcAttr
+	cmd.Stdin = bytes.NewReader(content)
+
+	output, err := cmd.Output()
+	if err != nil {
+		log.Error().Err(err).Msgf("Failed to write file: %s", output)
+		return 1, "You do not have permission to read on the directory. or directory does not exist"
+	}
+
+	return 0, fmt.Sprintf("Successfully downloaded %s.", data.Path)
+}
+
+func isZipFile(content []byte) bool {
+	_, err := zip.NewReader(bytes.NewReader(content), int64(len(content)))
+
+	return err == nil
 }
