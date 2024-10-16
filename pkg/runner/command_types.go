@@ -18,6 +18,14 @@ type Command struct {
 	Data  string            `json:"data,omitempty"`
 }
 
+type File struct {
+	Username  string `json:"username"`
+	Groupname string `json:"groupname"`
+	Type      string `json:"type"`
+	Content   string `json:"content"`
+	Path      string `json:"path"`
+}
+
 type CommandData struct {
 	SessionID     string   `json:"session_id"`
 	URL           string   `json:"url"`
@@ -35,6 +43,7 @@ type CommandData struct {
 	Content       string   `json:"content"`
 	Path          string   `json:"path"`
 	Paths         []string `json:"paths"`
+	Files         []File   `json:"files,omitempty"`
 	Keys          []string `json:"keys"`
 }
 
