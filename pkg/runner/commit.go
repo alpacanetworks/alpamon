@@ -34,14 +34,22 @@ const (
 	passwdFilePath = "/etc/passwd"
 	groupFilePath  = "/etc/group"
 
-	dpkgFilePath = "/var/lib/dpkg/status"
-	rpmFilePath  = "/var/lib/rpm/Packages"
+	dpkgDbPath = "/var/lib/dpkg/status"
 
 	IFF_UP          = 1 << 0 // Interface is up
 	IFF_LOOPBACK    = 1 << 3 // Loopback interface
 	IFF_POINTOPOINT = 1 << 4 // Point-to-point link
 	IFF_RUNNING     = 1 << 6 // Interface is running
 )
+
+var rpmDpPath = []string{
+	"/var/lib/rpm/Packages",
+	"/var/lib/rpm/rpmdb.sqlite",
+	"/usr/lib/sysimage/rpm/rpmdb.sqlite",
+	"/usr/lib/sysimage/rpm/Packages.db",
+	"/var/lib/rpm/Packages.db",
+	"/usr/lib/sysimage/rpm/Packages",
+}
 
 var syncMutex sync.Mutex
 
@@ -343,15 +351,15 @@ func getTimeData() (TimeData, error) {
 }
 
 func getUserData() ([]UserData, error) {
+	users := []UserData{}
+
 	file, err := os.Open(passwdFilePath)
 	if err != nil {
 		log.Debug().Err(err).Msg("Failed to open passwd file")
-		return nil, err
+		return users, err
 	}
 
 	defer func() { _ = file.Close() }()
-
-	users := []UserData{}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -381,21 +389,21 @@ func getUserData() ([]UserData, error) {
 
 	err = scanner.Err()
 	if err != nil {
-		return nil, err
+		return users, err
 	}
 
 	return users, nil
 }
 
 func getGroupData() ([]GroupData, error) {
+	groups := []GroupData{}
+
 	file, err := os.Open(groupFilePath)
 	if err != nil {
 		log.Debug().Err(err).Msg("Failed to open group file")
-		return nil, err
+		return groups, err
 	}
 	defer func() { _ = file.Close() }()
-
-	groups := []GroupData{}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -418,7 +426,7 @@ func getGroupData() ([]GroupData, error) {
 
 	err = scanner.Err()
 	if err != nil {
-		return nil, err
+		return groups, err
 	}
 
 	return groups, nil
@@ -427,7 +435,7 @@ func getGroupData() ([]GroupData, error) {
 func getNetworkInterfaces() ([]Interface, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return nil, err
+		return []Interface{}, err
 	}
 
 	interfaces := []Interface{}
@@ -521,24 +529,26 @@ func calculateBroadcastAddress(ip net.IP, mask net.IPMask) string {
 	return broadcast.String()
 }
 
-// Based on a function from the Datadog Agent.
-// Original source : https://github.com/DataDog/datadog-agent
-// License : Apache-2.0 license
 func getSystemPackages() ([]SystemPackageData, error) {
 	if utils.PlatformLike == "debian" {
 		return getDpkgPackage()
 	} else if utils.PlatformLike == "rhel" {
-		return getRpmPackage()
+		for _, path := range rpmDpPath {
+			rpmPackage, err := getRpmPackage(path)
+			if err == nil && len(rpmPackage) > 0 {
+				return rpmPackage, nil
+			}
+		}
 	}
 
 	return []SystemPackageData{}, nil
 }
 
 func getDpkgPackage() ([]SystemPackageData, error) {
-	fd, err := os.Open(dpkgFilePath)
+	fd, err := os.Open(dpkgDbPath)
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to open dpkg file")
-		return nil, err
+		log.Debug().Err(err).Str("path", dpkgDbPath).Msg("Failed to open dpkg file")
+		return []SystemPackageData{}, err
 	}
 	defer func() { _ = fd.Close() }()
 
@@ -579,25 +589,26 @@ func getDpkgPackage() ([]SystemPackageData, error) {
 		packages = append(packages, pkg)
 	}
 
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		return nil, err
 	}
 
 	return packages, nil
 }
 
-func getRpmPackage() ([]SystemPackageData, error) {
-	db, err := rpmdb.Open(rpmFilePath)
+func getRpmPackage(path string) ([]SystemPackageData, error) {
+	db, err := rpmdb.Open(path)
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to open rpm file")
-		return nil, err
+		log.Debug().Err(err).Str("path", path).Msg("Failed to open rpm file")
+		return []SystemPackageData{}, err
 	}
 
 	defer func() { _ = db.Close() }()
 
 	pkgList, err := db.ListPackages()
 	if err != nil {
-		return nil, err
+		log.Debug().Err(err).Str("path", path).Msg("Failed to list packages")
+		return []SystemPackageData{}, err
 	}
 
 	var packages []SystemPackageData
