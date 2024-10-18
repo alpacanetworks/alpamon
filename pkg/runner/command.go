@@ -602,13 +602,13 @@ func getFileData(data CommandData) ([]byte, error) {
 		client := http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to download content from URL: %w", err)
+			return nil, fmt.Errorf("failed to download content from URL: %w", err)
 		}
 		defer func() { _ = resp.Body.Close() }()
 
 		if (resp.StatusCode / 100) != 2 {
 			log.Error().Msgf("Failed to download content from URL: %d %s", resp.StatusCode, url)
-			return nil, errors.New("Downloading content failed.")
+			return nil, errors.New("downloading content failed")
 		}
 		content, err = io.ReadAll(resp.Body)
 		if err != nil {
@@ -658,14 +658,23 @@ func parsePaths(pathList []string) ([]string, bool, bool, error) {
 }
 
 func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysProcAttr) (string, error) {
+	var command string
 	if bulk {
-		archiveName := uuid.New().String() + ".zip"
-		cmd := exec.Command("zip", "-r", archiveName)
+		archiveName := filepath.Dir(paths[0]) + "/" + uuid.New().String() + ".zip"
+		dirPath := filepath.Dir(paths[0])
+		basePaths := make([]string, len(paths))
+		for i, path := range paths {
+			basePaths[i] = filepath.Base(path)
+		}
+
+		command = fmt.Sprintf("cd %s && zip -r %s %s",
+			strings.ReplaceAll(dirPath, " ", "\\ "),
+			strings.ReplaceAll(archiveName, " ", "\\ "),
+			strings.Join(basePaths, " "))
+		cmd := exec.Command("sh", "-c", command)
 		cmd.SysProcAttr = sysProcAttr
-		cmd.Args = append(cmd.Args, paths...)
 		err := cmd.Run()
 		if err != nil {
-			log.Debug().Err(err).Msg("asdf")
 			return "", err
 		}
 
@@ -675,7 +684,7 @@ func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysP
 	path := paths[0]
 	if recursive {
 		archiveName := path + ".zip"
-		command := fmt.Sprintf("cd %s && zip -r %s %s",
+		command = fmt.Sprintf("cd %s && zip -r %s %s",
 			strings.ReplaceAll(filepath.Dir(path), " ", "\\ "),
 			strings.ReplaceAll(archiveName, " ", "\\ "),
 			strings.ReplaceAll(filepath.Base(path), " ", "\\ "))
