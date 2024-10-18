@@ -10,13 +10,14 @@ import (
 )
 
 const (
-	logDir = "/var/log/alpamon"
+	logDir  = "/var/log/alpamon"
+	logFile = "alpamon.log"
 )
 
 func InitLogger() *os.File {
-	fileName := fmt.Sprintf("%s/alpamon.log", logDir)
+	fileName := fmt.Sprintf("%s/%s", logDir, logFile)
 	if _, err := os.Stat(logDir); os.IsNotExist(err) {
-		fileName = "alpamon.log"
+		fileName = logFile
 	}
 
 	logFile, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
