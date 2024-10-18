@@ -4,31 +4,27 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
-	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
-	"github.com/creack/pty"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 )
 
 type FtpClient struct {
-	conn          *websocket.Conn
-	requestHeader http.Header
-	cmd           *exec.Cmd
-	ptmx          *os.File
-	url           string
-	username      string
-	groupname     string
-	homeDirectory string
-	sessionID     string
+	conn             *websocket.Conn
+	requestHeader    http.Header
+	sysProcAttr      *syscall.SysProcAttr
+	url              string
+	username         string
+	groupname        string
+	homeDirectory    string
+	workingDirectory string
+	sessionID        string
 }
 
 var ftpTerminals map[string]*FtpClient
@@ -44,12 +40,13 @@ func NewFtpClient(data CommandData) *FtpClient {
 	}
 
 	return &FtpClient{
-		requestHeader: headers,
-		url:           strings.Replace(config.GlobalSettings.ServerURL, "http", "ws", 1) + data.URL,
-		username:      data.Username,
-		groupname:     data.Groupname,
-		homeDirectory: data.HomeDirectory,
-		sessionID:     data.SessionID,
+		requestHeader:    headers,
+		url:              strings.Replace(config.GlobalSettings.ServerURL, "http", "ws", 1) + data.URL,
+		username:         data.Username,
+		groupname:        data.Groupname,
+		homeDirectory:    data.HomeDirectory,
+		workingDirectory: data.HomeDirectory,
+		sessionID:        data.SessionID,
 	}
 }
 
@@ -63,18 +60,9 @@ func (fc *FtpClient) RunFtpBackground() {
 		return
 	}
 
-	fc.cmd = exec.Command("/bin/bash", "-i")
-
-	uid, gid, groupIds, env, err := fc.getFtpUserAndEnv()
+	fc.sysProcAttr, err = demote(fc.username, fc.groupname)
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to get web ftp user and env")
-		return
-	}
-
-	fc.setFtpCmdSysProcAttrAndEnv(uid, gid, groupIds, env)
-	fc.ptmx, err = pty.Start(fc.cmd)
-	if err != nil {
-		log.Debug().Err(err).Msg("Failed to start pty")
+		log.Debug().Err(err).Msg("Failed to demote user.")
 		fc.close()
 		return
 	}
@@ -155,15 +143,6 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 }
 
 func (fc *FtpClient) close() {
-	if fc.ptmx != nil {
-		_ = fc.ptmx.Close()
-	}
-
-	if fc.cmd != nil && fc.cmd.Process != nil {
-		_ = fc.cmd.Process.Kill()
-		_ = fc.cmd.Wait()
-	}
-
 	if fc.conn != nil {
 		err := fc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		if err != nil {
@@ -177,44 +156,6 @@ func (fc *FtpClient) close() {
 	}
 
 	log.Debug().Msg("Websocket connection for ftp has been closed.")
-}
-
-func (fc *FtpClient) getFtpUserAndEnv() (uid, gid int, groupIds []string, env map[string]string, err error) {
-	var usr *user.User
-	env = getDefaultEnv()
-
-	currentUID := os.Geteuid()
-	if currentUID != 0 || fc.username == "" {
-		usr, err = user.Current()
-		if err != nil {
-			return 0, 0, nil, env, fmt.Errorf("failed to get current user: %w", err)
-		}
-	} else {
-		usr, err = user.Lookup(fc.username)
-		if err != nil {
-			return 0, 0, nil, env, fmt.Errorf("failed to lookup specified user: %w", err)
-		}
-	}
-
-	env["USER"] = usr.Username
-	env["HOME"] = usr.HomeDir
-
-	uid, err = strconv.Atoi(usr.Uid)
-	if err != nil {
-		return 0, 0, nil, env, fmt.Errorf("failed to convert UID: %w", err)
-	}
-
-	gid, err = strconv.Atoi(usr.Gid)
-	if err != nil {
-		return 0, 0, nil, env, fmt.Errorf("failed to convert GID: %w", err)
-	}
-
-	groupIds, err = usr.GroupIds()
-	if err != nil {
-		return 0, 0, nil, env, fmt.Errorf("failed to get group IDs: %w", err)
-	}
-
-	return uid, gid, groupIds, env, nil
 }
 
 func (fc *FtpClient) handleFtpCommand(command string, data map[string]interface{}) (interface{}, error) {
@@ -242,16 +183,43 @@ func (fc *FtpClient) handleFtpCommand(command string, data map[string]interface{
 
 func (fc *FtpClient) parsePath(path string) string {
 	if strings.HasPrefix(path, "~") {
-		path = strings.Replace(path, "~", fc.homeDirectory, 1)
+		path = strings.Replace(path, "~", fc.workingDirectory, 1)
 	}
 
 	absPath := path
 	if !filepath.IsAbs(path) {
-		absPath = filepath.Join(fc.homeDirectory, path)
+		absPath = filepath.Join(fc.workingDirectory, path)
 	}
 
 	parsedPath := filepath.Clean(absPath)
 	return parsedPath
+}
+
+func (fc *FtpClient) size(path string) (int64, error) {
+	cmd := exec.Command("du", "-sk", path)
+	cmd.SysProcAttr = fc.sysProcAttr
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, err
+	}
+
+	parts := strings.Fields(string(output))
+	if len(parts) < 1 {
+		return 0, fmt.Errorf("could not retrieve size for path: %s", path)
+	}
+
+	size := int64(0)
+	fmt.Sscanf(parts[0], "%d", &size)
+
+	return size * 1024, nil
+}
+
+func (fc *FtpClient) isDir(path string) bool {
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("ls -ld \"%s\" | awk '{print $1}'", path))
+	cmd.SysProcAttr = fc.sysProcAttr
+	output, _ := cmd.Output()
+
+	return strings.HasPrefix(string(output), "d")
 }
 
 func (fc *FtpClient) list(rootdir string, depth int) (map[string]interface{}, error) {
@@ -260,38 +228,58 @@ func (fc *FtpClient) list(rootdir string, depth int) (map[string]interface{}, er
 }
 
 func (fc *FtpClient) listRecursive(path string, depth, current int) (map[string]interface{}, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return map[string]interface{}{
-			"name":    filepath.Base(path),
-			"path":    path,
-			"message": err.Error(),
-		}, nil
-	}
 
 	result := map[string]interface{}{
-		"name": info.Name(),
-		"type": "file",
-		"path": path,
-		"size": info.Size(),
+		"name":     filepath.Base(path),
+		"type":     "folder",
+		"path":     path,
+		"size":     int64(0),
+		"children": []interface{}{},
 	}
 
-	if info.IsDir() {
-		result["type"] = "folder"
-		result["children"] = []interface{}{}
+	cmd := exec.Command("find", path, "-mindepth", "1", "-maxdepth", "1")
+	cmd.SysProcAttr = fc.sysProcAttr
+	output, err := cmd.Output()
+	if err != nil {
+		return result, err
+	}
 
-		if current < depth {
-			files, err := os.ReadDir(path)
-			if err != nil {
-				return result, nil
-			}
-
-			for _, file := range files {
-				child, _ := fc.listRecursive(filepath.Join(path, file.Name()), depth, current+1)
-				result["children"] = append(result["children"].([]interface{}), child)
-				result["size"] = result["size"].(int64) + child["size"].(int64)
-			}
+	paths := strings.Split(string(output), "\n")
+	for _, foundPath := range paths {
+		if foundPath == "" {
+			continue
 		}
+
+		size, err := fc.size(foundPath)
+		if err != nil {
+			return result, err
+		}
+
+		child := map[string]interface{}{
+			"name": filepath.Base(foundPath),
+			"path": foundPath,
+			"size": size,
+		}
+
+		if fc.isDir(foundPath) {
+			child["type"] = "folder"
+
+			if current < depth-1 {
+				childResult, err := fc.listRecursive(foundPath, depth, current+1)
+				if err != nil {
+					return result, err
+				}
+				child["children"] = childResult["children"]
+				child["size"] = childResult["size"]
+			} else {
+				child["children"] = []interface{}{}
+			}
+		} else {
+			child["type"] = "file"
+		}
+
+		result["children"] = append(result["children"].([]interface{}), child)
+		result["size"] = result["size"].(int64) + size
 	}
 
 	return result, nil
@@ -299,96 +287,93 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (map[string]
 
 func (fc *FtpClient) mkd(path string) (map[string]string, error) {
 	path = fc.parsePath(path)
-	if err := os.MkdirAll(path, 0755); err != nil {
+
+	cmd := exec.Command("mkdir", "-p", path)
+	cmd.SysProcAttr = fc.sysProcAttr
+	_, err := cmd.Output()
+	if err != nil {
 		return nil, err
 	}
+
 	return map[string]string{"message": fmt.Sprintf("Make %s successfully", path)}, nil
 }
 
 func (fc *FtpClient) cwd(path string) (map[string]string, error) {
 	path = fc.parsePath(path)
-	if err := os.Chdir(path); err != nil {
-		return nil, err
-	}
+	fc.workingDirectory = path
+
 	return map[string]string{"message": fmt.Sprintf("Change working directory to %s", path)}, nil
 }
 
 func (fc *FtpClient) pwd() (map[string]string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
 	return map[string]string{
-		"message": fmt.Sprintf("Current working directory: %s", dir),
-		"path":    dir,
+		"message": fmt.Sprintf("Current working directory: %s", fc.workingDirectory),
+		"path":    fc.workingDirectory,
 	}, nil
 }
 
 func (fc *FtpClient) dele(path string) (map[string]string, error) {
 	path = fc.parsePath(path)
-	if err := os.Remove(path); err != nil {
+
+	cmd := exec.Command("rm", path)
+	cmd.SysProcAttr = fc.sysProcAttr
+	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
-	return map[string]string{"message": fmt.Sprintf("Delete %s successfully", path)}, nil
+
+	return map[string]string{
+		"message": fmt.Sprintf("Delete %s successfully", path),
+	}, nil
 }
 
 func (fc *FtpClient) rmd(path string, recursive bool) (map[string]string, error) {
 	path = fc.parsePath(path)
-	var err error
+
+	var cmd *exec.Cmd
 	if recursive {
-		err = os.RemoveAll(path)
+		cmd = exec.Command("rm", "-r", path)
 	} else {
-		err = os.Remove(path)
+		cmd = exec.Command("rmdir", path)
 	}
-	if err != nil {
+
+	cmd.SysProcAttr = fc.sysProcAttr
+	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
-	return map[string]string{"message": fmt.Sprintf("Delete %s successfully", path)}, nil
+
+	return map[string]string{
+		"message": fmt.Sprintf("Delete %s successfully", path),
+	}, nil
 }
 
 func (fc *FtpClient) mv(src, dst string) (map[string]string, error) {
 	src = fc.parsePath(src)
 	dst = filepath.Join(fc.parsePath(dst), filepath.Base(src))
-	if err := os.Rename(src, dst); err != nil {
+	cmd := exec.Command("mv", src, dst)
+	cmd.SysProcAttr = fc.sysProcAttr
+	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
-	return map[string]string{"message": fmt.Sprintf("Move %s to %s", src, dst)}, nil
+
+	return map[string]string{
+		"message": fmt.Sprintf("Move %s to %s", src, dst),
+	}, nil
 }
 
 func (fc *FtpClient) cp(src, dst string) (map[string]string, error) {
 	src = fc.parsePath(src)
 	dst = filepath.Join(fc.parsePath(dst), filepath.Base(src))
 
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return nil, err
-	}
-
-	if srcInfo.IsDir() {
+	if fc.isDir(src) {
 		return fc.cpDir(src, dst)
 	}
 	return fc.cpFile(src, dst)
 }
 
 func (fc *FtpClient) cpDir(src, dst string) (map[string]string, error) {
-	if err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		relPath, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-		dstPath := filepath.Join(dst, relPath)
-
-		if info.IsDir() {
-			return os.MkdirAll(dstPath, info.Mode())
-		}
-
-		_, err = fc.cpFile(path, dstPath)
-		return err
-	}); err != nil {
+	cmd := exec.Command("cp", "-r", src+"/*", dst)
+	cmd.SysProcAttr = fc.sysProcAttr
+	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
 
@@ -396,26 +381,11 @@ func (fc *FtpClient) cpDir(src, dst string) (map[string]string, error) {
 }
 
 func (fc *FtpClient) cpFile(src, dst string) (map[string]string, error) {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return nil, err
-	}
-	defer srcFile.Close()
-
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return nil, err
-	}
-	defer dstFile.Close()
-
-	if _, err := io.Copy(dstFile, srcFile); err != nil {
+	cmd := exec.Command("cp", src, dst)
+	cmd.SysProcAttr = fc.sysProcAttr
+	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
 
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string]string{"message": fmt.Sprintf("Copy %s to %s", src, dst)}, os.Chmod(dst, srcInfo.Mode())
+	return map[string]string{"message": fmt.Sprintf("Copy %s to %s", src, dst)}, nil
 }
