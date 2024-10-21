@@ -60,7 +60,7 @@ func (pc *PtyClient) RunPtyBackground() {
 	var err error
 	pc.conn, _, err = websocket.DefaultDialer.Dial(pc.url, pc.requestHeader)
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to connect to pty websocket at %s", pc.url)
+		log.Error().Err(err).Msgf("Failed to connect to pty websocket at %s", pc.url)
 		return
 	}
 
@@ -83,8 +83,12 @@ func (pc *PtyClient) RunPtyBackground() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go pc.readFromWebsocket(ctx, cancel)
-	go pc.readFromPTY(ctx, cancel)
+	go func() {
+		pc.readFromWebsocket(ctx, cancel)
+	}()
+	go func() {
+		pc.readFromPTY(ctx, cancel)
+	}()
 
 	terminals[pc.sessionID] = pc
 
