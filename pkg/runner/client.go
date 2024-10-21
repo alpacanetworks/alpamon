@@ -127,14 +127,14 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 	var data CommandData
 	err := json.Unmarshal(message, &content)
 	if err != nil {
-		log.Error().Err(err).Msgf("Anappropriate message: %s", message)
+		log.Error().Err(err).Msgf("Inappropriate message: %s", string(message))
 		return
 	}
 
 	if content.Command.Data != "" {
 		err = json.Unmarshal([]byte(content.Command.Data), &data)
 		if err != nil {
-			log.Error().Err(err).Msgf("Anappropriate message: %s", message)
+			log.Error().Err(err).Msgf("Inappropriate message: %s", string(message))
 			return
 		}
 	}

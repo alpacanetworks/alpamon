@@ -53,9 +53,9 @@ func LoadConfig() Settings {
 		log.Logger = log.Level(zerolog.DebugLevel)
 	}
 
-	valid, settings := validateConfig(config)
+	isValid, settings := validateConfig(config)
 
-	if !valid {
+	if !isValid {
 		log.Fatal().Msg("Aborting...")
 	}
 

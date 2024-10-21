@@ -350,7 +350,7 @@ func (cr *CommandRunner) addUser() (exitCode int, result string) {
 			return exitCode, result
 		}
 	} else {
-		return 1, "Not implemeted 'adduser' command for this platform."
+		return 1, "Not implemented 'adduser' command for this platform."
 	}
 
 	cr.sync([]string{"groups", "users"})
@@ -393,7 +393,7 @@ func (cr *CommandRunner) addGroup() (exitCode int, result string) {
 			return exitCode, result
 		}
 	} else {
-		return 1, "Not implemeted 'addgroup' command for this platform."
+		return 1, "Not implemented 'addgroup' command for this platform."
 	}
 
 	cr.sync([]string{"groups", "users"})
@@ -433,7 +433,7 @@ func (cr *CommandRunner) delUser() (exitCode int, result string) {
 			return exitCode, result
 		}
 	} else {
-		return 1, "Not implemeted 'deluser' command for this platform."
+		return 1, "Not implemented 'deluser' command for this platform."
 	}
 
 	cr.sync([]string{"groups", "users"})
@@ -473,7 +473,7 @@ func (cr *CommandRunner) delGroup() (exitCode int, result string) {
 			return exitCode, result
 		}
 	} else {
-		return 1, "Not implemeted 'delgroup' command for this platform."
+		return 1, "Not implemented 'delgroup' command for this platform."
 	}
 
 	cr.sync([]string{"groups", "users"})
