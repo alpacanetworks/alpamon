@@ -712,13 +712,13 @@ func fileDownload(data CommandData, sysProcAttr *syscall.SysProcAttr) (exitCode 
 	isZip := isZipFile(content)
 	if isZip {
 		command := fmt.Sprintf("tee -a %s > /dev/null | unzip -n %s -d %s; rm %s",
-			data.Path,
-			data.Path,
-			filepath.Dir(data.Path),
-			data.Path)
+			strings.ReplaceAll(data.Path, " ", "\\ "),
+			strings.ReplaceAll(data.Path, " ", "\\ "),
+			strings.ReplaceAll(filepath.Dir(data.Path), " ", "\\ "),
+			strings.ReplaceAll(data.Path, " ", "\\ "))
 		cmd = exec.Command("sh", "-c", command)
 	} else {
-		cmd = exec.Command("sh", "-c", fmt.Sprintf("tee -a %s > /dev/null", data.Path))
+		cmd = exec.Command("sh", "-c", fmt.Sprintf("tee -a %s > /dev/null", strings.ReplaceAll(data.Path, " ", "\\ ")))
 	}
 	cmd.SysProcAttr = sysProcAttr
 	cmd.Stdin = bytes.NewReader(content)
