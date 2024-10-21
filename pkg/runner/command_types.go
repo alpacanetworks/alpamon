@@ -78,3 +78,9 @@ type openPtyData struct {
 	Rows          uint16 `validate:"required"`
 	Cols          uint16 `validate:"required"`
 }
+
+type commandFin struct {
+	Success     bool    `json:"success"`
+	Result      string  `json:"result"`
+	ElapsedTime float64 `json:"elapsed_time"`
+}

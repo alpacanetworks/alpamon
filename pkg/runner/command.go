@@ -59,10 +59,10 @@ func (cr *CommandRunner) Run() {
 	if result != "" && cr.command.ID != "" {
 		url := fmt.Sprintf(eventCommandFinURL, cr.command.ID)
 
-		payload := map[string]interface{}{
-			"success":      exitCode == 0,
-			"result":       result,
-			"elapsed_time": end.Sub(start).Seconds(),
+		payload := &commandFin{
+			Success:     exitCode == 0,
+			Result:      result,
+			ElapsedTime: end.Sub(start).Seconds(),
 		}
 		scheduler.Rqueue.Post(url, payload, 10, time.Time{})
 	}
