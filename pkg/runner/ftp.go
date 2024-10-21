@@ -313,6 +313,14 @@ func (fc *FtpClient) mkd(path string) (map[string]string, error) {
 
 func (fc *FtpClient) cwd(path string) (map[string]string, error) {
 	path = fc.parsePath(path)
+	cmd := exec.Command("test", "-r", path, "-a", "-w", path, "-a", "-x", path)
+	cmd.SysProcAttr = fc.sysProcAttr
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return map[string]string{
+			"message": strings.ToLower(string(output)),
+		}, err
+	}
 	fc.workingDirectory = path
 
 	return map[string]string{
