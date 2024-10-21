@@ -95,10 +95,8 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 			}
 
 			var content map[string]interface{}
-			if err := json.Unmarshal(message, &content); err != nil {
-				if ctx.Err() != nil {
-					return
-				}
+			err = json.Unmarshal(message, &content)
+			if err != nil {
 				log.Debug().Err(err).Msg("Failed to unmarshal websocket message")
 				cancel()
 				return
@@ -221,8 +219,8 @@ func (fc *FtpClient) isDir(path string) bool {
 	return strings.HasPrefix(string(output), "d")
 }
 
-func (fc *FtpClient) list(rootdir string, depth int) (map[string]interface{}, error) {
-	path := fc.parsePath(rootdir)
+func (fc *FtpClient) list(rootDir string, depth int) (map[string]interface{}, error) {
+	path := fc.parsePath(rootDir)
 	return fc.listRecursive(path, depth, 0)
 }
 
@@ -240,7 +238,7 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (map[string]
 	cmd.SysProcAttr = fc.sysProcAttr
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		result := map[string]interface{}{
+		result = map[string]interface{}{
 			"name":    filepath.Base(path),
 			"path":    path,
 			"message": string(output),
@@ -256,7 +254,7 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (map[string]
 
 		size, err := fc.size(foundPath)
 		if err != nil {
-			result := map[string]interface{}{
+			result = map[string]interface{}{
 				"name":    filepath.Base(path),
 				"path":    path,
 				"message": string(output),
