@@ -110,7 +110,7 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 	case "delgroup":
 		return cr.delGroup()
 	case "ping":
-		return 0, time.Now().String()
+		return 0, time.Now().Format(time.RFC3339)
 	//case "debug":
 	//	TODO : getReporterStats()
 	case "download":
@@ -136,7 +136,6 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		go ptyClient.RunPtyBackground()
 
 		return 0, "Spawned a pty terminal."
-
 	case "resizepty":
 		if terminals[cr.data.SessionID] != nil {
 			err := terminals[cr.data.SessionID].resize(cr.data.Rows, cr.data.Cols)

@@ -9,11 +9,11 @@ type Content struct {
 }
 
 type Command struct {
-	Group string            `json:"group"`
 	ID    string            `json:"id"`
-	Line  string            `json:"line"`
 	Shell string            `json:"shell"`
+	Line  string            `json:"line"`
 	User  string            `json:"user"`
+	Group string            `json:"group"`
 	Env   map[string]string `json:"env"`
 	Data  string            `json:"data,omitempty"`
 }
