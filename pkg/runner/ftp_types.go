@@ -1,82 +1,89 @@
 package runner
 
-import "os"
+import "strings"
 
 type returnCode struct {
-	Success int           `json:"success"`
-	Error   map[error]int `json:"error"`
+	Success int            `json:"success"`
+	Error   map[string]int `json:"error"`
 }
 
 var returnCodes = map[string]returnCode{
 	"list": {
 		Success: 250,
-		Error:   map[error]int{},
+		Error:   map[string]int{},
 	},
 	"mkd": {
 		Success: 250,
-		Error: map[error]int{
-			os.ErrPermission: 450,
-			os.ErrInvalid:    452,
-			os.ErrNotExist:   550,
-			os.ErrExist:      552,
+		Error: map[string]int{
+			"permission denied":         450,
+			"invalid argument":          452,
+			"no such file or directory": 550,
+			"file exists":               552,
 		},
 	},
 	"cwd": {
 		Success: 250,
-		Error: map[error]int{
-			os.ErrPermission: 450,
-			os.ErrNotExist:   550,
+		Error: map[string]int{
+			"permission denied":         450,
+			"no such file or directory": 550,
 		},
 	},
 	"pwd": {
 		Success: 250,
-		Error: map[error]int{
-			os.ErrPermission: 450,
-			os.ErrNotExist:   550,
+		Error: map[string]int{
+			"permission denied":         450,
+			"no such file or directory": 550,
 		},
 	},
 	"dele": {
 		Success: 250,
-		Error: map[error]int{
-			os.ErrPermission: 450,
-			os.ErrInvalid:    452,
-			os.ErrNotExist:   550,
+		Error: map[string]int{
+			"permission denied":         450,
+			"invalid argument":          452,
+			"no such file or directory": 550,
 		},
 	},
 	"rmd": {
 		Success: 250,
-		Error: map[error]int{
-			os.ErrPermission: 450,
-			os.ErrInvalid:    452,
-			os.ErrNotExist:   550,
+		Error: map[string]int{
+			"permission denied":         450,
+			"invalid argument":          452,
+			"no such file or directory": 550,
+			"directory not empty":       552,
 		},
 	},
 	"mv": {
 		Success: 250,
-		Error: map[error]int{
-			os.ErrPermission: 450,
-			os.ErrInvalid:    452,
-			os.ErrNotExist:   550,
-			os.ErrExist:      552,
+		Error: map[string]int{
+			"permission denied":         450,
+			"invalid argument":          452,
+			"no such file or directory": 550,
+			"file exists":               552,
 		},
 	},
 	"cp": {
 		Success: 250,
-		Error: map[error]int{
-			os.ErrPermission: 450,
-			os.ErrInvalid:    452,
-			os.ErrNotExist:   550,
-			os.ErrExist:      552,
+		Error: map[string]int{
+			"permission denied":         450,
+			"invalid argument":          452,
+			"no such file or directory": 550,
+			"file exists":               552,
 		},
 	},
 }
 
-func GetFtpErrorCode(command string, err error) int {
+func GetFtpErrorCode(command string, result map[string]string) (map[string]string, int) {
 	if codes, ok := returnCodes[command]; ok {
-		if code, exists := codes.Error[err]; exists {
-			return code
+		for message, code := range codes.Error {
+			if strings.Contains(result["message"], message) {
+				return map[string]string{
+					"message": message,
+				}, code
+			}
 		}
 	}
 	// Default error code if not found
-	return 550
+	return map[string]string{
+		"message": result["message"],
+	}, 550
 }

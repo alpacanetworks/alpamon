@@ -112,8 +112,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 			data, err := fc.handleFtpCommand(command, content["data"].(map[string]interface{}))
 			if err != nil {
 				result["success"] = false
-				result["code"] = GetFtpErrorCode(command, err)
-				result["data"] = map[string]string{"message": err.Error()}
+				result["data"], result["code"] = GetFtpErrorCode(command, data.(map[string]string))
 			} else {
 				result["code"] = returnCodes[command].Success
 				result["data"] = data
@@ -239,9 +238,14 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (map[string]
 
 	cmd := exec.Command("find", path, "-mindepth", "1", "-maxdepth", "1")
 	cmd.SysProcAttr = fc.sysProcAttr
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return result, err
+		result := map[string]interface{}{
+			"name":    filepath.Base(path),
+			"path":    path,
+			"message": string(output),
+		}
+		return result, nil
 	}
 
 	paths := strings.Split(string(output), "\n")
@@ -252,7 +256,12 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (map[string]
 
 		size, err := fc.size(foundPath)
 		if err != nil {
-			return result, err
+			result := map[string]interface{}{
+				"name":    filepath.Base(path),
+				"path":    path,
+				"message": string(output),
+			}
+			return result, nil
 		}
 
 		child := map[string]interface{}{
@@ -267,7 +276,7 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (map[string]
 			if current < depth-1 {
 				childResult, err := fc.listRecursive(foundPath, depth, current+1)
 				if err != nil {
-					return result, err
+					return result, nil
 				}
 				child["children"] = childResult["children"]
 				child["size"] = childResult["size"]
@@ -288,21 +297,27 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (map[string]
 func (fc *FtpClient) mkd(path string) (map[string]string, error) {
 	path = fc.parsePath(path)
 
-	cmd := exec.Command("mkdir", "-p", path)
+	cmd := exec.Command("mkdir", path)
 	cmd.SysProcAttr = fc.sysProcAttr
-	_, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, err
+		return map[string]string{
+			"message": strings.ToLower(string(output)),
+		}, err
 	}
 
-	return map[string]string{"message": fmt.Sprintf("Make %s successfully", path)}, nil
+	return map[string]string{
+		"message": fmt.Sprintf("Make %s successfully", path),
+	}, nil
 }
 
 func (fc *FtpClient) cwd(path string) (map[string]string, error) {
 	path = fc.parsePath(path)
 	fc.workingDirectory = path
 
-	return map[string]string{"message": fmt.Sprintf("Change working directory to %s", path)}, nil
+	return map[string]string{
+		"message": fmt.Sprintf("Change working directory to %s", path),
+	}, nil
 }
 
 func (fc *FtpClient) pwd() (map[string]string, error) {
@@ -317,8 +332,10 @@ func (fc *FtpClient) dele(path string) (map[string]string, error) {
 
 	cmd := exec.Command("rm", path)
 	cmd.SysProcAttr = fc.sysProcAttr
-	if err := cmd.Run(); err != nil {
-		return nil, err
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return map[string]string{
+			"message": strings.ToLower(string(output)),
+		}, err
 	}
 
 	return map[string]string{
@@ -337,8 +354,10 @@ func (fc *FtpClient) rmd(path string, recursive bool) (map[string]string, error)
 	}
 
 	cmd.SysProcAttr = fc.sysProcAttr
-	if err := cmd.Run(); err != nil {
-		return nil, err
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return map[string]string{
+			"message": strings.ToLower(string(output)),
+		}, err
 	}
 
 	return map[string]string{
@@ -351,8 +370,10 @@ func (fc *FtpClient) mv(src, dst string) (map[string]string, error) {
 	dst = filepath.Join(fc.parsePath(dst), filepath.Base(src))
 	cmd := exec.Command("mv", src, dst)
 	cmd.SysProcAttr = fc.sysProcAttr
-	if err := cmd.Run(); err != nil {
-		return nil, err
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return map[string]string{
+			"message": strings.ToLower(string(output)),
+		}, err
 	}
 
 	return map[string]string{
@@ -373,19 +394,27 @@ func (fc *FtpClient) cp(src, dst string) (map[string]string, error) {
 func (fc *FtpClient) cpDir(src, dst string) (map[string]string, error) {
 	cmd := exec.Command("cp", "-r", src+"/*", dst)
 	cmd.SysProcAttr = fc.sysProcAttr
-	if err := cmd.Run(); err != nil {
-		return nil, err
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return map[string]string{
+			"message": strings.ToLower(string(output)),
+		}, err
 	}
 
-	return map[string]string{"message": fmt.Sprintf("Copy %s to %s", src, dst)}, nil
+	return map[string]string{
+		"message": fmt.Sprintf("Copy %s to %s", src, dst),
+	}, nil
 }
 
 func (fc *FtpClient) cpFile(src, dst string) (map[string]string, error) {
 	cmd := exec.Command("cp", src, dst)
 	cmd.SysProcAttr = fc.sysProcAttr
-	if err := cmd.Run(); err != nil {
-		return nil, err
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return map[string]string{
+			"message": strings.ToLower(string(output)),
+		}, err
 	}
 
-	return map[string]string{"message": fmt.Sprintf("Copy %s to %s", src, dst)}, nil
+	return map[string]string{
+		"message": fmt.Sprintf("Copy %s to %s", src, dst),
+	}, nil
 }
