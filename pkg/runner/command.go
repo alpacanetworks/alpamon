@@ -648,7 +648,7 @@ func parsePaths(pathList []string) (parsedPaths []string, bulk bool, recursive b
 	}
 
 	isBulk := len(pathList) > 1
-	isRecursive := true
+	isRecursive := false
 
 	if !isBulk {
 		fileInfo, err := os.Stat(paths[0])
@@ -680,21 +680,22 @@ func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysP
 			strings.Join(basePaths, " "))
 		cmd = exec.Command("sh", "-c", command)
 		cmd.SysProcAttr = sysProcAttr
+	} else {
+		path := paths[0]
+		if recursive {
+			archiveName = path + ".zip"
+			command = fmt.Sprintf("cd %s && zip -r %s %s",
+				strings.ReplaceAll(filepath.Dir(path), " ", "\\ "),
+				strings.ReplaceAll(archiveName, " ", "\\ "),
+				strings.ReplaceAll(filepath.Base(path), " ", "\\ "))
+
+			cmd = exec.Command("sh", "-c", command)
+			cmd.SysProcAttr = sysProcAttr
+		} else {
+			archiveName = path
+		}
 	}
 
-	path := paths[0]
-	if recursive {
-		archiveName = path + ".zip"
-		command = fmt.Sprintf("cd %s && zip -r %s %s",
-			strings.ReplaceAll(filepath.Dir(path), " ", "\\ "),
-			strings.ReplaceAll(archiveName, " ", "\\ "),
-			strings.ReplaceAll(filepath.Base(path), " ", "\\ "))
-
-		cmd = exec.Command("sh", "-c", command)
-		cmd.SysProcAttr = sysProcAttr
-	}
-
-	archiveName = path
 	err := cmd.Run()
 	if err != nil {
 		return "", err
