@@ -5,6 +5,7 @@ ALPAMON_BIN="/usr/local/bin/alpamon"
 main() {
   check_root_permission
   check_systemd_status
+  install_zip_package
   check_alpamon_binary
   install_alpamon
   start_systemd_service
@@ -22,6 +23,32 @@ check_systemd_status() {
     echo "Error: systemctl is required but could not be found. Please ensure systemd is installed and systemctl is available."
     exit 1
   fi
+}
+
+install_zip_package() {
+  echo "Checking and installing zip package..."
+
+  if command -v zip &> /dev/null; then
+    echo "zip package is already installed."
+    return 0
+  fi
+
+  if command -v apt-get &> /dev/null; then
+    apt-get update
+    apt-get install -y zip
+  elif command -v yum &> /dev/null; then
+    yum install -y zip
+  else
+    echo "Error: Could not detect package manager. Please install zip package manually."
+    exit 1
+  fi
+
+  if ! command -v zip &> /dev/null; then
+    echo "Error: Failed to install zip package."
+    exit 1
+  fi
+  
+  echo "zip package installed successfully."
 }
 
 check_alpamon_binary() {
