@@ -64,10 +64,10 @@ func (cr *CommandRunner) Run() {
 	if result != "" && cr.command.ID != "" {
 		url := fmt.Sprintf(eventCommandFinURL, cr.command.ID)
 
-		payload := map[string]interface{}{
-			"success":      exitCode == 0,
-			"result":       result,
-			"elapsed_time": end.Sub(start).Seconds(),
+		payload := &commandFin{
+			Success:     exitCode == 0,
+			Result:      result,
+			ElapsedTime: end.Sub(start).Seconds(),
 		}
 		scheduler.Rqueue.Post(url, payload, 10, time.Time{})
 	}
@@ -115,7 +115,7 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 	case "delgroup":
 		return cr.delGroup()
 	case "ping":
-		return 0, time.Now().String()
+		return 0, time.Now().Format(time.RFC3339)
 	//case "debug":
 	//	TODO : getReporterStats()
 	case "download":

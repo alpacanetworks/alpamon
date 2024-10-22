@@ -4,16 +4,16 @@ import "gopkg.in/go-playground/validator.v9"
 
 type Content struct {
 	Query   string  `json:"query"`
-	Command Command `json:"command"`
-	Reason  string  `json:"reason"`
+	Command Command `json:"command,omitempty"`
+	Reason  string  `json:"reason,omitempty"`
 }
 
 type Command struct {
-	Group string            `json:"group"`
 	ID    string            `json:"id"`
-	Line  string            `json:"line"`
 	Shell string            `json:"shell"`
+	Line  string            `json:"line"`
 	User  string            `json:"user"`
+	Group string            `json:"group"`
 	Env   map[string]string `json:"env"`
 	Data  string            `json:"data,omitempty"`
 }
@@ -96,4 +96,10 @@ type openFtpData struct {
 	Username      string `validate:"required"`
 	Groupname     string `validate:"required"`
 	HomeDirectory string `validate:"required"`
+}
+
+type commandFin struct {
+	Success     bool    `json:"success"`
+	Result      string  `json:"result"`
+	ElapsedTime float64 `json:"elapsed_time"`
 }
