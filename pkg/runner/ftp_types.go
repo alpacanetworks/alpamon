@@ -15,6 +15,14 @@ const (
 	Cp   FtpCommand = "cp"
 )
 
+const (
+	ErrPermissionedDenied    = "permission denied"
+	ErrInvalidArgument       = "invalid argument"
+	ErrNoSuchFileOrDirectory = "no such file or directory"
+	ErrFileExists            = "file exists"
+	ErrDirectoryNotEmpty     = "directory not empty"
+)
+
 type FtpData struct {
 	Path      string `json:"path,omitempty"`
 	Depth     int    `json:"depth,omitempty"`
@@ -29,24 +37,19 @@ type FtpContent struct {
 }
 
 type FtpResult struct {
-	Command FtpCommand  `json:"command"`
-	Success bool        `json:"success"`
-	Code    int         `json:"code,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-}
-
-type FileInfo struct {
-	Name     string     `json:"name"`
-	Type     string     `json:"type"`
-	Path     string     `json:"path"`
-	Size     int64      `json:"size"`
-	Children []FileInfo `json:"children,omitempty"`
-	Message  string     `json:"message,omitempty"`
+	Command FtpCommand    `json:"command"`
+	Success bool          `json:"success"`
+	Code    int           `json:"code,omitempty"`
+	Data    CommandResult `json:"data,omitempty"`
 }
 
 type CommandResult struct {
-	Message string `json:"message"`
-	Path    string `json:"path,omitempty"`
+	Name     string          `json:"name,omitempty"`
+	Type     string          `json:"type,omitempty"`
+	Path     string          `json:"path,omitempty"`
+	Size     int64           `json:"size,omitempty"`
+	Children []CommandResult `json:"children,omitempty"`
+	Message  string          `json:"message,omitempty"`
 }
 
 type returnCode struct {
@@ -62,75 +65,75 @@ var returnCodes = map[FtpCommand]returnCode{
 	Mkd: {
 		Success: 250,
 		Error: map[string]int{
-			"permission denied":         450,
-			"invalid argument":          452,
-			"no such file or directory": 550,
-			"file exists":               552,
+			ErrPermissionedDenied:    450,
+			ErrInvalidArgument:       452,
+			ErrNoSuchFileOrDirectory: 550,
+			ErrFileExists:            552,
 		},
 	},
 	Cwd: {
 		Success: 250,
 		Error: map[string]int{
-			"permission denied":         450,
-			"no such file or directory": 550,
+			ErrPermissionedDenied:    450,
+			ErrNoSuchFileOrDirectory: 550,
 		},
 	},
 	Pwd: {
 		Success: 250,
 		Error: map[string]int{
-			"permission denied":         450,
-			"no such file or directory": 550,
+			ErrPermissionedDenied:    450,
+			ErrNoSuchFileOrDirectory: 550,
 		},
 	},
 	Dele: {
 		Success: 250,
 		Error: map[string]int{
-			"permission denied":         450,
-			"invalid argument":          452,
-			"no such file or directory": 550,
+			ErrPermissionedDenied:    450,
+			ErrInvalidArgument:       452,
+			ErrNoSuchFileOrDirectory: 550,
 		},
 	},
 	Rmd: {
 		Success: 250,
 		Error: map[string]int{
-			"permission denied":         450,
-			"invalid argument":          452,
-			"no such file or directory": 550,
-			"directory not empty":       552,
+			ErrPermissionedDenied:    450,
+			ErrInvalidArgument:       452,
+			ErrNoSuchFileOrDirectory: 550,
+			ErrDirectoryNotEmpty:     552,
 		},
 	},
 	Mv: {
 		Success: 250,
 		Error: map[string]int{
-			"permission denied":         450,
-			"invalid argument":          452,
-			"no such file or directory": 550,
-			"file exists":               552,
+			ErrPermissionedDenied:    450,
+			ErrInvalidArgument:       452,
+			ErrNoSuchFileOrDirectory: 550,
+			ErrFileExists:            552,
 		},
 	},
 	Cp: {
 		Success: 250,
 		Error: map[string]int{
-			"permission denied":         450,
-			"invalid argument":          452,
-			"no such file or directory": 550,
-			"file exists":               552,
+			ErrPermissionedDenied:    450,
+			ErrInvalidArgument:       452,
+			ErrNoSuchFileOrDirectory: 550,
+			ErrFileExists:            552,
 		},
 	},
 }
 
-func GetFtpErrorCode(command FtpCommand, result map[string]string) (map[string]string, int) {
+func GetFtpErrorCode(command FtpCommand, result CommandResult) (CommandResult, int) {
 	if codes, ok := returnCodes[command]; ok {
 		for message, code := range codes.Error {
-			if strings.Contains(result["message"], message) {
-				return map[string]string{
-					"message": message,
+			if strings.Contains(result.Message, message) {
+				return CommandResult{
+					Message: message,
 				}, code
 			}
 		}
 	}
 	// Default error code if not found
-	return map[string]string{
-		"message": result["message"],
+	return CommandResult{
+		Message: result.Message,
 	}, 550
 }

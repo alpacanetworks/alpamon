@@ -27,12 +27,6 @@ type FtpClient struct {
 	sessionID        string
 }
 
-var ftpTerminals map[string]*FtpClient
-
-func init() {
-	ftpTerminals = make(map[string]*FtpClient)
-}
-
 func NewFtpClient(data CommandData) *FtpClient {
 	headers := http.Header{
 		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, config.GlobalSettings.ID, config.GlobalSettings.Key)},
@@ -72,8 +66,6 @@ func (fc *FtpClient) RunFtpBackground() {
 
 	go fc.read(ctx, cancel)
 
-	ftpTerminals[fc.sessionID] = fc
-
 	<-ctx.Done()
 	fc.close()
 }
@@ -109,11 +101,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 			data, err := fc.handleFtpCommand(content.Command, content.Data)
 			if err != nil {
 				result.Success = false
-				if cmdResult, ok := data.(CommandResult); ok {
-					result.Data, result.Code = GetFtpErrorCode(
-						content.Command,
-						map[string]string{"message": cmdResult.Message})
-				}
+				result.Data, result.Code = GetFtpErrorCode(content.Command, data)
 			} else {
 				result.Code = returnCodes[content.Command].Success
 				result.Data = data
@@ -151,14 +139,10 @@ func (fc *FtpClient) close() {
 		_ = fc.conn.Close()
 	}
 
-	if ftpTerminals[fc.sessionID] != nil {
-		delete(ftpTerminals, fc.sessionID)
-	}
-
 	log.Debug().Msg("Websocket connection for ftp has been closed.")
 }
 
-func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (interface{}, error) {
+func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (CommandResult, error) {
 	switch command {
 	case List:
 		return fc.list(data.Path, data.Depth)
@@ -177,7 +161,7 @@ func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (interfa
 	case Cp:
 		return fc.cp(data.Src, data.Dst)
 	default:
-		return nil, fmt.Errorf("unknown FTP command: %s", command)
+		return CommandResult{}, fmt.Errorf("unknown FTP command: %s", command)
 	}
 }
 
@@ -224,26 +208,27 @@ func (fc *FtpClient) isDir(path string) bool {
 	return strings.HasPrefix(string(output), "d")
 }
 
-func (fc *FtpClient) list(rootDir string, depth int) (*FileInfo, error) {
+func (fc *FtpClient) list(rootDir string, depth int) (CommandResult, error) {
 	path := fc.parsePath(rootDir)
-	return fc.listRecursive(path, depth, 0)
+	cmdResult, err := fc.listRecursive(path, depth, 0)
+	return *cmdResult, err
 }
 
-func (fc *FtpClient) listRecursive(path string, depth, current int) (*FileInfo, error) {
+func (fc *FtpClient) listRecursive(path string, depth, current int) (*CommandResult, error) {
 
-	result := &FileInfo{
+	result := &CommandResult{
 		Name:     filepath.Base(path),
 		Type:     "folder",
 		Path:     path,
 		Size:     int64(0),
-		Children: []FileInfo{},
+		Children: []CommandResult{},
 	}
 
 	cmd := exec.Command("find", path, "-mindepth", "1", "-maxdepth", "1")
 	cmd.SysProcAttr = fc.sysProcAttr
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return &FileInfo{
+		return &CommandResult{
 			Name:    filepath.Base(path),
 			Path:    path,
 			Message: string(output),
@@ -258,14 +243,14 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (*FileInfo, 
 
 		size, err := fc.size(foundPath)
 		if err != nil {
-			return &FileInfo{
+			return &CommandResult{
 				Name:    filepath.Base(path),
 				Path:    path,
 				Message: string(output),
 			}, nil
 		}
 
-		child := FileInfo{
+		child := CommandResult{
 			Name: filepath.Base(foundPath),
 			Path: foundPath,
 			Size: size,
@@ -399,7 +384,7 @@ func (fc *FtpClient) cp(src, dst string) (CommandResult, error) {
 }
 
 func (fc *FtpClient) cpDir(src, dst string) (CommandResult, error) {
-	cmd := exec.Command("cp", "-r", src+"/*", dst)
+	cmd := exec.Command("cp", "-r", src, dst)
 	cmd.SysProcAttr = fc.sysProcAttr
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return CommandResult{
