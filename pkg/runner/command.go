@@ -489,6 +489,10 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 		return 1, err.Error()
 	}
 
+	if cr.data.Paths == nil || len(cr.data.Paths) == 0 {
+		return 1, "No paths provided"
+	}
+
 	paths, bulk, recursive, err := parsePaths(cr.data.Paths)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to parse paths")
@@ -501,7 +505,7 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 		return 1, err.Error()
 	}
 	if bulk || recursive {
-		defer os.Remove(name)
+		defer func() { _ = os.Remove(name) }()
 	}
 
 	cmd := exec.Command("cat", name)
@@ -633,7 +637,7 @@ func getFileData(data CommandData) ([]byte, error) {
 	return content, nil
 }
 
-func parsePaths(pathList []string) ([]string, bool, bool, error) {
+func parsePaths(pathList []string) (parsedPaths []string, bulk bool, recursive bool, err error) {
 	paths := make([]string, len(pathList))
 	for i, path := range pathList {
 		absPath, err := filepath.Abs(path)
@@ -643,24 +647,27 @@ func parsePaths(pathList []string) ([]string, bool, bool, error) {
 		paths[i] = absPath
 	}
 
-	bulk := len(pathList) > 1
-	recursive := true
+	isBulk := len(pathList) > 1
+	isRecursive := true
 
-	if !bulk {
+	if !isBulk {
 		fileInfo, err := os.Stat(paths[0])
 		if err != nil {
 			return nil, false, false, err
 		}
-		recursive = fileInfo.IsDir()
+		isRecursive = fileInfo.IsDir()
 	}
 
-	return paths, bulk, recursive, nil
+	return paths, isBulk, isRecursive, nil
 }
 
 func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysProcAttr) (string, error) {
 	var command string
+	var archiveName string
+	var cmd *exec.Cmd
+
 	if bulk {
-		archiveName := filepath.Dir(paths[0]) + "/" + uuid.New().String() + ".zip"
+		archiveName = filepath.Dir(paths[0]) + "/" + uuid.New().String() + ".zip"
 		dirPath := filepath.Dir(paths[0])
 		basePaths := make([]string, len(paths))
 		for i, path := range paths {
@@ -671,35 +678,29 @@ func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysP
 			strings.ReplaceAll(dirPath, " ", "\\ "),
 			strings.ReplaceAll(archiveName, " ", "\\ "),
 			strings.Join(basePaths, " "))
-		cmd := exec.Command("sh", "-c", command)
+		cmd = exec.Command("sh", "-c", command)
 		cmd.SysProcAttr = sysProcAttr
-		err := cmd.Run()
-		if err != nil {
-			return "", err
-		}
-
-		return archiveName, nil
 	}
 
 	path := paths[0]
 	if recursive {
-		archiveName := path + ".zip"
+		archiveName = path + ".zip"
 		command = fmt.Sprintf("cd %s && zip -r %s %s",
 			strings.ReplaceAll(filepath.Dir(path), " ", "\\ "),
 			strings.ReplaceAll(archiveName, " ", "\\ "),
 			strings.ReplaceAll(filepath.Base(path), " ", "\\ "))
 
-		cmd := exec.Command("sh", "-c", command)
+		cmd = exec.Command("sh", "-c", command)
 		cmd.SysProcAttr = sysProcAttr
-		err := cmd.Run()
-		if err != nil {
-			return "", err
-		}
-
-		return archiveName, nil
 	}
 
-	return path, nil
+	archiveName = path
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	return archiveName, nil
 }
 
 func fileDownload(data CommandData, sysProcAttr *syscall.SysProcAttr) (exitCode int, result string) {
