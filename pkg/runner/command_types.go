@@ -4,8 +4,8 @@ import "gopkg.in/go-playground/validator.v9"
 
 type Content struct {
 	Query   string  `json:"query"`
-	Command Command `json:"command"`
-	Reason  string  `json:"reason"`
+	Command Command `json:"command,omitempty"`
+	Reason  string  `json:"reason,omitempty"`
 }
 
 type Command struct {
