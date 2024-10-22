@@ -34,7 +34,6 @@ install_zip_package() {
   fi
 
   if command -v apt-get &> /dev/null; then
-    apt-get update
     apt-get install -y zip
   elif command -v yum &> /dev/null; then
     yum install -y zip
