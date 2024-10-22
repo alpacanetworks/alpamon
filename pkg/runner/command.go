@@ -573,9 +573,9 @@ func (cr *CommandRunner) runFileDownload(fileName string) (exitCode int, result 
 
 	if code != 0 {
 		return code, message
-	} else {
-		return 0, fmt.Sprintf("Successfully downloaded %s.", fileName)
 	}
+
+	return 0, fmt.Sprintf("Successfully downloaded %s.", fileName)
 }
 
 func (cr *CommandRunner) validateData(data interface{}) error {
