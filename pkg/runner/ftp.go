@@ -193,7 +193,7 @@ func (fc *FtpClient) size(path string) (int64, error) {
 	}
 
 	size := int64(0)
-	if _, err := fmt.Sscanf(parts[0], "%d", &size); err != nil {
+	if _, err = fmt.Sscanf(parts[0], "%d", &size); err != nil {
 		return size, err
 	}
 
