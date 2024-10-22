@@ -60,14 +60,13 @@ func (cr *CommandRunner) Run() {
 		result = "Invalid command shell argument."
 	}
 
-	end := time.Now()
 	if result != "" && cr.command.ID != "" {
 		url := fmt.Sprintf(eventCommandFinURL, cr.command.ID)
 
 		payload := &commandFin{
 			Success:     exitCode == 0,
 			Result:      result,
-			ElapsedTime: end.Sub(start).Seconds(),
+			ElapsedTime: time.Since(start).Seconds(),
 		}
 		scheduler.Rqueue.Post(url, payload, 10, time.Time{})
 	}
