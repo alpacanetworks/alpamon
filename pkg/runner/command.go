@@ -488,7 +488,7 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 		return 1, err.Error()
 	}
 
-	if cr.data.Paths == nil || len(cr.data.Paths) == 0 {
+	if len(cr.data.Paths) == 0 {
 		return 1, "No paths provided"
 	}
 
