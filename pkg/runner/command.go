@@ -661,35 +661,28 @@ func parsePaths(pathList []string) (parsedPaths []string, bulk bool, recursive b
 }
 
 func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysProcAttr) (string, error) {
-	var command string
 	var archiveName string
 	var cmd *exec.Cmd
+	path := paths[0]
 
 	if bulk {
-		archiveName = filepath.Dir(paths[0]) + "/" + uuid.New().String() + ".zip"
-		dirPath := filepath.Dir(paths[0])
+		archiveName = filepath.Dir(path) + "/" + uuid.New().String() + ".zip"
+		dirPath := filepath.Dir(path)
 		basePaths := make([]string, len(paths))
 		for i, path := range paths {
 			basePaths[i] = filepath.Base(path)
 		}
 
-		command = fmt.Sprintf("cd %s && zip -r %s %s",
-			strings.ReplaceAll(dirPath, " ", "\\ "),
-			strings.ReplaceAll(archiveName, " ", "\\ "),
-			strings.Join(basePaths, " "))
-		cmd = exec.Command("sh", "-c", command)
+		cmd = exec.Command("zip", "-r", archiveName)
 		cmd.SysProcAttr = sysProcAttr
+		cmd.Args = append(cmd.Args, basePaths...)
+		cmd.Dir = dirPath
 	} else {
-		path := paths[0]
 		if recursive {
 			archiveName = path + ".zip"
-			command = fmt.Sprintf("cd %s && zip -r %s %s",
-				strings.ReplaceAll(filepath.Dir(path), " ", "\\ "),
-				strings.ReplaceAll(archiveName, " ", "\\ "),
-				strings.ReplaceAll(filepath.Base(path), " ", "\\ "))
-
-			cmd = exec.Command("sh", "-c", command)
+			cmd = exec.Command("zip", "-r", archiveName, filepath.Base(path))
 			cmd.SysProcAttr = sysProcAttr
+			cmd.Dir = filepath.Dir(path)
 		} else {
 			archiveName = path
 		}
