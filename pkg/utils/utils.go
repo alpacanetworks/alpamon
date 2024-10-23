@@ -3,12 +3,14 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"github.com/rs/zerolog/log"
-	"github.com/shirou/gopsutil/v4/host"
 	"net/url"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
+
+	"github.com/rs/zerolog/log"
+	"github.com/shirou/gopsutil/v4/host"
 )
 
 var (
@@ -91,4 +93,16 @@ func GetEnvOrDefault(envVar, defaultValue string) string {
 		return defaultValue
 	}
 	return value
+}
+
+func ConvertGroupIds(groupIds []string) []uint32 {
+	var gids []uint32
+	for _, gidStr := range groupIds {
+		gid, err := strconv.Atoi(gidStr)
+		if err != nil {
+			continue
+		}
+		gids = append(gids, uint32(gid))
+	}
+	return gids
 }

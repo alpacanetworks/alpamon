@@ -18,6 +18,14 @@ type Command struct {
 	Data  string            `json:"data,omitempty"`
 }
 
+type File struct {
+	Username  string `json:"username"`
+	Groupname string `json:"groupname"`
+	Type      string `json:"type"`
+	Content   string `json:"content"`
+	Path      string `json:"path"`
+}
+
 type CommandData struct {
 	SessionID     string   `json:"session_id"`
 	URL           string   `json:"url"`
@@ -33,6 +41,9 @@ type CommandData struct {
 	Groups        []uint64 `json:"groups"`
 	Type          string   `json:"type"`
 	Content       string   `json:"content"`
+	Path          string   `json:"path"`
+	Paths         []string `json:"paths"`
+	Files         []File   `json:"files,omitempty"`
 	Keys          []string `json:"keys"`
 }
 
@@ -77,6 +88,14 @@ type openPtyData struct {
 	HomeDirectory string `validate:"required"`
 	Rows          uint16 `validate:"required"`
 	Cols          uint16 `validate:"required"`
+}
+
+type openFtpData struct {
+	SessionID     string `validate:"required"`
+	URL           string `validate:"required"`
+	Username      string `validate:"required"`
+	Groupname     string `validate:"required"`
+	HomeDirectory string `validate:"required"`
 }
 
 type commandFin struct {

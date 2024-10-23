@@ -1,24 +1,29 @@
 package runner
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/config"
-	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/rs/zerolog/log"
-	"gopkg.in/go-playground/validator.v9"
 	"io"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
+
+	"github.com/alpacanetworks/alpamon-go/pkg/config"
+	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 func NewCommandRunner(wsClient *WebsocketClient, command Command, data CommandData) *CommandRunner {
@@ -135,6 +140,23 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		go ptyClient.RunPtyBackground()
 
 		return 0, "Spawned a pty terminal."
+	case "openftp":
+		data := openFtpData{
+			SessionID:     cr.data.SessionID,
+			URL:           cr.data.URL,
+			Username:      cr.data.Username,
+			Groupname:     cr.data.Groupname,
+			HomeDirectory: cr.data.HomeDirectory,
+		}
+		err := cr.validateData(data)
+		if err != nil {
+			return 1, fmt.Sprintf("openftp: Not enough information. %s", err.Error())
+		}
+
+		ftpClient := NewFtpClient(cr.data)
+		go ftpClient.RunFtpBackground()
+
+		return 0, "Spawned a ftp terminal."
 	case "resizepty":
 		if terminals[cr.data.SessionID] != nil {
 			err := terminals[cr.data.SessionID].resize(cr.data.Rows, cr.data.Cols)
@@ -466,7 +488,27 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 		return 1, err.Error()
 	}
 
-	cmd := exec.Command("cat", fileName)
+	if len(cr.data.Paths) == 0 {
+		return 1, "No paths provided"
+	}
+
+	paths, bulk, recursive, err := parsePaths(cr.data.Paths)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to parse paths")
+		return 1, err.Error()
+	}
+
+	name, err := makeArchive(paths, bulk, recursive, sysProcAttr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create archive")
+		return 1, err.Error()
+	}
+
+	if bulk || recursive {
+		defer func() { _ = os.Remove(name) }()
+	}
+
+	cmd := exec.Command("cat", name)
 	cmd.SysProcAttr = sysProcAttr
 
 	output, err := cmd.Output()
@@ -478,10 +520,11 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
 
-	fileWriter, err := writer.CreateFormFile("content", filepath.Base(fileName))
+	fileWriter, err := writer.CreateFormFile("content", filepath.Base(name))
 	if err != nil {
 		return 1, err.Error()
 	}
+
 	_, err = fileWriter.Write(output)
 	if err != nil {
 		return 1, err.Error()
@@ -506,25 +549,34 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 func (cr *CommandRunner) runFileDownload(fileName string) (exitCode int, result string) {
 	log.Debug().Msgf("Downloading file to %s. (username: %s, groupname: %s)", fileName, cr.data.Username, cr.data.Groupname)
 
+	var code int
+	var message string
 	sysProcAttr, err := demote(cr.data.Username, cr.data.Groupname)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to demote user.")
 		return 1, err.Error()
 	}
 
-	content, err := getFileData(cr.data)
-	if err != nil {
-		return 1, err.Error()
+	if len(cr.data.Files) == 0 {
+		code, message = fileDownload(cr.data, sysProcAttr)
+	} else {
+		for _, file := range cr.data.Files {
+			cmdData := CommandData{
+				Username:  file.Username,
+				Groupname: file.Groupname,
+				Type:      file.Type,
+				Content:   file.Content,
+				Path:      file.Path,
+			}
+			code, message = fileDownload(cmdData, sysProcAttr)
+			if code != 0 {
+				break
+			}
+		}
 	}
 
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("tee -a %s > /dev/null", fileName))
-	cmd.SysProcAttr = sysProcAttr
-	cmd.Stdin = bytes.NewReader(content)
-
-	output, err := cmd.Output()
-	if err != nil {
-		log.Error().Err(err).Msgf("Failed to write file: %s", output)
-		return 1, "You do not have permission to read on the directory. or directory does not exist"
+	if code != 0 {
+		return code, message
 	}
 
 	return 0, fmt.Sprintf("Successfully downloaded %s.", fileName)
@@ -548,19 +600,21 @@ func getFileData(data CommandData) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
+
 		if strings.HasPrefix(url, config.GlobalSettings.ServerURL) {
 			req.Header.Set("Authorization", fmt.Sprintf(`id="%s", key="%s"`, config.GlobalSettings.ID, config.GlobalSettings.Key))
 		}
+
 		client := http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to download content from URL: %w", err)
+			return nil, fmt.Errorf("failed to download content from URL: %w", err)
 		}
 		defer func() { _ = resp.Body.Close() }()
 
 		if (resp.StatusCode / 100) != 2 {
 			log.Error().Msgf("Failed to download content from URL: %d %s", resp.StatusCode, url)
-			return nil, errors.New("Downloading content failed.")
+			return nil, errors.New("downloading content failed")
 		}
 		content, err = io.ReadAll(resp.Body)
 		if err != nil {
@@ -583,4 +637,101 @@ func getFileData(data CommandData) ([]byte, error) {
 	}
 
 	return content, nil
+}
+
+func parsePaths(pathList []string) (parsedPaths []string, isBulk bool, isRecursive bool, err error) {
+	paths := make([]string, len(pathList))
+	for i, path := range pathList {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return nil, false, false, err
+		}
+		paths[i] = absPath
+	}
+
+	isBulk = len(pathList) > 1
+	isRecursive = false
+
+	if !isBulk {
+		fileInfo, err := os.Stat(paths[0])
+		if err != nil {
+			return nil, false, false, err
+		}
+		isRecursive = fileInfo.IsDir()
+	}
+
+	return paths, isBulk, isRecursive, nil
+}
+
+func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysProcAttr) (string, error) {
+	var archiveName string
+	var cmd *exec.Cmd
+	path := paths[0]
+
+	if bulk {
+		archiveName = filepath.Dir(path) + "/" + uuid.New().String() + ".zip"
+		dirPath := filepath.Dir(path)
+		basePaths := make([]string, len(paths))
+		for i, path := range paths {
+			basePaths[i] = filepath.Base(path)
+		}
+
+		cmd = exec.Command("zip", "-r", archiveName)
+		cmd.SysProcAttr = sysProcAttr
+		cmd.Args = append(cmd.Args, basePaths...)
+		cmd.Dir = dirPath
+	} else {
+		if recursive {
+			archiveName = path + ".zip"
+			cmd = exec.Command("zip", "-r", archiveName, filepath.Base(path))
+			cmd.SysProcAttr = sysProcAttr
+			cmd.Dir = filepath.Dir(path)
+		} else {
+			archiveName = path
+		}
+	}
+
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	return archiveName, nil
+}
+
+func fileDownload(data CommandData, sysProcAttr *syscall.SysProcAttr) (exitCode int, result string) {
+	var cmd *exec.Cmd
+	content, err := getFileData(data)
+	if err != nil {
+		return 1, err.Error()
+	}
+
+	isZip := isZipFile(content)
+	if isZip {
+		command := fmt.Sprintf("tee -a %s > /dev/null | unzip -n %s -d %s; rm %s",
+			strings.ReplaceAll(data.Path, " ", "\\ "),
+			strings.ReplaceAll(data.Path, " ", "\\ "),
+			strings.ReplaceAll(filepath.Dir(data.Path), " ", "\\ "),
+			strings.ReplaceAll(data.Path, " ", "\\ "))
+		cmd = exec.Command("sh", "-c", command)
+	} else {
+		cmd = exec.Command("sh", "-c", fmt.Sprintf("tee -a %s > /dev/null", strings.ReplaceAll(data.Path, " ", "\\ ")))
+	}
+
+	cmd.SysProcAttr = sysProcAttr
+	cmd.Stdin = bytes.NewReader(content)
+
+	output, err := cmd.Output()
+	if err != nil {
+		log.Error().Err(err).Msgf("Failed to write file: %s", output)
+		return 1, "You do not have permission to read on the directory. or directory does not exist"
+	}
+
+	return 0, fmt.Sprintf("Successfully downloaded %s.", data.Path)
+}
+
+func isZipFile(content []byte) bool {
+	_, err := zip.NewReader(bytes.NewReader(content), int64(len(content)))
+
+	return err == nil
 }
