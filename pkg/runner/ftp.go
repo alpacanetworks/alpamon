@@ -93,6 +93,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 				cancel()
 				return
 			}
+
 			result := FtpResult{
 				Command: content.Command,
 				Success: true,
@@ -215,7 +216,6 @@ func (fc *FtpClient) list(rootDir string, depth int) (CommandResult, error) {
 }
 
 func (fc *FtpClient) listRecursive(path string, depth, current int) (*CommandResult, error) {
-
 	result := &CommandResult{
 		Name:     filepath.Base(path),
 		Type:     "folder",
@@ -305,6 +305,7 @@ func (fc *FtpClient) cwd(path string) (CommandResult, error) {
 			Message: strings.ToLower(string(output)),
 		}, err
 	}
+
 	fc.workingDirectory = path
 
 	return CommandResult{
@@ -360,6 +361,7 @@ func (fc *FtpClient) rmd(path string, recursive bool) (CommandResult, error) {
 func (fc *FtpClient) mv(src, dst string) (CommandResult, error) {
 	src = fc.parsePath(src)
 	dst = filepath.Join(fc.parsePath(dst), filepath.Base(src))
+
 	cmd := exec.Command("mv", src, dst)
 	cmd.SysProcAttr = fc.sysProcAttr
 	if output, err := cmd.CombinedOutput(); err != nil {

@@ -503,6 +503,7 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 		log.Error().Err(err).Msg("Failed to create archive")
 		return 1, err.Error()
 	}
+
 	if bulk || recursive {
 		defer func() { _ = os.Remove(name) }()
 	}
@@ -599,9 +600,11 @@ func getFileData(data CommandData) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
+
 		if strings.HasPrefix(url, config.GlobalSettings.ServerURL) {
 			req.Header.Set("Authorization", fmt.Sprintf(`id="%s", key="%s"`, config.GlobalSettings.ID, config.GlobalSettings.Key))
 		}
+
 		client := http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
@@ -636,7 +639,7 @@ func getFileData(data CommandData) ([]byte, error) {
 	return content, nil
 }
 
-func parsePaths(pathList []string) (parsedPaths []string, bulk bool, recursive bool, err error) {
+func parsePaths(pathList []string) (parsedPaths []string, isBulk bool, isRecursive bool, err error) {
 	paths := make([]string, len(pathList))
 	for i, path := range pathList {
 		absPath, err := filepath.Abs(path)
@@ -646,8 +649,8 @@ func parsePaths(pathList []string) (parsedPaths []string, bulk bool, recursive b
 		paths[i] = absPath
 	}
 
-	isBulk := len(pathList) > 1
-	isRecursive := false
+	isBulk = len(pathList) > 1
+	isRecursive = false
 
 	if !isBulk {
 		fileInfo, err := os.Stat(paths[0])
@@ -714,6 +717,7 @@ func fileDownload(data CommandData, sysProcAttr *syscall.SysProcAttr) (exitCode 
 	} else {
 		cmd = exec.Command("sh", "-c", fmt.Sprintf("tee -a %s > /dev/null", strings.ReplaceAll(data.Path, " ", "\\ ")))
 	}
+
 	cmd.SysProcAttr = sysProcAttr
 	cmd.Stdin = bytes.NewReader(content)
 
