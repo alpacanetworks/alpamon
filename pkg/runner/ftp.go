@@ -212,11 +212,11 @@ func (fc *FtpClient) isDir(path string) bool {
 func (fc *FtpClient) list(rootDir string, depth int) (CommandResult, error) {
 	path := fc.parsePath(rootDir)
 	cmdResult, err := fc.listRecursive(path, depth, 0)
-	return *cmdResult, err
+	return cmdResult, err
 }
 
-func (fc *FtpClient) listRecursive(path string, depth, current int) (*CommandResult, error) {
-	result := &CommandResult{
+func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResult, error) {
+	result := CommandResult{
 		Name:     filepath.Base(path),
 		Type:     "folder",
 		Path:     path,
@@ -228,7 +228,7 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (*CommandRes
 	cmd.SysProcAttr = fc.sysProcAttr
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return &CommandResult{
+		return CommandResult{
 			Name:    filepath.Base(path),
 			Path:    path,
 			Message: string(output),
@@ -243,7 +243,7 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (*CommandRes
 
 		size, err := fc.size(foundPath)
 		if err != nil {
-			return &CommandResult{
+			return CommandResult{
 				Name:    filepath.Base(path),
 				Path:    path,
 				Message: string(output),
