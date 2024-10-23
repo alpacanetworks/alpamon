@@ -16,7 +16,7 @@ const (
 )
 
 const (
-	ErrPermissionedDenied    = "permission denied"
+	ErrPermissionDenied      = "permission denied"
 	ErrInvalidArgument       = "invalid argument"
 	ErrNoSuchFileOrDirectory = "no such file or directory"
 	ErrFileExists            = "file exists"
@@ -65,7 +65,7 @@ var returnCodes = map[FtpCommand]returnCode{
 	Mkd: {
 		Success: 250,
 		Error: map[string]int{
-			ErrPermissionedDenied:    450,
+			ErrPermissionDenied:      450,
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 			ErrFileExists:            552,
@@ -74,21 +74,21 @@ var returnCodes = map[FtpCommand]returnCode{
 	Cwd: {
 		Success: 250,
 		Error: map[string]int{
-			ErrPermissionedDenied:    450,
+			ErrPermissionDenied:      450,
 			ErrNoSuchFileOrDirectory: 550,
 		},
 	},
 	Pwd: {
 		Success: 250,
 		Error: map[string]int{
-			ErrPermissionedDenied:    450,
+			ErrPermissionDenied:      450,
 			ErrNoSuchFileOrDirectory: 550,
 		},
 	},
 	Dele: {
 		Success: 250,
 		Error: map[string]int{
-			ErrPermissionedDenied:    450,
+			ErrPermissionDenied:      450,
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 		},
@@ -96,7 +96,7 @@ var returnCodes = map[FtpCommand]returnCode{
 	Rmd: {
 		Success: 250,
 		Error: map[string]int{
-			ErrPermissionedDenied:    450,
+			ErrPermissionDenied:      450,
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 			ErrDirectoryNotEmpty:     552,
@@ -105,7 +105,7 @@ var returnCodes = map[FtpCommand]returnCode{
 	Mv: {
 		Success: 250,
 		Error: map[string]int{
-			ErrPermissionedDenied:    450,
+			ErrPermissionDenied:      450,
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 			ErrFileExists:            552,
@@ -114,7 +114,7 @@ var returnCodes = map[FtpCommand]returnCode{
 	Cp: {
 		Success: 250,
 		Error: map[string]int{
-			ErrPermissionedDenied:    450,
+			ErrPermissionDenied:      450,
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 			ErrFileExists:            552,
