@@ -33,20 +33,39 @@ func InitSettings(settings Settings) {
 func LoadConfig() Settings {
 	var iniData *ini.File
 	var err error
+	var validConfigFile string
+
 	for _, configFile := range configFiles {
-		iniData, err = ini.Load(configFile)
-		if err == nil {
-			break
+		fileInfo, statErr := os.Stat(configFile)
+		if statErr == nil {
+			if fileInfo.Size() == 0 {
+				log.Debug().Msgf("Config file %s is empty, skipping...", configFile)
+				continue
+			} else {
+				log.Debug().Msgf("Using config file %s", configFile)
+				validConfigFile = configFile
+				break
+			}
 		}
 	}
+
+	if validConfigFile == "" {
+		log.Fatal().Msg("No valid config file found")
+	}
+
+	iniData, err = ini.Load(validConfigFile)
+	if err != nil {
+		log.Fatal().Err(err).Msgf("Failed to load config file %s", validConfigFile)
+	}
+
 	if iniData == nil {
-		log.Fatal().Err(err).Msg("Failed to load config file")
+		log.Fatal().Err(err).Msgf("Failed to load config file %s", validConfigFile)
 	}
 
 	var config Config
 	err = iniData.MapTo(&config)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to parse config file")
+		log.Fatal().Err(err).Msgf("Failed to parse config file %s", validConfigFile)
 	}
 
 	if config.Logging.Debug {
