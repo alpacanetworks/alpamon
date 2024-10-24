@@ -63,6 +63,7 @@ func (pc *PtyClient) RunPtyBackground() {
 		log.Error().Err(err).Msgf("Failed to connect to pty websocket at %s", pc.url)
 		return
 	}
+	defer pc.close()
 
 	pc.cmd = exec.Command("/bin/bash", "-i")
 
@@ -93,7 +94,6 @@ func (pc *PtyClient) RunPtyBackground() {
 	terminals[pc.sessionID] = pc
 
 	<-ctx.Done()
-	pc.close()
 }
 
 func (pc *PtyClient) readFromWebsocket(ctx context.Context, cancel context.CancelFunc) {

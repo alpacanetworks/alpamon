@@ -53,6 +53,7 @@ func (fc *FtpClient) RunFtpBackground() {
 		log.Debug().Err(err).Msgf("Failed to connect to pty websocket at %s", fc.url)
 		return
 	}
+	defer fc.close()
 
 	fc.sysProcAttr, err = demote(fc.username, fc.groupname)
 	if err != nil {
@@ -67,7 +68,6 @@ func (fc *FtpClient) RunFtpBackground() {
 	go fc.read(ctx, cancel)
 
 	<-ctx.Done()
-	fc.close()
 }
 
 func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
