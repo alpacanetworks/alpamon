@@ -2,14 +2,14 @@ package scheduler
 
 import (
 	"github.com/adrianbrad/queue"
-	"github.com/hashicorp/go-retryablehttp"
+	"net/http"
 	"sync"
 	"time"
 )
 
 type Session struct {
 	BaseURL       string
-	Client        *retryablehttp.Client
+	Client        *http.Client
 	authorization string
 }
 

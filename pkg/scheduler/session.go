@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
@@ -26,10 +25,7 @@ func InitSession() *Session {
 		BaseURL: config.GlobalSettings.ServerURL,
 	}
 
-	client := retryablehttp.NewClient()
-	client.RetryMax = 3
-	client.RetryWaitMin = 1 * time.Second
-	client.RetryWaitMax = 3 * time.Second
+	client := http.Client{}
 
 	tlsConfig := &tls.Config{}
 	if config.GlobalSettings.CaCert != "" {
@@ -43,12 +39,11 @@ func InitSession() *Session {
 	}
 
 	tlsConfig.InsecureSkipVerify = config.GlobalSettings.SSLVerify
-
-	client.HTTPClient.Transport = &http.Transport{
+	client.Transport = &http.Transport{
 		TLSClientConfig: tlsConfig,
 	}
 
-	session.Client = client
+	session.Client = &client
 	session.authorization = fmt.Sprintf(`id="%s", key="%s"`, config.GlobalSettings.ID, config.GlobalSettings.Key)
 
 	return session
@@ -60,6 +55,7 @@ func (session *Session) CheckSession() bool {
 	for {
 		resp, _, err := session.Get(checkSessionURL, 5)
 		if err != nil {
+			log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds", config.GlobalSettings.ServerURL, int(timeout.Seconds()))
 			time.Sleep(timeout)
 			timeout *= 2
 			if timeout > config.MaxConnectInterval {
@@ -84,7 +80,7 @@ func (session *Session) CheckSession() bool {
 	}
 }
 
-func (session *Session) newRequest(method, url string, rawBody interface{}) (*retryablehttp.Request, error) {
+func (session *Session) newRequest(method, url string, rawBody interface{}) (*http.Request, error) {
 	var body io.Reader
 	if rawBody != nil {
 		switch v := rawBody.(type) {
@@ -101,11 +97,11 @@ func (session *Session) newRequest(method, url string, rawBody interface{}) (*re
 		}
 	}
 
-	return retryablehttp.NewRequest(method, utils.JoinPath(session.BaseURL, url), body)
+	return http.NewRequest(method, utils.JoinPath(session.BaseURL, url), body)
 }
 
-func (session *Session) do(req *retryablehttp.Request, timeout time.Duration) ([]byte, int, error) {
-	session.Client.HTTPClient.Timeout = timeout * time.Second
+func (session *Session) do(req *http.Request, timeout time.Duration) ([]byte, int, error) {
+	session.Client.Timeout = timeout * time.Second
 	req.Header.Set("Authorization", session.authorization)
 
 	if req.Method == http.MethodPost || req.Method == http.MethodPut || req.Method == http.MethodPatch {
@@ -156,16 +152,11 @@ func (session *Session) MultipartRequest(url string, body bytes.Buffer, contentT
 		return nil, 0, err
 	}
 
-	session.Client.HTTPClient.Timeout = timeout * time.Second
+	session.Client.Timeout = timeout * time.Second
 	req.Header.Set("Authorization", session.authorization)
 	req.Header.Set("Content-Type", contentType)
 
-	retryableReq, err := retryablehttp.FromRequest(req)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	resp, err := session.Client.Do(retryableReq)
+	resp, err := session.Client.Do(req)
 	if err != nil {
 		return nil, 0, err
 	}
