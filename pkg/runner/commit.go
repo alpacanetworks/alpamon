@@ -172,8 +172,8 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 		} else {
 			compareData(entry, currentData.(ComparableData), remoteData.(ComparableData))
 		}
-		log.Info().Msgf("Completed system information synchronization for %s.", key)
 	}
+	log.Info().Msg("Completed system information synchronization")
 }
 
 func compareData(entry commitDef, currentData, remoteData ComparableData) {

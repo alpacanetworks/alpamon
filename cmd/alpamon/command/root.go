@@ -39,10 +39,6 @@ func runAgent() {
 	}
 	defer func() { _ = os.Remove(pidFilePath) }()
 
-	// Logger
-	logFile := logger.InitLogger()
-	defer func() { _ = logFile.Close() }()
-
 	// Config & Settings
 	settings := config.LoadConfig()
 	config.InitSettings(settings)
@@ -54,6 +50,10 @@ func runAgent() {
 
 	// Reporter
 	scheduler.StartReporters(session)
+
+	// Logger
+	logFile := logger.InitLogger()
+	defer func() { _ = logFile.Close() }()
 
 	// Commit
 	runner.CommitAsync(session, commissioned)
