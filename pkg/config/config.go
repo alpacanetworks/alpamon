@@ -2,13 +2,14 @@ package config
 
 import (
 	"crypto/tls"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"gopkg.in/ini.v1"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"gopkg.in/ini.v1"
 )
 
 var (
@@ -18,6 +19,7 @@ var (
 	}
 
 	GlobalSettings Settings
+	FtpSettings    Settings
 )
 
 const (
@@ -28,6 +30,10 @@ const (
 
 func InitSettings(settings Settings) {
 	GlobalSettings = settings
+}
+
+func InitFtpSettings(settings Settings) {
+	FtpSettings = settings
 }
 
 func LoadConfig() Settings {
