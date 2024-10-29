@@ -153,8 +153,35 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 			return 1, fmt.Sprintf("openftp: Not enough information. %s", err.Error())
 		}
 
-		ftpClient := NewFtpClient(cr.data)
-		go ftpClient.RunFtpBackground()
+		sysProcAttr, err := demote(data.Username, data.Groupname)
+		if err != nil {
+			log.Debug().Err(err).Msg("Failed to get demote permission")
+
+			return 1, fmt.Sprintf("openftp: Failed to get demoted permission. %s", err.Error())
+		}
+
+		executable, err := os.Executable()
+		if err != nil {
+			log.Debug().Err(err).Msg("Failed to get executable path")
+
+			return 1, fmt.Sprintf("openftp: Failed to get executable path. %s", err.Error())
+		}
+
+		cmd := exec.Command(
+			executable,
+			"ftp",
+			data.URL,
+			data.HomeDirectory,
+		)
+		cmd.SysProcAttr = sysProcAttr
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Start(); err != nil {
+			log.Debug().Err(err).Msg("Failed to start worker process")
+
+			return 1, fmt.Sprintf("openftp: Failed to start worker process. %s", err.Error())
+		}
 
 		return 0, "Spawned a ftp terminal."
 	case "resizepty":
