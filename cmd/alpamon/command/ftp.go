@@ -2,6 +2,7 @@ package command
 
 import (
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
+	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/alpacanetworks/alpamon-go/pkg/runner"
 	"github.com/spf13/cobra"
 )
@@ -13,6 +14,9 @@ var ftpCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		url := args[0]
 		homeDirectory := args[1]
+
+		logFile := logger.InitLogger()
+		defer func() { _ = logFile.Close() }()
 
 		settings := config.LoadConfig()
 		config.InitFtpSettings(settings)
