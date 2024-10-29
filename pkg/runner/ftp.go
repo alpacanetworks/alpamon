@@ -233,7 +233,7 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 func (fc *FtpClient) mkd(path string) (CommandResult, error) {
 	path = fc.parsePath(path)
 
-	err := os.MkdirAll(path, 0755)
+	err := os.Mkdir(path, 0755)
 	if err != nil {
 		return CommandResult{
 			Message: err.Error(),
@@ -292,6 +292,12 @@ func (fc *FtpClient) dele(path string) (CommandResult, error) {
 
 func (fc *FtpClient) rmd(path string, recursive bool) (CommandResult, error) {
 	path = fc.parsePath(path)
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return CommandResult{
+			Message: err.Error(),
+		}, err
+	}
 
 	var err error
 	if recursive {
@@ -404,6 +410,10 @@ func copyFile(src, dst string) error {
 }
 
 func copyDir(src, dst string) error {
+	if strings.HasPrefix(dst, src) {
+		return fmt.Errorf("%s is inside %s, causing infinite recursion", dst, src)
+	}
+
 	srcInfo, err := os.Stat(src)
 	if err != nil {
 		return err
