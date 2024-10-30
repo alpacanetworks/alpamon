@@ -91,7 +91,6 @@ var remoteLogThresholds = map[string]int{
 	"reporter.go": 30,
 	"command.go":  30,
 	"pty.go":      30,
-	"commit.go":   30,
 }
 
 func (w *logRecordWriter) Write(p []byte) (n int, err error) {
