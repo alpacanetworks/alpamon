@@ -28,11 +28,11 @@ func InitLogger() *os.File {
 
 	logFile, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to open log file")
+		_, _ = fmt.Fprintf(os.Stderr, "Failed to open log file: %v\n", err)
+		os.Exit(1)
 	}
 
 	var output io.Writer
-
 	recordWriter := &logRecordWriter{}
 
 	// In development, log to console; in production, log to file
@@ -74,16 +74,31 @@ type logRecord struct {
 	Msg     string `json:"msg"`
 }
 
+type zerologEntry struct {
+	Level   string `json:"level"`
+	Time    string `json:"time"`
+	Caller  string `json:"caller"`
+	Message string `json:"message"`
+}
+
 type logRecordWriter struct{}
 
+// remoteLogThresholds defines log level thresholds for specific callers (files).
+// Logs below the specified level for a given file will not be sent to the alpacon-server.
+// If a file is not listed, all logs will be sent regardless of level.
+var remoteLogThresholds = map[string]int{
+	"client.go":   30,
+	"reporter.go": 30,
+}
+
 func (w *logRecordWriter) Write(p []byte) (n int, err error) {
-	var parsedLog map[string]string
-	err = json.Unmarshal(p, &parsedLog)
+	var entry zerologEntry
+	err = json.Unmarshal(p, &entry)
 	if err != nil {
 		return 0, err
 	}
 
-	caller := parsedLog["caller"]
+	caller := entry.Caller
 	if caller == "" {
 		return len(p), nil
 	}
@@ -93,14 +108,21 @@ func (w *logRecordWriter) Write(p []byte) (n int, err error) {
 		lineno, _ = strconv.Atoi(parts[1])
 	}
 
+	callerFileName := getCallerFileName(caller)
+	if levelThreshold, ok := remoteLogThresholds[callerFileName]; ok {
+		if convertLevelToNumber(entry.Level) < levelThreshold {
+			return len(p), nil
+		}
+	}
+
 	record := logRecord{
-		Date:    time.Now().UTC().Format(time.RFC3339),
-		Level:   convertLevelToNumber(parsedLog["level"]),
+		Date:    entry.Time,
+		Level:   convertLevelToNumber(entry.Level),
 		Program: "alpamon",
 		Path:    caller,
 		Lineno:  lineno,
 		PID:     os.Getpid(),
-		Msg:     parsedLog["message"],
+		Msg:     entry.Message,
 	}
 
 	go func() {
@@ -127,4 +149,14 @@ func convertLevelToNumber(level string) int {
 	default:
 		return 0 // NOT SET
 	}
+}
+
+func getCallerFileName(caller string) string {
+	parts := strings.Split(caller, "/")
+	if len(parts) > 0 {
+		fileWithLine := parts[len(parts)-1]
+		fileParts := strings.Split(fileWithLine, ":")
+		return fileParts[0]
+	}
+	return ""
 }

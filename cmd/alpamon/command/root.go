@@ -34,7 +34,7 @@ func runAgent() {
 	// Pid
 	pidFilePath, err := pidfile.WritePID()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Failed to create PID file", err.Error())
+		_, _ = fmt.Fprintln(os.Stderr, "Failed to create PID file", err.Error())
 		os.Exit(1)
 	}
 	defer func() { _ = os.Remove(pidFilePath) }()
