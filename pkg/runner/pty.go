@@ -70,14 +70,14 @@ func (pc *PtyClient) RunPtyBackground() {
 
 	uid, gid, groupIds, env, err := pc.getPtyUserAndEnv()
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to get pty user and env")
+		log.Error().Err(err).Msgf("Failed to get pty user and env")
 		return
 	}
 
 	pc.setPtyCmdSysProcAttrAndEnv(uid, gid, groupIds, env)
 	pc.ptmx, err = pty.Start(pc.cmd)
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to start pty")
+		log.Error().Err(err).Msg("Failed to start pty")
 		pc.close()
 		return
 	}
@@ -171,7 +171,7 @@ func (pc *PtyClient) resize(rows, cols uint16) error {
 		Cols: cols,
 	})
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to resize terminal")
+		log.Warn().Err(err).Msg("Failed to resize terminal")
 		return err
 	}
 	pc.rows = rows

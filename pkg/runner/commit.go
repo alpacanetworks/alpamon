@@ -149,7 +149,7 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 			}
 			remoteData = &[]SystemPackageData{}
 		default:
-			log.Debug().Msgf("Unknown key: %s", key)
+			log.Warn().Msgf("Unknown key: %s", key)
 			continue
 		}
 
@@ -157,7 +157,7 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 		if statusCode == http.StatusOK {
 			err = json.Unmarshal(resp, &remoteData)
 			if err != nil {
-				log.Debug().Err(err).Msg("Failed to unmarshal remote data")
+				log.Error().Err(err).Msg("Failed to unmarshal remote data")
 				continue
 			}
 		} else if statusCode == http.StatusNotFound {
