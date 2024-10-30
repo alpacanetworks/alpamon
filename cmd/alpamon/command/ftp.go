@@ -2,36 +2,29 @@ package command
 
 import (
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
-	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/alpacanetworks/alpamon-go/pkg/runner"
 	"github.com/spf13/cobra"
 )
 
 var ftpCmd = &cobra.Command{
-	Use:   "ftp <username> <groupname> <url> <homeDirectory>",
+	Use:   "ftp <url> <homeDirectory>",
 	Short: "Start worker for Web FTP",
-	Args:  cobra.ExactArgs(4),
+	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		data := runner.CommandData{
-			Username:      args[0],
-			Groupname:     args[1],
-			URL:           args[2],
-			HomeDirectory: args[3],
-		}
+		url := args[0]
+		homeDirectory := args[1]
 
-		logFile := logger.InitLogger()
-		defer func() { _ = logFile.Close() }()
-
+		// TODO : Send logs to alpamon's Logserver using a Unix domain socket
 		settings := config.LoadConfig()
 		config.InitFtpSettings(settings)
 
-		RunFtpWorker(data)
+		RunFtpWorker(url, homeDirectory)
 
 		return nil
 	},
 }
 
-func RunFtpWorker(data runner.CommandData) {
-	ftpClient := runner.NewFtpClient(data)
+func RunFtpWorker(url, homeDirectory string) {
+	ftpClient := runner.NewFtpClient(url, homeDirectory)
 	ftpClient.RunFtpBackground()
 }
