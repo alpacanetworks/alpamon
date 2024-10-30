@@ -48,12 +48,6 @@ func (fc *FtpClient) RunFtpBackground() {
 	}
 	defer fc.close()
 
-	if err != nil {
-		log.Debug().Err(err).Msg("Failed to demote user.")
-		fc.close()
-		return
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

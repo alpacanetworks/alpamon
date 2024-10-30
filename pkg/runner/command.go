@@ -153,12 +153,12 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 			return 1, fmt.Sprintf("openftp: Not enough information. %s", err.Error())
 		}
 
-		sysProcAttr, err := demote(data.Username, data.Groupname)
-		if err != nil {
-			log.Debug().Err(err).Msg("Failed to get demote permission")
+		// sysProcAttr, err := demote(data.Username, data.Groupname)
+		// if err != nil {
+		// 	log.Debug().Err(err).Msg("Failed to get demote permission")
 
-			return 1, fmt.Sprintf("openftp: Failed to get demoted permission. %s", err.Error())
-		}
+		// 	return 1, fmt.Sprintf("openftp: Failed to get demoted permission. %s", err.Error())
+		// }
 
 		executable, err := os.Executable()
 		if err != nil {
@@ -170,10 +170,12 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		cmd := exec.Command(
 			executable,
 			"ftp",
+			data.Username,
+			data.Groupname,
 			data.URL,
 			data.HomeDirectory,
 		)
-		cmd.SysProcAttr = sysProcAttr
+		// cmd.SysProcAttr = sysProcAttr
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
