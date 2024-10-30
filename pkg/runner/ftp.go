@@ -7,8 +7,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/gorilla/websocket"
@@ -19,11 +22,13 @@ type FtpClient struct {
 	conn             *websocket.Conn
 	requestHeader    http.Header
 	url              string
+	username         string
+	groupname        string
 	homeDirectory    string
 	workingDirectory string
 }
 
-func NewFtpClient(url, homeDirectory string) *FtpClient {
+func NewFtpClient(data CommandData) *FtpClient {
 	headers := http.Header{
 		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, config.FtpSettings.ID, config.FtpSettings.Key)},
 		"Origin":        {config.FtpSettings.ServerURL},
@@ -31,16 +36,72 @@ func NewFtpClient(url, homeDirectory string) *FtpClient {
 
 	return &FtpClient{
 		requestHeader:    headers,
-		url:              strings.Replace(config.FtpSettings.ServerURL, "http", "ws", 1) + url,
-		homeDirectory:    homeDirectory,
-		workingDirectory: homeDirectory,
+		url:              strings.Replace(config.FtpSettings.ServerURL, "http", "ws", 1) + data.URL,
+		username:         data.Username,
+		groupname:        data.Groupname,
+		homeDirectory:    data.HomeDirectory,
+		workingDirectory: data.HomeDirectory,
 	}
+}
+
+func (fc *FtpClient) demote() error {
+	if syscall.Getuid() == 0 {
+		if fc.username == "" || fc.groupname == "" {
+			log.Debug().Msg("No username or groupname provided.")
+			return fmt.Errorf("no username or groupname provided")
+		}
+
+		usr, err := user.Lookup(fc.username)
+		if err != nil {
+			log.Debug().Msgf("There is no corresponding %s username in this server", fc.username)
+			return fmt.Errorf("there is no corresponding %s username in this server", fc.username)
+		}
+
+		group, err := user.LookupGroup(fc.groupname)
+		if err != nil {
+			log.Debug().Msgf("There is no corresponding %s groupname in this server", fc.groupname)
+			return fmt.Errorf("there is no corresponding %s groupname in this server", fc.groupname)
+		}
+
+		uid, err := strconv.Atoi(usr.Uid)
+		if err != nil {
+			return err
+		}
+
+		gid, err := strconv.Atoi(group.Gid)
+		if err != nil {
+			return err
+		}
+
+		err = syscall.Setgroups([]int{})
+		if err != nil {
+			return err
+		}
+
+		err = syscall.Setuid(uid)
+		if err != nil {
+			return err
+		}
+
+		err = syscall.Setgid(gid)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (fc *FtpClient) RunFtpBackground() {
 	log.Debug().Msg("Opening websocket for ftp session.")
 
 	var err error
+	err = fc.demote()
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to get demote permission")
+		return
+	}
+
 	fc.conn, _, err = websocket.DefaultDialer.Dial(fc.url, fc.requestHeader)
 	if err != nil {
 		log.Debug().Err(err).Msgf("Failed to connect to pty websocket at %s", fc.url)
