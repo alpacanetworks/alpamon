@@ -2,6 +2,7 @@ package command
 
 import (
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
+	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/alpacanetworks/alpamon-go/pkg/runner"
 	"github.com/spf13/cobra"
 )
@@ -14,7 +15,8 @@ var ftpCmd = &cobra.Command{
 		url := args[0]
 		homeDirectory := args[1]
 
-		// TODO : Send logs to alpamon's Logserver using a Unix domain socket
+		logger.InitFtpLogger()
+
 		settings := config.LoadConfig()
 		config.InitFtpSettings(settings)
 

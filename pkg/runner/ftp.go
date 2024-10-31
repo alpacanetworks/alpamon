@@ -39,8 +39,7 @@ func NewFtpClient(url, homeDirectory string) *FtpClient {
 }
 
 func (fc *FtpClient) RunFtpBackground() {
-	// TODO : Send logs to alpamon's Logserver using a Unix domain socket
-	// log.Debug().Msg("Opening websocket for ftp session.")
+	log.Debug().Msg("Opening websocket for ftp session.")
 
 	var err error
 	fc.conn, _, err = websocket.DefaultDialer.Dial(fc.url, fc.requestHeader)
@@ -128,8 +127,7 @@ func (fc *FtpClient) close() {
 		_ = fc.conn.Close()
 	}
 
-	// TODO : Send logs to alpamon's Logserver using a Unix domain socket
-	// log.Debug().Msg("Websocket connection for ftp has been closed.")
+	log.Debug().Msg("Websocket connection for ftp has been closed.")
 }
 
 func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (CommandResult, error) {
