@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/gorilla/websocket"
@@ -180,6 +181,7 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 		Type:     "folder",
 		Path:     path,
 		Size:     int64(0),
+		ModTime:  time.Time{},
 		Children: []CommandResult{},
 	}
 
@@ -200,9 +202,10 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 		}
 
 		child := CommandResult{
-			Name: entry.Name(),
-			Path: fullPath,
-			Size: info.Size(),
+			Name:    entry.Name(),
+			Path:    fullPath,
+			Size:    info.Size(),
+			ModTime: info.ModTime(),
 		}
 
 		if entry.IsDir() {
@@ -221,6 +224,13 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 
 		result.Children = append(result.Children, child)
 		result.Size += child.Size
+	}
+
+	dirInfo, err := os.Stat(path)
+	if err != nil {
+		result.Message = err.Error()
+	} else {
+		result.ModTime = dirInfo.ModTime()
 	}
 
 	return result, nil

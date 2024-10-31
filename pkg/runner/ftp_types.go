@@ -1,6 +1,9 @@
 package runner
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 type FtpCommand string
 
@@ -49,6 +52,7 @@ type CommandResult struct {
 	Path     string          `json:"path,omitempty"`
 	Size     int64           `json:"size,omitempty"`
 	Children []CommandResult `json:"children,omitempty"`
+	ModTime  time.Time       `json:"mod_time,omitempty"`
 	Message  string          `json:"message,omitempty"`
 }
 
