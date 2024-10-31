@@ -37,6 +37,8 @@ nfpms:
     formats:
       - deb
       - rpm
+    dependencies:
+      - zip
     bindir: /usr/local/bin/
 
     scripts:
