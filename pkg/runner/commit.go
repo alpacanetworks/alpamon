@@ -72,10 +72,12 @@ func commitSystemInfo() {
 		"record": "committed", 
 		"description": "Committed system information. version: %s"}`, version.Version)), 80, time.Time{})
 
-	log.Info().Msg("Finished committing system information.")
+	log.Info().Msg("Completed committing system information.")
 }
 
 func syncSystemInfo(session *scheduler.Session, keys []string) {
+	log.Info().Msg("Start system information synchronization.")
+
 	syncMutex.Lock()
 	defer syncMutex.Unlock()
 
@@ -147,7 +149,7 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 			}
 			remoteData = &[]SystemPackageData{}
 		default:
-			log.Debug().Msgf("Unknown key: %s", key)
+			log.Warn().Msgf("Unknown key: %s", key)
 			continue
 		}
 
@@ -155,7 +157,7 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 		if statusCode == http.StatusOK {
 			err = json.Unmarshal(resp, &remoteData)
 			if err != nil {
-				log.Debug().Err(err).Msg("Failed to unmarshal remote data")
+				log.Error().Err(err).Msg("Failed to unmarshal remote data")
 				continue
 			}
 		} else if statusCode == http.StatusNotFound {
@@ -171,6 +173,7 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 			compareData(entry, currentData.(ComparableData), remoteData.(ComparableData))
 		}
 	}
+	log.Info().Msg("Completed system information synchronization")
 }
 
 func compareData(entry commitDef, currentData, remoteData ComparableData) {

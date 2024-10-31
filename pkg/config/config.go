@@ -43,16 +43,23 @@ func LoadConfig() Settings {
 
 	for _, configFile := range configFiles {
 		fileInfo, statErr := os.Stat(configFile)
-		if statErr == nil {
-			if fileInfo.Size() == 0 {
-				log.Debug().Msgf("Config file %s is empty, skipping...", configFile)
+		if statErr != nil {
+			if os.IsNotExist(statErr) {
 				continue
 			} else {
-				log.Debug().Msgf("Using config file %s", configFile)
-				validConfigFile = configFile
-				break
+				log.Error().Err(statErr).Msgf("Error accessing config file %s", configFile)
+				continue
 			}
 		}
+
+		if fileInfo.Size() == 0 {
+			log.Debug().Msgf("Config file %s is empty, skipping...", configFile)
+			continue
+		}
+
+		log.Debug().Msgf("Using config file %s", configFile)
+		validConfigFile = configFile
+		break
 	}
 
 	if validConfigFile == "" {
@@ -64,10 +71,6 @@ func LoadConfig() Settings {
 		log.Fatal().Err(err).Msgf("Failed to load config file %s", validConfigFile)
 	}
 
-	if iniData == nil {
-		log.Fatal().Err(err).Msgf("Failed to load config file %s", validConfigFile)
-	}
-
 	var config Config
 	err = iniData.MapTo(&config)
 	if err != nil {
@@ -75,7 +78,9 @@ func LoadConfig() Settings {
 	}
 
 	if config.Logging.Debug {
-		log.Logger = log.Level(zerolog.DebugLevel)
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
 	isValid, settings := validateConfig(config)

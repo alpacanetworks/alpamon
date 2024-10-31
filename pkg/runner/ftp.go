@@ -68,7 +68,9 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 				if ctx.Err() != nil {
 					return
 				}
-				log.Debug().Err(err).Msg("Failed to read from ftp websocket")
+				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					log.Debug().Err(err).Msg("Failed to read from ftp websocket")
+				}
 				cancel()
 				return
 			}
@@ -110,7 +112,9 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 				if ctx.Err() != nil {
 					return
 				}
-				log.Debug().Err(err).Msg("Failed to send websocket message")
+				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					log.Debug().Err(err).Msg("Failed to send websocket message")
+				}
 				cancel()
 				return
 			}
@@ -120,10 +124,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 
 func (fc *FtpClient) close() {
 	if fc.conn != nil {
-		err := fc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		if err != nil {
-			log.Debug().Err(err).Msg("Failed to write close message to ftp websocket")
-		}
+		_ = fc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		_ = fc.conn.Close()
 	}
 

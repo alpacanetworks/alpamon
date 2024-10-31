@@ -89,10 +89,10 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 	switch args[0] {
 	case "upgrade":
 		if utils.PlatformLike == "debian" {
-			cmd = "curl -s https://packagecloud.io/install/repositories/alpacanetworks/alpamon/script.deb.sh?any=true | sudo bash && " +
+			cmd = "apt-get upgrate -y && " +
 				"apt-get upgrade -y alpamon"
 		} else if utils.PlatformLike == "rhel" {
-			cmd = "curl -s https://packagecloud.io/install/repositories/alpacanetworks/alpamon/script.rpm.sh?any=true | sudo bash && " +
+			cmd = "yum update- y " +
 				"yum update -y alpamon"
 		} else {
 			return 1, fmt.Sprintf("Platform '%s' not supported.", utils.PlatformLike)

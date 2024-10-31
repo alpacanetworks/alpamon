@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/creack/pty"
@@ -69,14 +70,14 @@ func (pc *PtyClient) RunPtyBackground() {
 
 	uid, gid, groupIds, env, err := pc.getPtyUserAndEnv()
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to get pty user and env")
+		log.Error().Err(err).Msgf("Failed to get pty user and env")
 		return
 	}
 
 	pc.setPtyCmdSysProcAttrAndEnv(uid, gid, groupIds, env)
 	pc.ptmx, err = pty.Start(pc.cmd)
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to start pty")
+		log.Error().Err(err).Msg("Failed to start pty")
 		pc.close()
 		return
 	}
@@ -107,7 +108,9 @@ func (pc *PtyClient) readFromWebsocket(ctx context.Context, cancel context.Cance
 				if ctx.Err() != nil {
 					return
 				}
-				log.Debug().Err(err).Msg("Failed to read from pty websocket")
+				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					log.Debug().Err(err).Msg("Failed to read from pty websocket")
+				}
 				cancel()
 				return
 			}
@@ -116,7 +119,9 @@ func (pc *PtyClient) readFromWebsocket(ctx context.Context, cancel context.Cance
 				if ctx.Err() != nil {
 					return
 				}
-				log.Debug().Err(err).Msg("Failed to write to pty")
+				if !errors.Is(err, os.ErrClosed) {
+					log.Debug().Err(err).Msg("Failed to write to pty")
+				}
 				cancel()
 				return
 			}
@@ -140,7 +145,7 @@ func (pc *PtyClient) readFromPTY(ctx context.Context, cancel context.CancelFunc)
 				if err == io.EOF {
 					log.Debug().Msg("pty session exited.")
 				} else {
-					log.Debug().Err(err).Msg("Failed to read from pty")
+					log.Debug().Err(err).Msg("Failed to read from PTY")
 				}
 				cancel()
 				return
@@ -150,7 +155,9 @@ func (pc *PtyClient) readFromPTY(ctx context.Context, cancel context.CancelFunc)
 				if ctx.Err() != nil {
 					return
 				}
-				log.Debug().Err(err).Msg("Failed to write to pty")
+				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					log.Debug().Err(err).Msg("Failed to write to pty")
+				}
 				cancel()
 				return
 			}
@@ -164,7 +171,7 @@ func (pc *PtyClient) resize(rows, cols uint16) error {
 		Cols: cols,
 	})
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to resize terminal")
+		log.Warn().Err(err).Msg("Failed to resize terminal")
 		return err
 	}
 	pc.rows = rows
@@ -186,10 +193,7 @@ func (pc *PtyClient) close() {
 	}
 
 	if pc.conn != nil {
-		err := pc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		if err != nil {
-			log.Debug().Err(err).Msg("Failed to write close message to pty websocket")
-		}
+		_ = pc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		_ = pc.conn.Close()
 	}
 
