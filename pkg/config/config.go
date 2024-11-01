@@ -19,7 +19,6 @@ var (
 	}
 
 	GlobalSettings Settings
-	FtpSettings    Settings
 )
 
 const (
@@ -30,10 +29,6 @@ const (
 
 func InitSettings(settings Settings) {
 	GlobalSettings = settings
-}
-
-func InitFtpSettings(settings Settings) {
-	FtpSettings = settings
 }
 
 func LoadConfig() Settings {
