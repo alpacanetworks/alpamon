@@ -132,6 +132,7 @@ func (fc *FtpClient) close() {
 	}
 
 	fc.log.Debug().Msg("Websocket connection for ftp has been closed.")
+	os.Exit(1)
 }
 
 func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (CommandResult, error) {
