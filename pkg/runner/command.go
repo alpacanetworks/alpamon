@@ -153,34 +153,9 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 			return 1, fmt.Sprintf("openftp: Not enough information. %s", err.Error())
 		}
 
-		sysProcAttr, err := demote(data.Username, data.Groupname)
+		err = cr.openFtp(data)
 		if err != nil {
-			log.Debug().Err(err).Msg("Failed to get demote permission")
-
-			return 1, fmt.Sprintf("openftp: Failed to get demoted permission. %s", err.Error())
-		}
-
-		executable, err := os.Executable()
-		if err != nil {
-			log.Debug().Err(err).Msg("Failed to get executable path")
-
-			return 1, fmt.Sprintf("openftp: Failed to get executable path. %s", err.Error())
-		}
-
-		cmd := exec.Command(
-			executable,
-			"ftp",
-			data.URL,
-			data.HomeDirectory,
-		)
-		cmd.SysProcAttr = sysProcAttr
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		if err := cmd.Start(); err != nil {
-			log.Debug().Err(err).Msg("Failed to start worker process")
-
-			return 1, fmt.Sprintf("openftp: Failed to start worker process. %s", err.Error())
+			return 1, fmt.Sprintf("%v", err)
 		}
 
 		return 0, "Spawned a ftp terminal."
@@ -614,6 +589,40 @@ func (cr *CommandRunner) validateData(data interface{}) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (cr *CommandRunner) openFtp(data openFtpData) error {
+	sysProcAttr, err := demote(data.Username, data.Groupname)
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to get demote permission")
+
+		return fmt.Errorf("openftp: Failed to get demoted permission. %w", err)
+	}
+
+	executable, err := os.Executable()
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to get executable path")
+
+		return fmt.Errorf("openftp: Failed to get executable path. %w", err)
+	}
+
+	cmd := exec.Command(
+		executable,
+		"ftp",
+		data.URL,
+		data.HomeDirectory,
+	)
+	cmd.SysProcAttr = sysProcAttr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err = cmd.Start(); err != nil {
+		log.Debug().Err(err).Msg("Failed to start ftp worker process")
+
+		return fmt.Errorf("openftp: Failed to start ftp worker process. %w", err)
+	}
+
 	return nil
 }
 
