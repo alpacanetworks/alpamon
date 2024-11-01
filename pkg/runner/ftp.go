@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
+	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/gorilla/websocket"
-	"github.com/rs/zerolog/log"
 )
 
 type FtpClient struct {
@@ -22,29 +22,32 @@ type FtpClient struct {
 	url              string
 	homeDirectory    string
 	workingDirectory string
+	log              logger.FtpLogger
 }
 
-func NewFtpClient(url, homeDirectory string) *FtpClient {
+func NewFtpClient(url, homeDirectory string, ftpLogger logger.FtpLogger) *FtpClient {
+	settings := config.LoadConfig()
 	headers := http.Header{
-		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, config.FtpSettings.ID, config.FtpSettings.Key)},
-		"Origin":        {config.FtpSettings.ServerURL},
+		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, settings.ID, settings.Key)},
+		"Origin":        {settings.ServerURL},
 	}
 
 	return &FtpClient{
 		requestHeader:    headers,
-		url:              strings.Replace(config.FtpSettings.ServerURL, "http", "ws", 1) + url,
+		url:              strings.Replace(settings.ServerURL, "http", "ws", 1) + url,
 		homeDirectory:    homeDirectory,
 		workingDirectory: homeDirectory,
+		log:              ftpLogger,
 	}
 }
 
 func (fc *FtpClient) RunFtpBackground() {
-	log.Debug().Msg("Opening websocket for ftp session.")
+	fc.log.Debug().Msg("Opening websocket for ftp session.")
 
 	var err error
 	fc.conn, _, err = websocket.DefaultDialer.Dial(fc.url, fc.requestHeader)
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to connect to pty websocket at %s", fc.url)
+		fc.log.Debug().Err(err).Msgf("Failed to connect to pty websocket at %s", fc.url)
 		return
 	}
 	defer fc.close()
@@ -69,7 +72,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 					return
 				}
 				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					log.Debug().Err(err).Msg("Failed to read from ftp websocket")
+					fc.log.Debug().Err(err).Msg("Failed to read from ftp websocket")
 				}
 				cancel()
 				return
@@ -78,7 +81,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 			var content FtpContent
 			err = json.Unmarshal(message, &content)
 			if err != nil {
-				log.Debug().Err(err).Msg("Failed to unmarshal websocket message")
+				fc.log.Debug().Err(err).Msg("Failed to unmarshal websocket message")
 				cancel()
 				return
 			}
@@ -102,7 +105,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 				if ctx.Err() != nil {
 					return
 				}
-				log.Debug().Err(err).Msg("Failed to marshal response")
+				fc.log.Debug().Err(err).Msg("Failed to marshal response")
 				cancel()
 				return
 			}
@@ -113,7 +116,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 					return
 				}
 				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					log.Debug().Err(err).Msg("Failed to send websocket message")
+					fc.log.Debug().Err(err).Msg("Failed to send websocket message")
 				}
 				cancel()
 				return
@@ -128,7 +131,7 @@ func (fc *FtpClient) close() {
 		_ = fc.conn.Close()
 	}
 
-	log.Debug().Msg("Websocket connection for ftp has been closed.")
+	fc.log.Debug().Msg("Websocket connection for ftp has been closed.")
 }
 
 func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (CommandResult, error) {
@@ -386,19 +389,27 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer srcFile.Close()
+
+	defer func() error {
+		if err := srcFile.Close(); err != nil {
+			return err
+		}
+		return nil
+	}()
 
 	dstFile, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
+
+	defer func() error {
+		if err := dstFile.Close(); err != nil {
+			return err
+		}
+		return nil
+	}()
 
 	if _, err = io.Copy(dstFile, srcFile); err != nil {
-		return err
-	}
-
-	if err = dstFile.Close(); err != nil {
 		return err
 	}
 
