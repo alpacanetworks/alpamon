@@ -65,29 +65,6 @@ func InitLogger() *os.File {
 	return logFile
 }
 
-// TODO : Send logs to alpamon's Logserver using a Unix domain socket
-func InitFtpLogger() {
-	consoleOutput := zerolog.ConsoleWriter{
-		Out:          os.Stderr,
-		TimeFormat:   time.RFC3339,
-		TimeLocation: time.Local,
-		FormatLevel: func(i interface{}) string {
-			return "[" + strings.ToUpper(i.(string)) + "]"
-		},
-		FormatMessage: func(i interface{}) string {
-			return " " + i.(string)
-		},
-		FormatFieldName: func(i interface{}) string {
-			return "(" + i.(string) + ")"
-		},
-		FormatFieldValue: func(i interface{}) string {
-			return i.(string)
-		},
-	}
-
-	log.Logger = zerolog.New(consoleOutput).With().Timestamp().Caller().Logger()
-}
-
 type logRecord struct {
 	Date    string `json:"date"`
 	Level   int    `json:"level"`
