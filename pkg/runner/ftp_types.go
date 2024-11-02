@@ -62,7 +62,7 @@ type CommandResult struct {
 	Path     string          `json:"path,omitempty"`
 	Size     int64           `json:"size,omitempty"`
 	Children []CommandResult `json:"children,omitempty"`
-	ModTime  time.Time       `json:"mod_time,omitempty"`
+	ModTime  *time.Time      `json:"mod_time,omitempty"`
 	Message  string          `json:"message,omitempty"`
 }
 

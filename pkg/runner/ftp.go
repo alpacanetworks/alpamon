@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
@@ -185,7 +184,7 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 		Type:     "folder",
 		Path:     path,
 		Size:     int64(0),
-		ModTime:  time.Time{},
+		ModTime:  nil,
 		Children: []CommandResult{},
 	}
 
@@ -205,11 +204,12 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 			continue
 		}
 
+		modTime := info.ModTime()
 		child := CommandResult{
 			Name:    entry.Name(),
 			Path:    fullPath,
 			Size:    info.Size(),
-			ModTime: info.ModTime(),
+			ModTime: &modTime,
 		}
 
 		if entry.IsDir() {
@@ -234,7 +234,8 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 	if err != nil {
 		result.Message = err.Error()
 	} else {
-		result.ModTime = dirInfo.ModTime()
+		modTime := dirInfo.ModTime()
+		result.ModTime = &modTime
 	}
 
 	return result, nil
@@ -386,17 +387,16 @@ func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
 	}, nil
 }
 
-func copyFile(src, dst string) error {
+func copyFile(src, dst string) (finalErr error) {
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 
-	defer func() error {
-		if err := srcFile.Close(); err != nil {
-			return err
+	defer func() {
+		if err := srcFile.Close(); err != nil && finalErr == nil {
+			finalErr = err
 		}
-		return nil
 	}()
 
 	dstFile, err := os.Create(dst)
@@ -404,11 +404,10 @@ func copyFile(src, dst string) error {
 		return err
 	}
 
-	defer func() error {
-		if err := dstFile.Close(); err != nil {
-			return err
+	defer func() {
+		if err := dstFile.Close(); err != nil && finalErr == nil {
+			finalErr = err
 		}
-		return nil
 	}()
 
 	if _, err = io.Copy(dstFile, srcFile); err != nil {
