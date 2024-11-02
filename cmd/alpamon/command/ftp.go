@@ -1,6 +1,7 @@
 package command
 
 import (
+	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/alpacanetworks/alpamon-go/pkg/runner"
 	"github.com/spf13/cobra"
@@ -11,16 +12,18 @@ var ftpCmd = &cobra.Command{
 	Short: "Start worker for Web FTP",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		url := args[0]
-		homeDirectory := args[1]
+		data := runner.FtpConfigData{
+			URL:           args[0],
+			HomeDirectory: args[1],
+			Logger:        logger.NewFtpLogger(),
+			Settings:      config.LoadConfig(),
+		}
 
-		ftpLogger := logger.NewFtpLogger()
-
-		RunFtpWorker(url, homeDirectory, ftpLogger)
+		RunFtpWorker(data)
 	},
 }
 
-func RunFtpWorker(url, homeDirectory string, ftpLogger logger.FtpLogger) {
-	ftpClient := runner.NewFtpClient(url, homeDirectory, ftpLogger)
+func RunFtpWorker(data runner.FtpConfigData) {
+	ftpClient := runner.NewFtpClient(data)
 	ftpClient.RunFtpBackground()
 }

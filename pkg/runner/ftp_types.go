@@ -3,6 +3,9 @@ package runner
 import (
 	"strings"
 	"time"
+
+	"github.com/alpacanetworks/alpamon-go/pkg/config"
+	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 )
 
 type FtpCommand string
@@ -25,6 +28,13 @@ const (
 	ErrFileExists            = "file exists"
 	ErrDirectoryNotEmpty     = "directory not empty"
 )
+
+type FtpConfigData struct {
+	URL           string
+	HomeDirectory string
+	Logger        logger.FtpLogger
+	Settings      config.Settings
+}
 
 type FtpData struct {
 	Path      string `json:"path,omitempty"`

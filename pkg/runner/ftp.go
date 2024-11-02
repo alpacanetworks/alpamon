@@ -23,21 +23,22 @@ type FtpClient struct {
 	homeDirectory    string
 	workingDirectory string
 	log              logger.FtpLogger
+	settings         config.Settings
 }
 
-func NewFtpClient(url, homeDirectory string, ftpLogger logger.FtpLogger) *FtpClient {
-	settings := config.LoadConfig()
+func NewFtpClient(data FtpConfigData) *FtpClient {
 	headers := http.Header{
-		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, settings.ID, settings.Key)},
-		"Origin":        {settings.ServerURL},
+		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, data.Settings.ID, data.Settings.Key)},
+		"Origin":        {data.Settings.ServerURL},
 	}
 
 	return &FtpClient{
 		requestHeader:    headers,
-		url:              strings.Replace(settings.ServerURL, "http", "ws", 1) + url,
-		homeDirectory:    homeDirectory,
-		workingDirectory: homeDirectory,
-		log:              ftpLogger,
+		url:              strings.Replace(data.Settings.ServerURL, "http", "ws", 1) + data.URL,
+		homeDirectory:    data.HomeDirectory,
+		workingDirectory: data.HomeDirectory,
+		log:              data.Logger,
+		settings:         data.Settings,
 	}
 }
 
