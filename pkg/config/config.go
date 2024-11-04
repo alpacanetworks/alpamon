@@ -2,13 +2,14 @@ package config
 
 import (
 	"crypto/tls"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"gopkg.in/ini.v1"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"gopkg.in/ini.v1"
 )
 
 var (

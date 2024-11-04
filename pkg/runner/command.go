@@ -153,8 +153,10 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 			return 1, fmt.Sprintf("openftp: Not enough information. %s", err.Error())
 		}
 
-		ftpClient := NewFtpClient(cr.data)
-		go ftpClient.RunFtpBackground()
+		err = cr.openFtp(data)
+		if err != nil {
+			return 1, fmt.Sprintf("%v", err)
+		}
 
 		return 0, "Spawned a ftp terminal."
 	case "resizepty":
@@ -287,7 +289,7 @@ func (cr *CommandRunner) addUser() (exitCode int, result string) {
 
 	err := cr.validateData(data)
 	if err != nil {
-		return 1, fmt.Sprintf("adduser: Not enough information. %s", err.Error())
+		return 1, fmt.Sprintf("adduser: Not enough information. %s", err)
 	}
 
 	if utils.PlatformLike == "debian" {
@@ -364,7 +366,7 @@ func (cr *CommandRunner) addGroup() (exitCode int, result string) {
 
 	err := cr.validateData(data)
 	if err != nil {
-		return 1, fmt.Sprintf("addgroup: Not enough information. %s", err.Error())
+		return 1, fmt.Sprintf("addgroup: Not enough information. %s", err)
 	}
 
 	if utils.PlatformLike == "debian" {
@@ -406,7 +408,7 @@ func (cr *CommandRunner) delUser() (exitCode int, result string) {
 
 	err := cr.validateData(data)
 	if err != nil {
-		return 1, fmt.Sprintf("deluser: Not enough information. %s", err.Error())
+		return 1, fmt.Sprintf("deluser: Not enough information. %s", err)
 	}
 
 	if utils.PlatformLike == "debian" {
@@ -446,7 +448,7 @@ func (cr *CommandRunner) delGroup() (exitCode int, result string) {
 
 	err := cr.validateData(data)
 	if err != nil {
-		return 1, fmt.Sprintf("delgroup: Not enough information. %s", err.Error())
+		return 1, fmt.Sprintf("delgroup: Not enough information. %s", err)
 	}
 
 	if utils.PlatformLike == "debian" {
@@ -587,6 +589,40 @@ func (cr *CommandRunner) validateData(data interface{}) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (cr *CommandRunner) openFtp(data openFtpData) error {
+	sysProcAttr, err := demote(data.Username, data.Groupname)
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to get demote permission")
+
+		return fmt.Errorf("openftp: Failed to get demoted permission. %w", err)
+	}
+
+	executable, err := os.Executable()
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to get executable path")
+
+		return fmt.Errorf("openftp: Failed to get executable path. %w", err)
+	}
+
+	cmd := exec.Command(
+		executable,
+		"ftp",
+		data.URL,
+		data.HomeDirectory,
+	)
+	cmd.SysProcAttr = sysProcAttr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err = cmd.Start(); err != nil {
+		log.Debug().Err(err).Msg("Failed to start ftp worker process")
+
+		return fmt.Errorf("openftp: Failed to start ftp worker process. %w", err)
+	}
+
 	return nil
 }
 

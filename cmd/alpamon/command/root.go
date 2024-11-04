@@ -2,6 +2,9 @@ package command
 
 import (
 	"fmt"
+	"os"
+	"syscall"
+
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/alpacanetworks/alpamon-go/pkg/pidfile"
@@ -11,8 +14,6 @@ import (
 	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"os"
-	"syscall"
 )
 
 var RootCmd = &cobra.Command{
@@ -24,7 +25,7 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(installCmd)
+	RootCmd.AddCommand(installCmd, ftpCmd)
 }
 
 func runAgent() {
