@@ -387,29 +387,18 @@ func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
 	}, nil
 }
 
-func copyFile(src, dst string) (finalErr error) {
-	finalErr = nil
+func copyFile(src, dst string) error {
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return err
 	}
-
-	defer func() {
-		if err = srcFile.Close(); err != nil && finalErr == nil {
-			finalErr = err
-		}
-	}()
+	defer func() { _ = srcFile.Close() }()
 
 	dstFile, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-
-	defer func() {
-		if err := dstFile.Close(); err != nil && finalErr == nil {
-			finalErr = err
-		}
-	}()
+	defer func() { _ = dstFile.Close() }()
 
 	if _, err = io.Copy(dstFile, srcFile); err != nil {
 		return err
@@ -424,7 +413,7 @@ func copyFile(src, dst string) (finalErr error) {
 		return err
 	}
 
-	return finalErr
+	return nil
 }
 
 func copyDir(src, dst string) error {
