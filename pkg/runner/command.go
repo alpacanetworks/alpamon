@@ -289,7 +289,7 @@ func (cr *CommandRunner) addUser() (exitCode int, result string) {
 
 	err := cr.validateData(data)
 	if err != nil {
-		return 1, fmt.Sprintf("adduser: Not enough information. %s", err.Error())
+		return 1, fmt.Sprintf("adduser: Not enough information. %s", err)
 	}
 
 	if utils.PlatformLike == "debian" {
@@ -366,7 +366,7 @@ func (cr *CommandRunner) addGroup() (exitCode int, result string) {
 
 	err := cr.validateData(data)
 	if err != nil {
-		return 1, fmt.Sprintf("addgroup: Not enough information. %s", err.Error())
+		return 1, fmt.Sprintf("addgroup: Not enough information. %s", err)
 	}
 
 	if utils.PlatformLike == "debian" {
@@ -408,7 +408,7 @@ func (cr *CommandRunner) delUser() (exitCode int, result string) {
 
 	err := cr.validateData(data)
 	if err != nil {
-		return 1, fmt.Sprintf("deluser: Not enough information. %s", err.Error())
+		return 1, fmt.Sprintf("deluser: Not enough information. %s", err)
 	}
 
 	if utils.PlatformLike == "debian" {
@@ -448,7 +448,7 @@ func (cr *CommandRunner) delGroup() (exitCode int, result string) {
 
 	err := cr.validateData(data)
 	if err != nil {
-		return 1, fmt.Sprintf("delgroup: Not enough information. %s", err.Error())
+		return 1, fmt.Sprintf("delgroup: Not enough information. %s", err)
 	}
 
 	if utils.PlatformLike == "debian" {

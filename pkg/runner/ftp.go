@@ -394,7 +394,7 @@ func copyFile(src, dst string) (finalErr error) {
 	}
 
 	defer func() {
-		if err := srcFile.Close(); err != nil && finalErr == nil {
+		if err = srcFile.Close(); err != nil && finalErr == nil {
 			finalErr = err
 		}
 	}()
