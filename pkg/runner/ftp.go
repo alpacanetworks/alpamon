@@ -388,6 +388,7 @@ func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
 }
 
 func copyFile(src, dst string) (finalErr error) {
+	finalErr = nil
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return err
@@ -423,7 +424,7 @@ func copyFile(src, dst string) (finalErr error) {
 		return err
 	}
 
-	return nil
+	return finalErr
 }
 
 func copyDir(src, dst string) error {
