@@ -603,7 +603,7 @@ func getDpkgPackage() ([]SystemPackageData, error) {
 func getRpmPackage(path string) ([]SystemPackageData, error) {
 	db, err := rpmdb.Open(path)
 	if err != nil {
-		log.Debug().Msgf("Failed to open %s file", path)
+		log.Debug().Err(err).Msgf("Failed to open %s file: %v", path, err)
 		return []SystemPackageData{}, err
 	}
 
@@ -611,7 +611,7 @@ func getRpmPackage(path string) ([]SystemPackageData, error) {
 
 	pkgList, err := db.ListPackages()
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to list packages")
+		log.Debug().Err(err).Msgf("Failed to list packages: %v", err)
 		return []SystemPackageData{}, err
 	}
 
