@@ -10,6 +10,7 @@ import (
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	rpmdb "github.com/knqyf263/go-rpmdb/pkg"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/host"
@@ -550,7 +551,7 @@ func getSystemPackages() ([]SystemPackageData, error) {
 func getDpkgPackage() ([]SystemPackageData, error) {
 	fd, err := os.Open(dpkgDbPath)
 	if err != nil {
-		log.Debug().Err(err).Str("path", dpkgDbPath).Msg("Failed to open dpkg file")
+		log.Debug().Err(err).Msgf("Failed to open %s file", dpkgDbPath)
 		return []SystemPackageData{}, err
 	}
 	defer func() { _ = fd.Close() }()
@@ -602,7 +603,7 @@ func getDpkgPackage() ([]SystemPackageData, error) {
 func getRpmPackage(path string) ([]SystemPackageData, error) {
 	db, err := rpmdb.Open(path)
 	if err != nil {
-		log.Debug().Err(err).Str("path", path).Msg("Failed to open rpm file")
+		log.Debug().Msgf("Failed to open %s file", path)
 		return []SystemPackageData{}, err
 	}
 
@@ -610,7 +611,7 @@ func getRpmPackage(path string) ([]SystemPackageData, error) {
 
 	pkgList, err := db.ListPackages()
 	if err != nil {
-		log.Debug().Err(err).Str("path", path).Msg("Failed to list packages")
+		log.Debug().Err(err).Msg("Failed to list packages")
 		return []SystemPackageData{}, err
 	}
 
