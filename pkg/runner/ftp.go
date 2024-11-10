@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/gorilla/websocket"
 )
@@ -22,22 +21,19 @@ type FtpClient struct {
 	homeDirectory    string
 	workingDirectory string
 	log              logger.FtpLogger
-	settings         config.Settings
 }
 
 func NewFtpClient(data FtpConfigData) *FtpClient {
 	headers := http.Header{
-		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, data.Settings.ID, data.Settings.Key)},
-		"Origin":        {data.Settings.ServerURL},
+		"Origin": {data.ServerURL},
 	}
 
 	return &FtpClient{
 		requestHeader:    headers,
-		url:              strings.Replace(data.Settings.ServerURL, "http", "ws", 1) + data.URL,
+		url:              strings.Replace(data.ServerURL, "http", "ws", 1) + data.URL,
 		homeDirectory:    data.HomeDirectory,
 		workingDirectory: data.HomeDirectory,
 		log:              data.Logger,
-		settings:         data.Settings,
 	}
 }
 

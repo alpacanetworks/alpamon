@@ -4,7 +4,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 )
 
@@ -31,9 +30,9 @@ const (
 
 type FtpConfigData struct {
 	URL           string
+	ServerURL     string
 	HomeDirectory string
 	Logger        logger.FtpLogger
-	Settings      config.Settings
 }
 
 type FtpData struct {

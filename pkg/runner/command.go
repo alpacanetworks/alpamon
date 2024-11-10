@@ -611,6 +611,7 @@ func (cr *CommandRunner) openFtp(data openFtpData) error {
 		executable,
 		"ftp",
 		data.URL,
+		config.GlobalSettings.ServerURL,
 		data.HomeDirectory,
 	)
 	cmd.SysProcAttr = sysProcAttr
