@@ -1,10 +1,14 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"syscall"
 
+	"github.com/alpacanetworks/alpamon-go/pkg/collector"
+	"github.com/alpacanetworks/alpamon-go/pkg/collector/check"
+	"github.com/alpacanetworks/alpamon-go/pkg/collector/transporter"
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/alpacanetworks/alpamon-go/pkg/pidfile"
@@ -58,6 +62,29 @@ func runAgent() {
 
 	// Commit
 	runner.CommitAsync(session, commissioned)
+
+	checkFactory := &check.DefaultCheckFactory{}
+	transporterFactory := &transporter.DefaultTransporterFactory{}
+
+	collector, err := collector.NewCollector(session, checkFactory, transporterFactory)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create collector")
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if err := collector.Start(ctx); err != nil {
+		log.Error().Err(err).Msg("Failed to start collector")
+		return
+	}
+
+	go func() {
+		for err := range collector.Errors() {
+			log.Error().Err(err).Msg("Collector error")
+		}
+	}()
 
 	// Websocket Client
 	wsClient := runner.NewWebsocketClient(session)
