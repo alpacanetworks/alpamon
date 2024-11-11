@@ -615,6 +615,7 @@ func (cr *CommandRunner) openFtp(data openFtpData) error {
 		data.HomeDirectory,
 	)
 	cmd.SysProcAttr = sysProcAttr
+	cmd.Dir = data.HomeDirectory
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
