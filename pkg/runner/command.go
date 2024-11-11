@@ -728,9 +728,11 @@ func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysP
 		}
 	}
 
-	err := cmd.Run()
-	if err != nil {
-		return "", err
+	if bulk || recursive {
+		err := cmd.Run()
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return archiveName, nil
