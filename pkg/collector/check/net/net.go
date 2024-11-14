@@ -24,24 +24,25 @@ func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer) *Ch
 
 func (c *Check) Execute(ctx context.Context) {
 	ioCounters, err := c.collectIOCounters()
+	interfaces, _ := c.collectInterfaces()
 
-	var metric base.MetricData
-	if err != nil {
-		metric = base.MetricData{
-			Type: checkType,
-			Data: []base.CheckResult{},
-		}
-	} else {
+	metric := base.MetricData{
+		Type: checkType,
+		Data: []base.CheckResult{},
+	}
+	if err == nil {
 		for _, ioCounter := range ioCounters {
-			data := base.CheckResult{
-				Timestamp:   time.Now(),
-				Name:        ioCounter.Name,
-				InputPkts:   ioCounter.PacketsRecv,
-				InputBytes:  ioCounter.BytesRecv,
-				OutputPkts:  ioCounter.PacketsSent,
-				OutputBytes: ioCounter.BytesSent,
+			if _, ok := interfaces[ioCounter.Name]; ok {
+				data := base.CheckResult{
+					Timestamp:   time.Now(),
+					Name:        ioCounter.Name,
+					InputPkts:   ioCounter.PacketsRecv,
+					InputBytes:  ioCounter.BytesRecv,
+					OutputPkts:  ioCounter.PacketsSent,
+					OutputBytes: ioCounter.BytesSent,
+				}
+				metric.Data = append(metric.Data, data)
 			}
-			metric.Data = append(metric.Data, data)
 		}
 	}
 
@@ -55,6 +56,24 @@ func (c *Check) Execute(ctx context.Context) {
 	} else {
 		buffer.SuccessQueue <- metric
 	}
+}
+
+func (c *Check) collectInterfaces() (map[string]net.InterfaceStat, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	interfaces := map[string]net.InterfaceStat{}
+	for _, iface := range ifaces {
+		mac := iface.HardwareAddr
+		if mac == "" {
+			continue
+		}
+		interfaces[iface.Name] = iface
+	}
+
+	return interfaces, nil
 }
 
 func (c *Check) collectIOCounters() ([]net.IOCountersStat, error) {
