@@ -19,11 +19,11 @@ type CheckResult struct {
 	Usage       float64   `json:"usage,omitempty"`
 	Name        string    `json:"name,omitempty"`
 	Device      string    `json:"device,omitempty"`
-	Partition   string    `json:"partition,omitempty"`
+	MountPoint  string    `json:"mount_point,omitempty"`
 	Total       uint64    `json:"total,omitempty"`
 	Free        uint64    `json:"free,omitempty"`
 	Used        uint64    `json:"used,omitempty"`
-	WriteBytes  uint64    `json:"wrtie_bytes,omitempty"`
+	WriteBytes  uint64    `json:"write_bytes,omitempty"`
 	ReadBytes   uint64    `json:"read_bytes,omitempty"`
 	InputPkts   uint64    `json:"input_pkts,omitempty"`
 	InputBytes  uint64    `json:"input_bytes,omitempty"`

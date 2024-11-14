@@ -40,13 +40,16 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 	if err == nil {
 		for _, partition := range partitions {
-			usage, err := c.collectDiskUsage(partition.Mountpoint)
-			if err == nil {
+			usage, usageErr := c.collectDiskUsage(partition.Mountpoint)
+			if usageErr == nil {
 				data := base.CheckResult{
-					Usage: usage.UsedPercent,
-					Total: usage.Total,
-					Free:  usage.Free,
-					Used:  usage.Used,
+					Timestamp:  time.Now(),
+					Device:     partition.Device,
+					MountPoint: partition.Mountpoint,
+					Usage:      usage.UsedPercent,
+					Total:      usage.Total,
+					Free:       usage.Free,
+					Used:       usage.Used,
 				}
 				metric.Data = append(metric.Data, data)
 			}
