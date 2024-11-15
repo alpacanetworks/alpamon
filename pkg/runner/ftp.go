@@ -177,9 +177,8 @@ func (fc *FtpClient) list(rootDir string, depth int) (CommandResult, error) {
 func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResult, error) {
 	if depth > 3 {
 		return CommandResult{
-			Code:    550,
-			Message: "The depth has reached its limit. Please try a lower depth.",
-		}, nil
+			Message: ErrTooLargeDepth,
+		}, fmt.Errorf(ErrTooLargeDepth)
 	}
 
 	result := CommandResult{
@@ -362,6 +361,7 @@ func (fc *FtpClient) mv(src, dst string) (CommandResult, error) {
 	}
 
 	return CommandResult{
+		Dst:     dst,
 		Message: fmt.Sprintf("Move %s to %s", src, dst),
 	}, nil
 }
@@ -392,6 +392,7 @@ func (fc *FtpClient) cpDir(src, dst string) (CommandResult, error) {
 	}
 
 	return CommandResult{
+		Dst:     dst,
 		Message: fmt.Sprintf("Copy %s to %s", src, dst),
 	}, nil
 }
@@ -405,6 +406,7 @@ func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
 	}
 
 	return CommandResult{
+		Dst:     dst,
 		Message: fmt.Sprintf("Copy %s to %s", src, dst),
 	}, nil
 }
