@@ -178,7 +178,7 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 	if depth > 3 {
 		return CommandResult{
 			Message: ErrTooLargeDepth,
-		}, fmt.Errorf(ErrTooLargeDepth)
+		}, fmt.Errorf("%s", ErrTooLargeDepth)
 	}
 
 	result := CommandResult{
