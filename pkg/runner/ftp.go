@@ -175,6 +175,13 @@ func (fc *FtpClient) list(rootDir string, depth int) (CommandResult, error) {
 }
 
 func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResult, error) {
+	if depth > 3 {
+		return CommandResult{
+			Code:    550,
+			Message: "The depth has reached its limit. Please try a lower depth.",
+		}, nil
+	}
+
 	result := CommandResult{
 		Name:     filepath.Base(path),
 		Type:     "folder",
@@ -186,17 +193,32 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		return CommandResult{
+		errResult := CommandResult{
 			Name:    filepath.Base(path),
 			Path:    path,
 			Message: err.Error(),
-		}, nil
+		}
+		_, errResult.Code = GetFtpErrorCode(List, errResult)
+
+		return errResult, nil
 	}
 
 	for _, entry := range entries {
 		fullPath := filepath.Join(path, entry.Name())
-		info, err := entry.Info()
+		info, err := os.Lstat(fullPath)
 		if err != nil {
+			errChild := CommandResult{
+				Name:    entry.Name(),
+				Path:    fullPath,
+				Message: err.Error(),
+			}
+			_, errChild.Code = GetFtpErrorCode(List, errChild)
+			result.Children = append(result.Children, errChild)
+
+			continue
+		}
+
+		if info.Mode()&os.ModeSymlink != 0 {
 			continue
 		}
 
@@ -204,6 +226,7 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 		child := CommandResult{
 			Name:    entry.Name(),
 			Path:    fullPath,
+			Code:    returnCodes[List].Success,
 			Size:    info.Size(),
 			ModTime: &modTime,
 		}
@@ -213,13 +236,14 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 			if current < depth-1 {
 				childResult, err := fc.listRecursive(fullPath, depth, current+1)
 				if err != nil {
+					result.Children = append(result.Children, childResult)
 					continue
 				}
-				child.Children = childResult.Children
-				child.Size = childResult.Size
+				child = childResult
 			}
 		} else {
 			child.Type = "file"
+			child.Code = returnCodes[List].Success
 		}
 
 		result.Children = append(result.Children, child)
@@ -229,9 +253,11 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 	dirInfo, err := os.Stat(path)
 	if err != nil {
 		result.Message = err.Error()
+		_, result.Code = GetFtpErrorCode(List, result)
 	} else {
 		modTime := dirInfo.ModTime()
 		result.ModTime = &modTime
+		result.Code = returnCodes[List].Success
 	}
 
 	return result, nil
