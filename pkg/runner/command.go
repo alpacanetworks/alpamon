@@ -89,11 +89,11 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 	switch args[0] {
 	case "upgrade":
 		if utils.PlatformLike == "debian" {
-			cmd = "apt-get upgrate -y && " +
+			cmd = "apt-get update -y && " +
 				"apt-get upgrade -y alpamon"
 		} else if utils.PlatformLike == "rhel" {
-			cmd = "yum update- y " +
-				"yum update -y alpamon"
+			cmd = "yum update- y &&" +
+				"yum upgrade -y alpamon"
 		} else {
 			return 1, fmt.Sprintf("Platform '%s' not supported.", utils.PlatformLike)
 		}
