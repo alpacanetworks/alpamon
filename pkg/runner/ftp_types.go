@@ -4,7 +4,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 )
 
@@ -23,6 +22,8 @@ const (
 
 const (
 	ErrPermissionDenied      = "permission denied"
+	ErrOperationNotPermitted = "operation not permitted"
+	ErrTooLargeDepth         = "depth has reached its limit. please try a lower depth"
 	ErrInvalidArgument       = "invalid argument"
 	ErrNoSuchFileOrDirectory = "no such file or directory"
 	ErrFileExists            = "file exists"
@@ -31,9 +32,9 @@ const (
 
 type FtpConfigData struct {
 	URL           string
+	ServerURL     string
 	HomeDirectory string
 	Logger        logger.FtpLogger
-	Settings      config.Settings
 }
 
 type FtpData struct {
@@ -60,6 +61,8 @@ type CommandResult struct {
 	Name     string          `json:"name,omitempty"`
 	Type     string          `json:"type,omitempty"`
 	Path     string          `json:"path,omitempty"`
+	Dst      string          `json:"dst,omitempty"`
+	Code     int             `json:"code,omitempty"`
 	Size     int64           `json:"size,omitempty"`
 	Children []CommandResult `json:"children,omitempty"`
 	ModTime  *time.Time      `json:"mod_time,omitempty"`
@@ -74,12 +77,18 @@ type returnCode struct {
 var returnCodes = map[FtpCommand]returnCode{
 	List: {
 		Success: 250,
-		Error:   map[string]int{},
+		Error: map[string]int{
+			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
+			ErrTooLargeDepth:         452,
+			ErrNoSuchFileOrDirectory: 550,
+		},
 	},
 	Mkd: {
 		Success: 250,
 		Error: map[string]int{
 			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 			ErrFileExists:            552,
@@ -89,6 +98,7 @@ var returnCodes = map[FtpCommand]returnCode{
 		Success: 250,
 		Error: map[string]int{
 			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
 			ErrNoSuchFileOrDirectory: 550,
 		},
 	},
@@ -96,6 +106,7 @@ var returnCodes = map[FtpCommand]returnCode{
 		Success: 250,
 		Error: map[string]int{
 			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
 			ErrNoSuchFileOrDirectory: 550,
 		},
 	},
@@ -103,6 +114,7 @@ var returnCodes = map[FtpCommand]returnCode{
 		Success: 250,
 		Error: map[string]int{
 			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 		},
@@ -111,6 +123,7 @@ var returnCodes = map[FtpCommand]returnCode{
 		Success: 250,
 		Error: map[string]int{
 			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 			ErrDirectoryNotEmpty:     552,
@@ -120,6 +133,7 @@ var returnCodes = map[FtpCommand]returnCode{
 		Success: 250,
 		Error: map[string]int{
 			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 			ErrFileExists:            552,
@@ -129,6 +143,7 @@ var returnCodes = map[FtpCommand]returnCode{
 		Success: 250,
 		Error: map[string]int{
 			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 			ErrFileExists:            552,

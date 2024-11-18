@@ -89,11 +89,11 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 	switch args[0] {
 	case "upgrade":
 		if utils.PlatformLike == "debian" {
-			cmd = "apt-get upgrate -y && " +
+			cmd = "apt-get update -y && " +
 				"apt-get upgrade -y alpamon"
 		} else if utils.PlatformLike == "rhel" {
-			cmd = "yum update- y " +
-				"yum update -y alpamon"
+			cmd = "yum update- y &&" +
+				"yum upgrade -y alpamon"
 		} else {
 			return 1, fmt.Sprintf("Platform '%s' not supported.", utils.PlatformLike)
 		}
@@ -611,6 +611,7 @@ func (cr *CommandRunner) openFtp(data openFtpData) error {
 		executable,
 		"ftp",
 		data.URL,
+		config.GlobalSettings.ServerURL,
 		data.HomeDirectory,
 	)
 	cmd.SysProcAttr = sysProcAttr
@@ -727,9 +728,11 @@ func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysP
 		}
 	}
 
-	err := cmd.Run()
-	if err != nil {
-		return "", err
+	if bulk || recursive {
+		err := cmd.Run()
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return archiveName, nil
@@ -744,7 +747,7 @@ func fileDownload(data CommandData, sysProcAttr *syscall.SysProcAttr) (exitCode 
 
 	isZip := isZipFile(content)
 	if isZip {
-		command := fmt.Sprintf("tee -a %s > /dev/null | unzip -n %s -d %s; rm %s",
+		command := fmt.Sprintf("tee -a %s > /dev/null && unzip -n %s -d %s; rm %s",
 			strings.ReplaceAll(data.Path, " ", "\\ "),
 			strings.ReplaceAll(data.Path, " ", "\\ "),
 			strings.ReplaceAll(filepath.Dir(data.Path), " ", "\\ "),

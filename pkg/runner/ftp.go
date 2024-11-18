@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/gorilla/websocket"
 )
@@ -22,22 +21,19 @@ type FtpClient struct {
 	homeDirectory    string
 	workingDirectory string
 	log              logger.FtpLogger
-	settings         config.Settings
 }
 
 func NewFtpClient(data FtpConfigData) *FtpClient {
 	headers := http.Header{
-		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, data.Settings.ID, data.Settings.Key)},
-		"Origin":        {data.Settings.ServerURL},
+		"Origin": {data.ServerURL},
 	}
 
 	return &FtpClient{
 		requestHeader:    headers,
-		url:              strings.Replace(data.Settings.ServerURL, "http", "ws", 1) + data.URL,
+		url:              strings.Replace(data.ServerURL, "http", "ws", 1) + data.URL,
 		homeDirectory:    data.HomeDirectory,
 		workingDirectory: data.HomeDirectory,
 		log:              data.Logger,
-		settings:         data.Settings,
 	}
 }
 
@@ -179,6 +175,12 @@ func (fc *FtpClient) list(rootDir string, depth int) (CommandResult, error) {
 }
 
 func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResult, error) {
+	if depth > 3 {
+		return CommandResult{
+			Message: ErrTooLargeDepth,
+		}, fmt.Errorf("%s", ErrTooLargeDepth)
+	}
+
 	result := CommandResult{
 		Name:     filepath.Base(path),
 		Type:     "folder",
@@ -190,17 +192,32 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		return CommandResult{
+		errResult := CommandResult{
 			Name:    filepath.Base(path),
 			Path:    path,
 			Message: err.Error(),
-		}, nil
+		}
+		_, errResult.Code = GetFtpErrorCode(List, errResult)
+
+		return errResult, nil
 	}
 
 	for _, entry := range entries {
 		fullPath := filepath.Join(path, entry.Name())
-		info, err := entry.Info()
+		info, err := os.Lstat(fullPath)
 		if err != nil {
+			errChild := CommandResult{
+				Name:    entry.Name(),
+				Path:    fullPath,
+				Message: err.Error(),
+			}
+			_, errChild.Code = GetFtpErrorCode(List, errChild)
+			result.Children = append(result.Children, errChild)
+
+			continue
+		}
+
+		if info.Mode()&os.ModeSymlink != 0 {
 			continue
 		}
 
@@ -208,6 +225,7 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 		child := CommandResult{
 			Name:    entry.Name(),
 			Path:    fullPath,
+			Code:    returnCodes[List].Success,
 			Size:    info.Size(),
 			ModTime: &modTime,
 		}
@@ -217,13 +235,14 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 			if current < depth-1 {
 				childResult, err := fc.listRecursive(fullPath, depth, current+1)
 				if err != nil {
+					result.Children = append(result.Children, childResult)
 					continue
 				}
-				child.Children = childResult.Children
-				child.Size = childResult.Size
+				child = childResult
 			}
 		} else {
 			child.Type = "file"
+			child.Code = returnCodes[List].Success
 		}
 
 		result.Children = append(result.Children, child)
@@ -233,9 +252,11 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 	dirInfo, err := os.Stat(path)
 	if err != nil {
 		result.Message = err.Error()
+		_, result.Code = GetFtpErrorCode(List, result)
 	} else {
 		modTime := dirInfo.ModTime()
 		result.ModTime = &modTime
+		result.Code = returnCodes[List].Success
 	}
 
 	return result, nil
@@ -340,6 +361,7 @@ func (fc *FtpClient) mv(src, dst string) (CommandResult, error) {
 	}
 
 	return CommandResult{
+		Dst:     dst,
 		Message: fmt.Sprintf("Move %s to %s", src, dst),
 	}, nil
 }
@@ -370,6 +392,7 @@ func (fc *FtpClient) cpDir(src, dst string) (CommandResult, error) {
 	}
 
 	return CommandResult{
+		Dst:     dst,
 		Message: fmt.Sprintf("Copy %s to %s", src, dst),
 	}, nil
 }
@@ -383,6 +406,7 @@ func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
 	}
 
 	return CommandResult{
+		Dst:     dst,
 		Message: fmt.Sprintf("Copy %s to %s", src, dst),
 	}, nil
 }
