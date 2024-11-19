@@ -9,6 +9,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/user"
@@ -631,15 +632,24 @@ func getFileData(data CommandData) ([]byte, error) {
 	var content []byte
 	switch data.Type {
 	case "url":
-		url := data.Content
+		parsedRequestURL, err := url.Parse(data.Content)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse URL '%s': %w", data.Content, err)
+		}
 
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequest("GET", parsedRequestURL.String(), nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 
-		if strings.HasPrefix(url, config.GlobalSettings.ServerURL) {
-			req.Header.Set("Authorization", fmt.Sprintf(`id="%s", key="%s"`, config.GlobalSettings.ID, config.GlobalSettings.Key))
+		parsedServerURL, err := url.Parse(config.GlobalSettings.ServerURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse url: %w", err)
+		}
+
+		if parsedRequestURL.Host == parsedServerURL.Host && parsedRequestURL.Scheme == parsedServerURL.Scheme {
+			req.Header.Set("Authorization", fmt.Sprintf(`id="%s", key="%s"`,
+				config.GlobalSettings.ID, config.GlobalSettings.Key))
 		}
 
 		client := http.Client{}
@@ -650,7 +660,7 @@ func getFileData(data CommandData) ([]byte, error) {
 		defer func() { _ = resp.Body.Close() }()
 
 		if (resp.StatusCode / 100) != 2 {
-			log.Error().Msgf("Failed to download content from URL: %d %s", resp.StatusCode, url)
+			log.Error().Msgf("Failed to download content from URL: %d %s", resp.StatusCode, parsedRequestURL)
 			return nil, errors.New("downloading content failed")
 		}
 		content, err = io.ReadAll(resp.Body)
