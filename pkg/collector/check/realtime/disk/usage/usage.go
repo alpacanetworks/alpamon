@@ -5,11 +5,8 @@ import (
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/shirou/gopsutil/v4/disk"
-)
-
-const (
-	checkType = base.DISK_USAGE
 )
 
 var excludedFileSystems = map[string]bool{
@@ -25,20 +22,25 @@ type Check struct {
 	base.BaseCheck
 }
 
-func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer) *Check {
+func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, client *ent.Client) *Check {
 	return &Check{
-		BaseCheck: base.NewBaseCheck(name, interval, buffer),
+		BaseCheck: base.NewBaseCheck(name, interval, buffer, client),
 	}
 }
 
 func (c *Check) Execute(ctx context.Context) {
+	var checkError base.CheckError
+
 	partitions, err := c.collectDiskPartitions()
+	if err != nil {
+		checkError.CollectError = err
+	}
 
 	metric := base.MetricData{
-		Type: checkType,
+		Type: base.DISK_USAGE,
 		Data: []base.CheckResult{},
 	}
-	if err == nil {
+	if checkError.CollectError == nil {
 		for _, partition := range partitions {
 			usage, usageErr := c.collectDiskUsage(partition.Mountpoint)
 			if usageErr == nil {
@@ -54,6 +56,10 @@ func (c *Check) Execute(ctx context.Context) {
 				metric.Data = append(metric.Data, data)
 			}
 		}
+
+		if err := c.saveDiskUsage(ctx, metric.Data); err != nil {
+			checkError.QueryError = err
+		}
 	}
 
 	if ctx.Err() != nil {
@@ -61,7 +67,7 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if err != nil {
+	if checkError.CollectError != nil || checkError.QueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
@@ -91,4 +97,22 @@ func (c *Check) collectDiskUsage(path string) (*disk.UsageStat, error) {
 	}
 
 	return usage, nil
+}
+
+func (c *Check) saveDiskUsage(ctx context.Context, data []base.CheckResult) error {
+	client := c.GetClient()
+	err := client.DiskUsage.MapCreateBulk(data, func(q *ent.DiskUsageCreate, i int) {
+		q.SetTimestamp(data[i].Timestamp).
+			SetDevice(data[i].Device).
+			SetMountPoint(data[i].MountPoint).
+			SetUsage(data[i].Usage).
+			SetTotal(int64(data[i].Total)).
+			SetFree(int64(data[i].Free)).
+			SetUsed(int64(data[i].Used))
+	}).Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

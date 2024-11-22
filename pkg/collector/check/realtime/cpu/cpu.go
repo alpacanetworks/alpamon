@@ -6,36 +6,42 @@ import (
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/shirou/gopsutil/v4/cpu"
-)
-
-const (
-	checkType = base.CPU
 )
 
 type Check struct {
 	base.BaseCheck
 }
 
-func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer) *Check {
+func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, client *ent.Client) *Check {
 	return &Check{
-		BaseCheck: base.NewBaseCheck(name, interval, buffer),
+		BaseCheck: base.NewBaseCheck(name, interval, buffer, client),
 	}
 }
 
 func (c *Check) Execute(ctx context.Context) {
+	var checkError base.CheckError
+
 	usage, err := c.collectCPUUsage()
+	if err != nil {
+		checkError.CollectError = err
+	}
 
 	metric := base.MetricData{
-		Type: checkType,
+		Type: base.CPU,
 		Data: []base.CheckResult{},
 	}
-	if err == nil {
+	if checkError.CollectError == nil {
 		data := base.CheckResult{
 			Timestamp: time.Now(),
 			Usage:     usage,
 		}
 		metric.Data = append(metric.Data, data)
+
+		if err := c.saveCPUUsage(ctx, data); err != nil {
+			checkError.QueryError = err
+		}
 	}
 
 	if ctx.Err() != nil {
@@ -43,7 +49,7 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if err != nil {
+	if checkError.CollectError != nil || checkError.QueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
@@ -61,4 +67,15 @@ func (c *Check) collectCPUUsage() (float64, error) {
 	}
 
 	return usage[0], nil
+}
+
+func (c *Check) saveCPUUsage(ctx context.Context, data base.CheckResult) error {
+	client := c.GetClient()
+	if err := client.CPU.Create().
+		SetTimestamp(data.Timestamp).
+		SetUsage(data.Usage).Exec(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }

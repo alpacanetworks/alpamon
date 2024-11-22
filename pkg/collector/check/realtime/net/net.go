@@ -5,32 +5,34 @@ import (
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/shirou/gopsutil/v4/net"
-)
-
-const (
-	checkType = base.NET
 )
 
 type Check struct {
 	base.BaseCheck
 }
 
-func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer) *Check {
+func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, client *ent.Client) *Check {
 	return &Check{
-		BaseCheck: base.NewBaseCheck(name, interval, buffer),
+		BaseCheck: base.NewBaseCheck(name, interval, buffer, client),
 	}
 }
 
 func (c *Check) Execute(ctx context.Context) {
+	var checkError base.CheckError
+
 	ioCounters, err := c.collectIOCounters()
 	interfaces, _ := c.collectInterfaces()
+	if err != nil {
+		checkError.CollectError = err
+	}
 
 	metric := base.MetricData{
-		Type: checkType,
+		Type: base.NET,
 		Data: []base.CheckResult{},
 	}
-	if err == nil {
+	if checkError.CollectError == nil {
 		for _, ioCounter := range ioCounters {
 			if _, ok := interfaces[ioCounter.Name]; ok {
 				data := base.CheckResult{
@@ -44,6 +46,10 @@ func (c *Check) Execute(ctx context.Context) {
 				metric.Data = append(metric.Data, data)
 			}
 		}
+
+		if err := c.saveTraffic(ctx, metric.Data); err != nil {
+			checkError.QueryError = err
+		}
 	}
 
 	if ctx.Err() != nil {
@@ -51,7 +57,7 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if err != nil {
+	if checkError.CollectError != nil || checkError.QueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
@@ -83,4 +89,21 @@ func (c *Check) collectIOCounters() ([]net.IOCountersStat, error) {
 	}
 
 	return ioCounters, nil
+}
+
+func (c *Check) saveTraffic(ctx context.Context, data []base.CheckResult) error {
+	client := c.GetClient()
+	err := client.Traffic.MapCreateBulk(data, func(q *ent.TrafficCreate, i int) {
+		q.SetTimestamp(data[i].Timestamp).
+			SetName(data[i].Name).
+			SetInputPkts(int64(data[i].InputPkts)).
+			SetInputBytes(int64(data[i].InputBytes)).
+			SetOutputPkts(int64(data[i].OutputPkts)).
+			SetOutputBytes(int64(data[i].OutputBytes))
+	}).Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
