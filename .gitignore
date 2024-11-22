@@ -1,0 +1,5 @@
+/pkg/db/ent/*
+!/pkg/db/ent/generate.go
+alpamon.log
+metrics.db
+.DS_Store
