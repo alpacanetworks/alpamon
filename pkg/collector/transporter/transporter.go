@@ -8,11 +8,16 @@ import (
 )
 
 var checkTypeUrlMap = map[base.CheckType]string{
-	base.CPU:        "/api/metrics/cpu/",
-	base.MEM:        "/api/metrics/memory/",
-	base.DISK_USAGE: "/api/metrics/disk-usage/",
-	base.DISK_IO:    "/api/metrics/disk-io/",
-	base.NET:        "/api/metrics/traffic/",
+	base.CPU:                 "/api/metrics/realtime/cpu/",
+	base.CPU_PER_HOUR:        "/api/metrics/hourly/cpu/",
+	base.MEM:                 "/api/metrics/realtime/memory/",
+	base.MEM_PER_HOUR:        "/api/metrics/hourly/memory/",
+	base.DISK_USAGE:          "/api/metrics/realtime/disk-usage/",
+	base.DISK_USAGE_PER_HOUR: "/api/metrics/hourly/disk-usage/",
+	base.DISK_IO:             "/api/metrics/realtime/disk-io/",
+	base.DISK_IO_PER_HOUR:    "/api/metrics/hourly/disk-io/",
+	base.NET:                 "/api/metrics/realtime/traffic/",
+	base.NET_PER_HOUR:        "/api/metrics/hourly/traffic/",
 }
 
 type TransportStrategy interface {
@@ -45,16 +50,11 @@ func (t *Transporter) Send(data base.MetricData) error {
 
 	var err error
 	switch checkType {
-	case base.CPU:
-		_, _, err = t.session.Post(checkTypeUrlMap[base.CPU], data.Data[0], 10)
-	case base.MEM:
-		_, _, err = t.session.Post(checkTypeUrlMap[base.MEM], data.Data[0], 10)
-	case base.DISK_USAGE:
-		_, _, err = t.session.Post(checkTypeUrlMap[base.DISK_USAGE], data.Data, 10)
-	case base.DISK_IO:
-		_, _, err = t.session.Post(checkTypeUrlMap[base.DISK_IO], data.Data, 10)
-	case base.NET:
-		_, _, err = t.session.Post(checkTypeUrlMap[base.NET], data.Data, 10)
+	case base.CPU, base.CPU_PER_HOUR, base.MEM, base.MEM_PER_HOUR:
+		_, _, err = t.session.Post(checkTypeUrlMap[checkType], data.Data[0], 10)
+	case base.DISK_USAGE, base.DISK_USAGE_PER_HOUR, base.DISK_IO,
+		base.DISK_IO_PER_HOUR, base.NET, base.NET_PER_HOUR:
+		_, _, err = t.session.Post(checkTypeUrlMap[checkType], data.Data, 10)
 	default:
 		err = fmt.Errorf("unknown check type: %s", checkType)
 	}

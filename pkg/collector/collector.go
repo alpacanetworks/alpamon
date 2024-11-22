@@ -10,6 +10,7 @@ import (
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/scheduler"
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/transporter"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	session "github.com/alpacanetworks/alpamon-go/pkg/scheduler"
 )
 
@@ -22,7 +23,7 @@ type Collector struct {
 	stopChan    chan struct{}
 }
 
-func NewCollector(session *session.Session, checkFactory check.CheckFactory, transporterFactory transporter.TransporterFactory) (*Collector, error) {
+func NewCollector(session *session.Session, client *ent.Client, checkFactory check.CheckFactory, transporterFactory transporter.TransporterFactory) (*Collector, error) {
 	transporter, err := transporterFactory.CreateTransporter(session)
 	if err != nil {
 		return nil, err
@@ -39,14 +40,19 @@ func NewCollector(session *session.Session, checkFactory check.CheckFactory, tra
 	}
 
 	checkTypes := map[base.CheckType]string{
-		base.CPU:        "cpu",
-		base.MEM:        "memory",
-		base.DISK_USAGE: "disk_usage",
-		base.DISK_IO:    "disk_io",
-		base.NET:        "net",
+		base.CPU:                 "cpu",
+		base.MEM:                 "memory",
+		base.DISK_USAGE:          "disk_usage",
+		base.DISK_IO:             "disk_io",
+		base.NET:                 "net",
+		base.CPU_PER_HOUR:        "cpu_per_hour",
+		base.MEM_PER_HOUR:        "memory_per_hour",
+		base.DISK_USAGE_PER_HOUR: "disk_usage_per_hour",
+		base.DISK_IO_PER_HOUR:    "disk_io_per_hour",
+		base.NET_PER_HOUR:        "net_per_hour",
 	}
 	for checkType, name := range checkTypes {
-		check, err := checkFactory.CreateCheck(checkType, name, time.Duration(time.Duration.Seconds(5)), checkBuffer)
+		check, err := checkFactory.CreateCheck(checkType, name, time.Duration(time.Duration.Seconds(5)), checkBuffer, client)
 		if err != nil {
 			return nil, err
 		}
