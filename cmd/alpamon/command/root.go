@@ -10,6 +10,7 @@ import (
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check"
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/transporter"
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
+	"github.com/alpacanetworks/alpamon-go/pkg/db"
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/alpacanetworks/alpamon-go/pkg/pidfile"
 	"github.com/alpacanetworks/alpamon-go/pkg/runner"
@@ -63,17 +64,29 @@ func runAgent() {
 	// Commit
 	runner.CommitAsync(session, commissioned)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client, err := db.GetClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to open database client")
+		return
+	}
+	defer db.Close()
+
+	if err := db.RunMigration(ctx, client); err != nil {
+		log.Error().Err(err).Msg("Failed to migrate schema")
+		return
+	}
+
 	checkFactory := &check.DefaultCheckFactory{}
 	transporterFactory := &transporter.DefaultTransporterFactory{}
 
-	collector, err := collector.NewCollector(session, checkFactory, transporterFactory)
+	collector, err := collector.NewCollector(session, client, checkFactory, transporterFactory)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create collector")
 		return
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	if err := collector.Start(ctx); err != nil {
 		log.Error().Err(err).Msg("Failed to start collector")
