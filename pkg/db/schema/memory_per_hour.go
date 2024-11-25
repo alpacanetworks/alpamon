@@ -8,7 +8,7 @@ import (
 	"entgo.io/ent/schema/index"
 )
 
-// MemoryPerHour holds the schema definition for theMemoryPerHour entity.
+// MemoryPerHour holds the schema definition for the MemoryPerHour entity.
 type MemoryPerHour struct {
 	ent.Schema
 }
