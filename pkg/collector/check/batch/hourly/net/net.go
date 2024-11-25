@@ -33,13 +33,18 @@ func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, cli
 }
 
 func (c *Check) Execute(ctx context.Context) {
+	var checkError base.CheckError
+
 	queryset, err := c.getTrafficPeakAndAvg(ctx)
+	if err != nil {
+		checkError.GetQueryError = err
+	}
+
 	metric := base.MetricData{
 		Type: base.NET_PER_HOUR,
 		Data: []base.CheckResult{},
 	}
-
-	if err == nil {
+	if checkError.GetQueryError == nil {
 		for _, row := range queryset {
 			data := base.CheckResult{
 				Timestamp:       time.Now(),
@@ -55,6 +60,10 @@ func (c *Check) Execute(ctx context.Context) {
 			}
 			metric.Data = append(metric.Data, data)
 		}
+
+		if err := c.saveTrafficPeakAndAvg(ctx, metric.Data); err != nil {
+			checkError.SaveQueryError = err
+		}
 	}
 
 	if ctx.Err() != nil {
@@ -62,7 +71,7 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if err != nil {
+	if checkError.CollectError != nil || checkError.SaveQueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
@@ -95,4 +104,25 @@ func (c *Check) getTrafficPeakAndAvg(ctx context.Context) ([]trafficQuerySet, er
 	}
 
 	return queryset, nil
+}
+
+func (c *Check) saveTrafficPeakAndAvg(ctx context.Context, data []base.CheckResult) error {
+	client := c.GetClient()
+	err := client.TrafficPerHour.MapCreateBulk(data, func(q *ent.TrafficPerHourCreate, i int) {
+		q.SetTimestamp(data[i].Timestamp).
+			SetName(data[i].Name).
+			SetPeakInputPkts(int64(data[i].PeakInputPkts)).
+			SetPeakInputBytes(int64(data[i].PeakInputBytes)).
+			SetPeakOutputPkts(int64(data[i].PeakOutputPkts)).
+			SetPeakOutputBytes(int64(data[i].PeakOutputBytes)).
+			SetAvgInputPkts(int64(data[i].AvgInputPkts)).
+			SetAvgInputBytes(int64(data[i].AvgInputBytes)).
+			SetAvgOutputPkts(int64(data[i].AvgOutputPkts)).
+			SetAvgOutputBytes(int64(data[i].AvgOutputBytes))
+	}).Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

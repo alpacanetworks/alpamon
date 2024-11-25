@@ -48,7 +48,7 @@ func (c *Check) Execute(ctx context.Context) {
 		}
 
 		if err := c.saveTraffic(ctx, metric.Data); err != nil {
-			checkError.QueryError = err
+			checkError.SaveQueryError = err
 		}
 	}
 
@@ -57,7 +57,7 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if checkError.CollectError != nil || checkError.QueryError != nil {
+	if checkError.CollectError != nil || checkError.SaveQueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric

@@ -13,11 +13,6 @@ type Check struct {
 	base.BaseCheck
 }
 
-type MemoryCheckError struct {
-	CollectError error
-	QueryError   error
-}
-
 func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, client *ent.Client) *Check {
 	return &Check{
 		BaseCheck: base.NewBaseCheck(name, interval, buffer, client),
@@ -25,7 +20,7 @@ func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, cli
 }
 
 func (c *Check) Execute(ctx context.Context) {
-	var checkError MemoryCheckError
+	var checkError base.CheckError
 
 	usage, err := c.collectMemoryUsage()
 	if err != nil {
@@ -44,7 +39,7 @@ func (c *Check) Execute(ctx context.Context) {
 		metric.Data = append(metric.Data, data)
 
 		if err := c.saveMemoryUsage(ctx, data); err != nil {
-			checkError.QueryError = err
+			checkError.SaveQueryError = err
 		}
 	}
 
@@ -53,7 +48,7 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if checkError.CollectError != nil || checkError.QueryError != nil {
+	if checkError.CollectError != nil || checkError.SaveQueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric

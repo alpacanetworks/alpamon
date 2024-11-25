@@ -58,8 +58,10 @@ type CheckResult struct {
 }
 
 type CheckError struct {
-	CollectError error
-	QueryError   error
+	CollectError     error
+	GetQueryError    error
+	SaveQueryError   error
+	DeleteQueryError error
 }
 
 type MetricData struct {
