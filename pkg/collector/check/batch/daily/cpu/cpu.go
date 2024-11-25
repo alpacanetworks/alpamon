@@ -39,6 +39,10 @@ func (c *Check) Execute(ctx context.Context) {
 			AvgUsage:  queryset[0].AVG,
 		}
 		metric.Data = append(metric.Data, data)
+
+		if err := c.deleteCPUPerHour(ctx); err != nil {
+			checkError.DeleteQueryError = err
+		}
 	}
 
 	if ctx.Err() != nil {
@@ -46,7 +50,7 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if checkError.GetQueryError != nil {
+	if checkError.GetQueryError != nil || checkError.DeleteQueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
@@ -72,4 +76,19 @@ func (c *Check) getCPUPerHour(ctx context.Context) ([]base.CPUQuerySet, error) {
 	}
 
 	return queryset, nil
+}
+
+func (c *Check) deleteCPUPerHour(ctx context.Context) error {
+	client := c.GetClient()
+	now := time.Now()
+	from := now.Add(-24 * time.Hour)
+
+	_, err := client.CPUPerHour.Delete().
+		Where(cpuperhour.TimestampGTE(from), cpuperhour.TimestampLTE(now)).
+		Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

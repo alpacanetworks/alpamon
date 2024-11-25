@@ -42,6 +42,10 @@ func (c *Check) Execute(ctx context.Context) {
 				AvgUsage:   row.AVG,
 			}
 			metric.Data = append(metric.Data, data)
+
+			if err := c.deleteDiskUsagePerHour(ctx); err != nil {
+				checkError.DeleteQueryError = err
+			}
 		}
 	}
 
@@ -50,7 +54,7 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if checkError.GetQueryError != nil {
+	if checkError.GetQueryError != nil || checkError.DeleteQueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
@@ -77,4 +81,19 @@ func (c *Check) getDiskUsagePerHour(ctx context.Context) ([]base.DiskUsageQueryS
 	}
 
 	return queryset, nil
+}
+
+func (c *Check) deleteDiskUsagePerHour(ctx context.Context) error {
+	client := c.GetClient()
+	now := time.Now()
+	from := now.Add(-24 * time.Hour)
+
+	_, err := client.DiskUsagePerHour.Delete().
+		Where(diskusageperhour.TimestampGTE(from), diskusageperhour.TimestampLTE(now)).
+		Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -43,6 +43,10 @@ func (c *Check) Execute(ctx context.Context) {
 		if err := c.saveMemoryPerHour(ctx, data); err != nil {
 			checkError.SaveQueryError = err
 		}
+
+		if err := c.deleteMemory(ctx); err != nil {
+			checkError.DeleteQueryError = err
+		}
 	}
 
 	if ctx.Err() != nil {
@@ -50,7 +54,10 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if checkError.GetQueryError != nil || checkError.SaveQueryError != nil {
+	isFailed := checkError.GetQueryError != nil ||
+		checkError.SaveQueryError != nil ||
+		checkError.DeleteQueryError != nil
+	if isFailed {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
@@ -84,6 +91,21 @@ func (c *Check) saveMemoryPerHour(ctx context.Context, data base.CheckResult) er
 		SetTimestamp(data.Timestamp).
 		SetPeakUsage(data.PeakUsage).
 		SetAvgUsage(data.AvgUsage).Exec(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Check) deleteMemory(ctx context.Context) error {
+	client := c.GetClient()
+	now := time.Now()
+	from := now.Add(-1 * time.Hour)
+
+	_, err := client.Memory.Delete().
+		Where(memory.TimestampGTE(from), memory.TimestampLTE(now)).
+		Exec(ctx)
+	if err != nil {
 		return err
 	}
 

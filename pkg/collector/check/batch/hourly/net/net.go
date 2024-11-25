@@ -52,6 +52,10 @@ func (c *Check) Execute(ctx context.Context) {
 		if err := c.saveTrafficPerHour(ctx, metric.Data); err != nil {
 			checkError.SaveQueryError = err
 		}
+
+		if err := c.deleteTraffic(ctx); err != nil {
+			checkError.DeleteQueryError = err
+		}
 	}
 
 	if ctx.Err() != nil {
@@ -59,7 +63,10 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if checkError.GetQueryError != nil || checkError.SaveQueryError != nil {
+	isFailed := checkError.GetQueryError != nil ||
+		checkError.SaveQueryError != nil ||
+		checkError.DeleteQueryError != nil
+	if isFailed {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
@@ -108,6 +115,21 @@ func (c *Check) saveTrafficPerHour(ctx context.Context, data []base.CheckResult)
 			SetAvgOutputPkts(int64(data[i].AvgOutputPkts)).
 			SetAvgOutputBytes(int64(data[i].AvgOutputBytes))
 	}).Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Check) deleteTraffic(ctx context.Context) error {
+	client := c.GetClient()
+	now := time.Now()
+	from := now.Add(-1 * time.Hour)
+
+	_, err := client.Traffic.Delete().
+		Where(traffic.TimestampGTE(from), traffic.TimestampLTE(now)).
+		Exec(ctx)
 	if err != nil {
 		return err
 	}

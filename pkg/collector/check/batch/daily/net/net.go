@@ -47,6 +47,10 @@ func (c *Check) Execute(ctx context.Context) {
 				AvgOutputBytes:  uint64(row.AvgOutputBytes),
 			}
 			metric.Data = append(metric.Data, data)
+
+			if err := c.deleteTrafficPerHour(ctx); err != nil {
+				checkError.DeleteQueryError = err
+			}
 		}
 	}
 
@@ -55,7 +59,7 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if checkError.GetQueryError != nil {
+	if checkError.GetQueryError != nil || checkError.DeleteQueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
@@ -88,4 +92,19 @@ func (c *Check) getTrafficPerHour(ctx context.Context) ([]base.TrafficQuerySet, 
 	}
 
 	return queryset, nil
+}
+
+func (c *Check) deleteTrafficPerHour(ctx context.Context) error {
+	client := c.GetClient()
+	now := time.Now()
+	from := now.Add(-24 * time.Hour)
+
+	_, err := client.TrafficPerHour.Delete().
+		Where(trafficperhour.TimestampGTE(from), trafficperhour.TimestampLTE(now)).
+		Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
