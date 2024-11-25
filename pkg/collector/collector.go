@@ -50,6 +50,11 @@ func NewCollector(session *session.Session, client *ent.Client, checkFactory che
 		base.DISK_USAGE_PER_HOUR: "disk_usage_per_hour",
 		base.DISK_IO_PER_HOUR:    "disk_io_per_hour",
 		base.NET_PER_HOUR:        "net_per_hour",
+		base.CPU_PER_DAY:         "cpu_per_day",
+		base.MEM_PER_DAY:         "memory_per_day",
+		base.DISK_USAGE_PER_DAY:  "disk_usage_per_day",
+		base.DISK_IO_PER_DAY:     "disk_io_per_day",
+		base.NET_PER_DAY:         "net_per_day",
 	}
 	for checkType, name := range checkTypes {
 		check, err := checkFactory.CreateCheck(checkType, name, time.Duration(time.Duration.Seconds(5)), checkBuffer, client)
