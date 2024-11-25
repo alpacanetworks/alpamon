@@ -26,19 +26,28 @@ func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, cli
 }
 
 func (c *Check) Execute(ctx context.Context) {
+	var checkError base.CheckError
+
 	queryset, err := c.getMemoryPeakAndAvg(ctx)
+	if err != nil {
+		checkError.GetQueryError = err
+	}
+
 	metric := base.MetricData{
 		Type: base.MEM_PER_HOUR,
 		Data: []base.CheckResult{},
 	}
-
-	if err == nil {
+	if checkError.GetQueryError == nil {
 		data := base.CheckResult{
 			Timestamp: time.Now(),
 			PeakUsage: queryset[0].Max,
 			AvgUsage:  queryset[0].AVG,
 		}
 		metric.Data = append(metric.Data, data)
+
+		if err := c.saveMemoryPeakAndAvg(ctx, data); err != nil {
+			checkError.SaveQueryError = err
+		}
 	}
 
 	if ctx.Err() != nil {
@@ -46,7 +55,7 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if err != nil {
+	if checkError.GetQueryError != nil || checkError.SaveQueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
@@ -72,4 +81,16 @@ func (c *Check) getMemoryPeakAndAvg(ctx context.Context) ([]memoryQuerySet, erro
 	}
 
 	return queryset, nil
+}
+
+func (c *Check) saveMemoryPeakAndAvg(ctx context.Context, data base.CheckResult) error {
+	client := c.GetClient()
+	if err := client.MemoryPerHour.Create().
+		SetTimestamp(data.Timestamp).
+		SetPeakUsage(data.PeakUsage).
+		SetAvgUsage(data.AvgUsage).Exec(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }

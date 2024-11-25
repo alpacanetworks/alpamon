@@ -28,13 +28,18 @@ func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, cli
 }
 
 func (c *Check) Execute(ctx context.Context) {
+	var checkError base.CheckError
+
 	queryset, err := c.getDiskUsagePeakAndAvg(ctx)
+	if err != nil {
+		checkError.GetQueryError = err
+	}
+
 	metric := base.MetricData{
 		Type: base.DISK_USAGE_PER_HOUR,
 		Data: []base.CheckResult{},
 	}
-
-	if err == nil {
+	if checkError.GetQueryError == nil {
 		for _, row := range queryset {
 			data := base.CheckResult{
 				Timestamp:  time.Now(),
@@ -45,6 +50,10 @@ func (c *Check) Execute(ctx context.Context) {
 			}
 			metric.Data = append(metric.Data, data)
 		}
+
+		if err := c.saveDiskUsagePeakAndAvg(ctx, metric.Data); err != nil {
+			checkError.SaveQueryError = err
+		}
 	}
 
 	if ctx.Err() != nil {
@@ -52,7 +61,7 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if err != nil {
+	if checkError.CollectError != nil || checkError.SaveQueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
@@ -79,4 +88,20 @@ func (c *Check) getDiskUsagePeakAndAvg(ctx context.Context) ([]diskUsageQuerySet
 	}
 
 	return queryset, nil
+}
+
+func (c *Check) saveDiskUsagePeakAndAvg(ctx context.Context, data []base.CheckResult) error {
+	client := c.GetClient()
+	err := client.DiskUsagePerHour.MapCreateBulk(data, func(q *ent.DiskUsagePerHourCreate, i int) {
+		q.SetTimestamp(data[i].Timestamp).
+			SetDevice(data[i].Device).
+			SetMountPoint(data[i].MountPoint).
+			SetPeakUsage(data[i].PeakUsage).
+			SetAvgUsage(data[i].AvgUsage)
+	}).Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
