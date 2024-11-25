@@ -14,18 +14,6 @@ type Check struct {
 	base.BaseCheck
 }
 
-type trafficQuerySet struct {
-	Name            string  `json:"name"`
-	PeakInputPkts   float64 `json:"peak_input_pkts"`
-	PeakInputBytes  float64 `json:"peak_input_bytes"`
-	PeakOutputPkts  float64 `json:"peak_output_pkts"`
-	PeakOutputBytes float64 `json:"peak_output_bytes"`
-	AvgInputPkts    float64 `json:"avg_input_pkts"`
-	AvgInputBytes   float64 `json:"avg_input_bytes"`
-	AvgOutputPkts   float64 `json:"avg_output_pkts"`
-	AvgOutputBytes  float64 `json:"avg_output_bytes"`
-}
-
 func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, client *ent.Client) *Check {
 	return &Check{
 		BaseCheck: base.NewBaseCheck(name, interval, buffer, client),
@@ -35,7 +23,7 @@ func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, cli
 func (c *Check) Execute(ctx context.Context) {
 	var checkError base.CheckError
 
-	queryset, err := c.getTrafficPeakAndAvg(ctx)
+	queryset, err := c.getTraffic(ctx)
 	if err != nil {
 		checkError.GetQueryError = err
 	}
@@ -61,7 +49,7 @@ func (c *Check) Execute(ctx context.Context) {
 			metric.Data = append(metric.Data, data)
 		}
 
-		if err := c.saveTrafficPeakAndAvg(ctx, metric.Data); err != nil {
+		if err := c.saveTrafficPerHour(ctx, metric.Data); err != nil {
 			checkError.SaveQueryError = err
 		}
 	}
@@ -71,19 +59,19 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if checkError.CollectError != nil || checkError.SaveQueryError != nil {
+	if checkError.GetQueryError != nil || checkError.SaveQueryError != nil {
 		buffer.FailureQueue <- metric
 	} else {
 		buffer.SuccessQueue <- metric
 	}
 }
 
-func (c *Check) getTrafficPeakAndAvg(ctx context.Context) ([]trafficQuerySet, error) {
+func (c *Check) getTraffic(ctx context.Context) ([]base.TrafficQuerySet, error) {
 	client := c.GetClient()
 	now := time.Now()
 	from := now.Add(-1 * time.Hour)
 
-	var queryset []trafficQuerySet
+	var queryset []base.TrafficQuerySet
 	err := client.Traffic.Query().
 		Where(traffic.TimestampGTE(from), traffic.TimestampLTE(now)).
 		GroupBy(traffic.FieldName).
@@ -106,7 +94,7 @@ func (c *Check) getTrafficPeakAndAvg(ctx context.Context) ([]trafficQuerySet, er
 	return queryset, nil
 }
 
-func (c *Check) saveTrafficPeakAndAvg(ctx context.Context, data []base.CheckResult) error {
+func (c *Check) saveTrafficPerHour(ctx context.Context, data []base.CheckResult) error {
 	client := c.GetClient()
 	err := client.TrafficPerHour.MapCreateBulk(data, func(q *ent.TrafficPerHourCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).

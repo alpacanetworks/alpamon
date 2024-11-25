@@ -14,11 +14,6 @@ type Check struct {
 	base.BaseCheck
 }
 
-type memoryQuerySet struct {
-	Max float64
-	AVG float64
-}
-
 func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, client *ent.Client) *Check {
 	return &Check{
 		BaseCheck: base.NewBaseCheck(name, interval, buffer, client),
@@ -28,7 +23,7 @@ func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, cli
 func (c *Check) Execute(ctx context.Context) {
 	var checkError base.CheckError
 
-	queryset, err := c.getMemoryPeakAndAvg(ctx)
+	queryset, err := c.getMemory(ctx)
 	if err != nil {
 		checkError.GetQueryError = err
 	}
@@ -45,7 +40,7 @@ func (c *Check) Execute(ctx context.Context) {
 		}
 		metric.Data = append(metric.Data, data)
 
-		if err := c.saveMemoryPeakAndAvg(ctx, data); err != nil {
+		if err := c.saveMemoryPerHour(ctx, data); err != nil {
 			checkError.SaveQueryError = err
 		}
 	}
@@ -62,12 +57,12 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 }
 
-func (c *Check) getMemoryPeakAndAvg(ctx context.Context) ([]memoryQuerySet, error) {
+func (c *Check) getMemory(ctx context.Context) ([]base.MemoryQuerySet, error) {
 	client := c.GetClient()
 	now := time.Now()
 	from := now.Add(-1 * time.Hour)
 
-	var queryset []memoryQuerySet
+	var queryset []base.MemoryQuerySet
 	err := client.Memory.Query().
 		Where(memory.TimestampGTE(from), memory.TimestampLTE(now)).
 		Aggregate(
@@ -83,7 +78,7 @@ func (c *Check) getMemoryPeakAndAvg(ctx context.Context) ([]memoryQuerySet, erro
 	return queryset, nil
 }
 
-func (c *Check) saveMemoryPeakAndAvg(ctx context.Context, data base.CheckResult) error {
+func (c *Check) saveMemoryPerHour(ctx context.Context, data base.CheckResult) error {
 	client := c.GetClient()
 	if err := client.MemoryPerHour.Create().
 		SetTimestamp(data.Timestamp).

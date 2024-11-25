@@ -14,11 +14,6 @@ type Check struct {
 	base.BaseCheck
 }
 
-type cpuQuerySet struct {
-	Max float64
-	AVG float64
-}
-
 func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, client *ent.Client) *Check {
 	return &Check{
 		BaseCheck: base.NewBaseCheck(name, interval, buffer, client),
@@ -28,7 +23,7 @@ func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, cli
 func (c *Check) Execute(ctx context.Context) {
 	var checkError base.CheckError
 
-	queryset, err := c.getCPUPeakAndAvg(ctx)
+	queryset, err := c.getCPU(ctx)
 	if err != nil {
 		checkError.GetQueryError = err
 	}
@@ -45,7 +40,7 @@ func (c *Check) Execute(ctx context.Context) {
 		}
 		metric.Data = append(metric.Data, data)
 
-		if err := c.saveCPUPeakAndAvg(ctx, data); err != nil {
+		if err := c.saveCPUPerHour(ctx, data); err != nil {
 			checkError.SaveQueryError = err
 		}
 	}
@@ -62,12 +57,12 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 }
 
-func (c *Check) getCPUPeakAndAvg(ctx context.Context) ([]cpuQuerySet, error) {
+func (c *Check) getCPU(ctx context.Context) ([]base.CPUQuerySet, error) {
 	client := c.GetClient()
 	now := time.Now()
 	from := now.Add(-1 * time.Hour)
 
-	var queryset []cpuQuerySet
+	var queryset []base.CPUQuerySet
 	err := client.CPU.Query().
 		Where(cpu.TimestampGTE(from), cpu.TimestampLTE(now)).
 		Aggregate(
@@ -83,7 +78,7 @@ func (c *Check) getCPUPeakAndAvg(ctx context.Context) ([]cpuQuerySet, error) {
 	return queryset, nil
 }
 
-func (c *Check) saveCPUPeakAndAvg(ctx context.Context, data base.CheckResult) error {
+func (c *Check) saveCPUPerHour(ctx context.Context, data base.CheckResult) error {
 	client := c.GetClient()
 	if err := client.CPUPerHour.Create().
 		SetTimestamp(data.Timestamp).

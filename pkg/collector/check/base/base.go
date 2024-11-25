@@ -26,6 +26,50 @@ const (
 
 type CheckType string
 
+type CheckError struct {
+	CollectError     error
+	GetQueryError    error
+	SaveQueryError   error
+	DeleteQueryError error
+}
+
+type CPUQuerySet struct {
+	Max float64
+	AVG float64
+}
+
+type MemoryQuerySet struct {
+	Max float64
+	AVG float64
+}
+
+type DiskIOQuerySet struct {
+	Device         string  `json:"device" db:"device"`
+	PeakReadBytes  float64 `json:"peak_read_bytes"`
+	PeakWriteBytes float64 `json:"peak_write_bytes"`
+	AvgReadBytes   float64 `json:"avg_read_bytes"`
+	AvgWriteBytes  float64 `json:"avg_write_bytes"`
+}
+
+type DiskUsageQuerySet struct {
+	Device     string  `json:"device"`
+	MountPoint string  `json:"mount_point"`
+	Max        float64 `json:"max"`
+	AVG        float64 `json:"avg"`
+}
+
+type TrafficQuerySet struct {
+	Name            string  `json:"name"`
+	PeakInputPkts   float64 `json:"peak_input_pkts"`
+	PeakInputBytes  float64 `json:"peak_input_bytes"`
+	PeakOutputPkts  float64 `json:"peak_output_pkts"`
+	PeakOutputBytes float64 `json:"peak_output_bytes"`
+	AvgInputPkts    float64 `json:"avg_input_pkts"`
+	AvgInputBytes   float64 `json:"avg_input_bytes"`
+	AvgOutputPkts   float64 `json:"avg_output_pkts"`
+	AvgOutputBytes  float64 `json:"avg_output_bytes"`
+}
+
 type CheckResult struct {
 	Timestamp       time.Time `json:"timestamp"`
 	Usage           float64   `json:"usage,omitempty"`
@@ -55,13 +99,6 @@ type CheckResult struct {
 	AvgInputBytes   uint64    `json:"avg_input_bytes,omitempty"`
 	AvgOutputPkts   uint64    `json:"avg_output_pkts,omitempty"`
 	AvgOutputBytes  uint64    `json:"avg_output_bytes,omitempty"`
-}
-
-type CheckError struct {
-	CollectError     error
-	GetQueryError    error
-	SaveQueryError   error
-	DeleteQueryError error
 }
 
 type MetricData struct {
