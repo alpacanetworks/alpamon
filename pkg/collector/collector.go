@@ -2,7 +2,10 @@ package collector
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -12,6 +15,12 @@ import (
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/transporter"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	session "github.com/alpacanetworks/alpamon-go/pkg/scheduler"
+	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
+)
+
+var (
+	confURL = "/api/metrics/config/"
 )
 
 type Collector struct {
@@ -23,8 +32,55 @@ type Collector struct {
 	stopChan    chan struct{}
 }
 
-func NewCollector(session *session.Session, client *ent.Client, checkFactory check.CheckFactory, transporterFactory transporter.TransporterFactory) (*Collector, error) {
-	transporter, err := transporterFactory.CreateTransporter(session)
+type collectorArgs struct {
+	session          *session.Session
+	client           *ent.Client
+	conf             []collectConf
+	checkFactory     check.CheckFactory
+	transportFactory transporter.TransporterFactory
+}
+
+type collectConf struct {
+	Type     base.CheckType
+	Interval int
+}
+
+func InitCollector(session *session.Session, client *ent.Client) *Collector {
+	checkFactory := &check.DefaultCheckFactory{}
+	transporterFactory := &transporter.DefaultTransporterFactory{}
+
+	var conf []collectConf
+	resp, statusCode, err := session.Get(confURL, 10)
+	if statusCode == http.StatusOK {
+		err = json.Unmarshal(resp, &conf)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to unmarshal collection config")
+			os.Exit(1)
+		}
+	} else {
+		log.Error().Err(err).Msgf("HTTP %d: Failed to get collection config", statusCode)
+		os.Exit(1)
+	}
+
+	args := collectorArgs{
+		session:          session,
+		client:           client,
+		conf:             conf,
+		checkFactory:     checkFactory,
+		transportFactory: transporterFactory,
+	}
+
+	collector, err := NewCollector(args)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create collector")
+		os.Exit(1)
+	}
+
+	return collector
+}
+
+func NewCollector(args collectorArgs) (*Collector, error) {
+	transporter, err := args.transportFactory.CreateTransporter(args.session)
 	if err != nil {
 		return nil, err
 	}
@@ -39,25 +95,18 @@ func NewCollector(session *session.Session, client *ent.Client, checkFactory che
 		stopChan:    make(chan struct{}),
 	}
 
-	checkTypes := map[base.CheckType]string{
-		base.CPU:                 "cpu",
-		base.MEM:                 "memory",
-		base.DISK_USAGE:          "disk_usage",
-		base.DISK_IO:             "disk_io",
-		base.NET:                 "net",
-		base.CPU_PER_HOUR:        "cpu_per_hour",
-		base.MEM_PER_HOUR:        "memory_per_hour",
-		base.DISK_USAGE_PER_HOUR: "disk_usage_per_hour",
-		base.DISK_IO_PER_HOUR:    "disk_io_per_hour",
-		base.NET_PER_HOUR:        "net_per_hour",
-		base.CPU_PER_DAY:         "cpu_per_day",
-		base.MEM_PER_DAY:         "memory_per_day",
-		base.DISK_USAGE_PER_DAY:  "disk_usage_per_day",
-		base.DISK_IO_PER_DAY:     "disk_io_per_day",
-		base.NET_PER_DAY:         "net_per_day",
-	}
-	for checkType, name := range checkTypes {
-		check, err := checkFactory.CreateCheck(checkType, name, time.Duration(time.Duration.Seconds(5)), checkBuffer, client)
+	for _, entry := range args.conf {
+		duration := time.Duration(entry.Interval) * time.Minute
+		name := string(entry.Type) + "_" + uuid.NewString()
+		checkArgs := base.CheckArgs{
+			Type:     entry.Type,
+			Name:     name,
+			Interval: time.Duration(duration.Minutes() * float64(time.Minute)),
+			Buffer:   checkBuffer,
+			Client:   args.client,
+		}
+
+		check, err := args.checkFactory.CreateCheck(&checkArgs)
 		if err != nil {
 			return nil, err
 		}
