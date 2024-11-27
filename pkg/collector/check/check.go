@@ -3,7 +3,6 @@ package check
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	cpudaily "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/cpu"
@@ -21,56 +20,42 @@ import (
 	diskusage "github.com/alpacanetworks/alpamon-go/pkg/collector/check/realtime/disk/usage"
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/realtime/memory"
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/realtime/net"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 )
 
-type CheckStrategy interface {
+var checkFactories = map[base.CheckType]newCheck{
+	base.CPU:                 cpu.NewCheck,
+	base.CPU_PER_HOUR:        cpuhourly.NewCheck,
+	base.CPU_PER_DAY:         cpudaily.NewCheck,
+	base.MEM:                 memory.NewCheck,
+	base.MEM_PER_HOUR:        memoryhourly.NewCheck,
+	base.MEM_PER_DAY:         memorydaily.NewCheck,
+	base.DISK_USAGE:          diskusage.NewCheck,
+	base.DISK_USAGE_PER_HOUR: diskusagehourly.NewCheck,
+	base.DISK_USAGE_PER_DAY:  diskusagedaily.NewCheck,
+	base.DISK_IO:             diskio.NewCheck,
+	base.DISK_IO_PER_HOUR:    diskiohourly.NewCheck,
+	base.DISK_IO_PER_DAY:     diskiodaily.NewCheck,
+	base.NET:                 net.NewCheck,
+	base.NET_PER_HOUR:        nethourly.NewCheck,
+	base.NET_PER_DAY:         netdaily.NewCheck,
+}
+
+type Check interface {
 	Execute(ctx context.Context)
-	GetInterval() time.Duration
-	GetName() string
-	GetBuffer() *base.CheckBuffer
-	GetClient() *ent.Client
 }
 
 type CheckFactory interface {
-	CreateCheck(checkType base.CheckType, name string, interval time.Duration, buffer *base.CheckBuffer, client *ent.Client) (CheckStrategy, error)
+	CreateCheck(args *base.CheckArgs) (base.CheckStrategy, error)
 }
+
+type newCheck func(args *base.CheckArgs) base.CheckStrategy
 
 type DefaultCheckFactory struct{}
 
-func (f *DefaultCheckFactory) CreateCheck(checkType base.CheckType, name string, interval time.Duration, buffer *base.CheckBuffer, client *ent.Client) (CheckStrategy, error) {
-	switch checkType {
-	case base.CPU:
-		return cpu.NewCheck(name, interval, buffer, client), nil
-	case base.CPU_PER_HOUR:
-		return cpuhourly.NewCheck(name, interval, buffer, client), nil
-	case base.CPU_PER_DAY:
-		return cpudaily.NewCheck(name, interval, buffer, client), nil
-	case base.MEM:
-		return memory.NewCheck(name, interval, buffer, client), nil
-	case base.MEM_PER_HOUR:
-		return memoryhourly.NewCheck(name, interval, buffer, client), nil
-	case base.MEM_PER_DAY:
-		return memorydaily.NewCheck(name, interval, buffer, client), nil
-	case base.DISK_USAGE:
-		return diskusage.NewCheck(name, interval, buffer, client), nil
-	case base.DISK_USAGE_PER_HOUR:
-		return diskusagehourly.NewCheck(name, interval, buffer, client), nil
-	case base.DISK_USAGE_PER_DAY:
-		return diskusagedaily.NewCheck(name, interval, buffer, client), nil
-	case base.DISK_IO:
-		return diskio.NewCheck(name, interval, buffer, client), nil
-	case base.DISK_IO_PER_HOUR:
-		return diskiohourly.NewCheck(name, interval, buffer, client), nil
-	case base.DISK_IO_PER_DAY:
-		return diskiodaily.NewCheck(name, interval, buffer, client), nil
-	case base.NET:
-		return net.NewCheck(name, interval, buffer, client), nil
-	case base.NET_PER_HOUR:
-		return nethourly.NewCheck(name, interval, buffer, client), nil
-	case base.NET_PER_DAY:
-		return netdaily.NewCheck(name, interval, buffer, client), nil
-	default:
-		return nil, fmt.Errorf("unknown check type: %s", checkType)
+func (f *DefaultCheckFactory) CreateCheck(args *base.CheckArgs) (base.CheckStrategy, error) {
+	if factory, exists := checkFactories[args.Type]; exists {
+		return factory(args), nil
 	}
+
+	return nil, fmt.Errorf("unknown check type: %s", args.Type)
 }
