@@ -1,6 +1,7 @@
 package base
 
 import (
+	"context"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
@@ -22,9 +23,18 @@ const (
 	NET                 CheckType = "net"
 	NET_PER_HOUR        CheckType = "net_per_hour"
 	NET_PER_DAY         CheckType = "net_per_day"
+	CLEANUP             CheckType = "cleanup"
 )
 
 type CheckType string
+
+type CheckArgs struct {
+	Type     CheckType
+	Name     string
+	Interval time.Duration
+	Buffer   *CheckBuffer
+	Client   *ent.Client
+}
 
 type CheckError struct {
 	CollectError     error
@@ -106,6 +116,14 @@ type MetricData struct {
 	Data []CheckResult `json:"data,omitempty"`
 }
 
+type CheckStrategy interface {
+	Execute(ctx context.Context)
+	GetInterval() time.Duration
+	GetName() string
+	GetBuffer() *CheckBuffer
+	GetClient() *ent.Client
+}
+
 type BaseCheck struct {
 	name     string
 	interval time.Duration
@@ -119,12 +137,12 @@ type CheckBuffer struct {
 	Capacity     int
 }
 
-func NewBaseCheck(name string, interval time.Duration, buffer *CheckBuffer, client *ent.Client) BaseCheck {
+func NewBaseCheck(args *CheckArgs) BaseCheck {
 	return BaseCheck{
-		name:     name,
-		interval: interval,
-		buffer:   buffer,
-		client:   client,
+		name:     args.Name,
+		interval: args.Interval,
+		buffer:   args.Buffer,
+		client:   args.Client,
 	}
 }
 
