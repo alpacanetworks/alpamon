@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/collector/check"
+	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 )
 
 type Scheduler struct {
@@ -15,7 +15,7 @@ type Scheduler struct {
 }
 
 type ScheduledTask struct {
-	check    check.CheckStrategy
+	check    base.CheckStrategy
 	nextRun  time.Time
 	interval time.Duration
 	running  bool
@@ -28,14 +28,15 @@ func NewScheduler() *Scheduler {
 	}
 }
 
-func (s *Scheduler) AddTask(check check.CheckStrategy) error {
+func (s *Scheduler) AddTask(check base.CheckStrategy) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	interval := check.GetInterval()
 	s.tasks[check.GetName()] = &ScheduledTask{
 		check:    check,
-		nextRun:  time.Now(),
-		interval: check.GetInterval(),
+		nextRun:  time.Now().Add(interval),
+		interval: interval,
 		running:  false,
 	}
 	return nil

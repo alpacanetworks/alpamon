@@ -13,9 +13,9 @@ type Check struct {
 	base.BaseCheck
 }
 
-func NewCheck(name string, interval time.Duration, buffer *base.CheckBuffer, client *ent.Client) *Check {
+func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 	return &Check{
-		BaseCheck: base.NewBaseCheck(name, interval, buffer, client),
+		BaseCheck: base.NewBaseCheck(args),
 	}
 }
 

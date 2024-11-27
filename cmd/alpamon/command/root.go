@@ -7,8 +7,6 @@ import (
 	"syscall"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector"
-	"github.com/alpacanetworks/alpamon-go/pkg/collector/check"
-	"github.com/alpacanetworks/alpamon-go/pkg/collector/transporter"
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/db"
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
@@ -79,15 +77,7 @@ func runAgent() {
 		return
 	}
 
-	checkFactory := &check.DefaultCheckFactory{}
-	transporterFactory := &transporter.DefaultTransporterFactory{}
-
-	collector, err := collector.NewCollector(session, client, checkFactory, transporterFactory)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create collector")
-		return
-	}
-
+	collector := collector.InitCollector(session, client)
 	if err := collector.Start(ctx); err != nil {
 		log.Error().Err(err).Msg("Failed to start collector")
 		return
