@@ -105,6 +105,7 @@ func (pc *PtyClient) readFromWebsocket(ctx context.Context, cancel context.Cance
 		default:
 			_, message, err := pc.conn.ReadMessage()
 			if err != nil {
+				// Double-check ctx.Err() to handle cancellation during blocking read
 				if ctx.Err() != nil {
 					return
 				}
@@ -116,6 +117,7 @@ func (pc *PtyClient) readFromWebsocket(ctx context.Context, cancel context.Cance
 			}
 			_, err = pc.ptmx.Write(message)
 			if err != nil {
+				// Double-check ctx.Err() to handle cancellation during blocking write
 				if ctx.Err() != nil {
 					return
 				}
