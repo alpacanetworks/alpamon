@@ -2,56 +2,38 @@ package io
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/diskio"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/rs/zerolog/log"
 )
 
 type Check struct {
 	base.BaseCheck
+	retryCount base.RetryCount
 }
 
 func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 	return &Check{
 		BaseCheck: base.NewBaseCheck(args),
+		retryCount: base.RetryCount{
+			MaxGetRetries:    base.GET_MAX_RETRIES,
+			MaxSaveRetries:   base.SAVE_MAX_RETRIES,
+			MaxDeleteRetries: base.DELETE_MAX_RETRIES,
+			MaxRetryTime:     base.MAX_RETRY_TIMES,
+			Delay:            base.DEFAULT_DELAY,
+		},
 	}
 }
 
 func (c *Check) Execute(ctx context.Context) {
-	var checkError base.CheckError
-
-	queryset, err := c.getDiskIO(ctx)
+	metric, err := c.queryDiskIO(ctx)
 	if err != nil {
-		checkError.GetQueryError = err
-	}
-
-	metric := base.MetricData{
-		Type: base.DISK_IO_PER_HOUR,
-		Data: []base.CheckResult{},
-	}
-	if checkError.GetQueryError == nil {
-		for _, row := range queryset {
-			data := base.CheckResult{
-				Timestamp:      time.Now(),
-				Device:         row.Device,
-				PeakWriteBytes: uint64(row.PeakWriteBytes),
-				PeakReadBytes:  uint64(row.PeakReadBytes),
-				AvgWriteBytes:  uint64(row.AvgWriteBytes),
-				AvgReadBytes:   uint64(row.AvgReadBytes),
-			}
-			metric.Data = append(metric.Data, data)
-		}
-
-		if err := c.saveDiskIOPerHour(ctx, metric.Data); err != nil {
-			checkError.SaveQueryError = err
-		}
-
-		if err := c.deleteDiskIO(ctx); err != nil {
-			checkError.DeleteQueryError = err
-		}
+		return
 	}
 
 	if ctx.Err() != nil {
@@ -59,14 +41,123 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	isFailed := checkError.GetQueryError != nil ||
-		checkError.SaveQueryError != nil ||
-		checkError.DeleteQueryError != nil
-	if isFailed {
-		buffer.FailureQueue <- metric
-	} else {
-		buffer.SuccessQueue <- metric
+	buffer.SuccessQueue <- metric
+}
+
+func (c *Check) queryDiskIO(ctx context.Context) (base.MetricData, error) {
+	queryset, err := c.retryGetDiskIO(ctx)
+	if err != nil {
+		return base.MetricData{}, err
 	}
+
+	var data []base.CheckResult
+	for _, row := range queryset {
+		data = append(data, base.CheckResult{
+			Timestamp:      time.Now(),
+			Device:         row.Device,
+			PeakWriteBytes: uint64(row.PeakWriteBytes),
+			PeakReadBytes:  uint64(row.PeakReadBytes),
+			AvgWriteBytes:  uint64(row.AvgWriteBytes),
+			AvgReadBytes:   uint64(row.AvgReadBytes),
+		})
+	}
+	metric := base.MetricData{
+		Type: base.DISK_IO_PER_HOUR,
+		Data: data,
+	}
+
+	err = c.retrySaveDiskIOPerHour(ctx, data)
+	if err != nil {
+		return base.MetricData{}, err
+	}
+
+	err = c.retryDeleteDiskIO(ctx)
+	if err != nil {
+		return base.MetricData{}, err
+	}
+
+	return metric, nil
+}
+
+func (c *Check) retryGetDiskIO(ctx context.Context) ([]base.DiskIOQuerySet, error) {
+	start := time.Now()
+	for attempt := 0; attempt <= c.retryCount.MaxGetRetries; attempt++ {
+		if time.Since(start) >= c.retryCount.MaxRetryTime {
+			break
+		}
+
+		queryset, err := c.getDiskIO(ctx)
+		if err == nil {
+			return queryset, nil
+		}
+
+		if attempt < c.retryCount.MaxGetRetries {
+			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
+			select {
+			case <-time.After(backoff):
+				log.Debug().Msgf("Retry to get disk io queryset: %d attempt", attempt)
+				continue
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("failed to get disk io queryset")
+}
+
+func (c *Check) retrySaveDiskIOPerHour(ctx context.Context, data []base.CheckResult) error {
+	start := time.Now()
+	for attempt := 0; attempt <= c.retryCount.MaxSaveRetries; attempt++ {
+		if time.Since(start) >= c.retryCount.MaxRetryTime {
+			break
+		}
+
+		err := c.saveDiskIOPerHour(ctx, data)
+		if err == nil {
+			return nil
+		}
+
+		if attempt < c.retryCount.MaxSaveRetries {
+			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
+			select {
+			case <-time.After(backoff):
+				log.Debug().Msgf("Retry to save disk io per hour: %d attempt", attempt)
+				continue
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
+
+	return fmt.Errorf("failed to save disk io per hour")
+}
+
+func (c *Check) retryDeleteDiskIO(ctx context.Context) error {
+	start := time.Now()
+	for attempt := 0; attempt <= c.retryCount.MaxDeleteRetries; attempt++ {
+		if time.Since(start) >= c.retryCount.MaxRetryTime {
+			break
+		}
+
+		err := c.deleteDiskIO(ctx)
+		if err == nil {
+			return nil
+		}
+
+		if attempt < c.retryCount.MaxDeleteRetries {
+			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
+			select {
+			case <-time.After(backoff):
+				log.Debug().Msgf("Retry to delete disk io: %d attempt", attempt)
+				continue
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
+
+	return fmt.Errorf("failed to delete disk io")
 }
 
 func (c *Check) getDiskIO(ctx context.Context) ([]base.DiskIOQuerySet, error) {

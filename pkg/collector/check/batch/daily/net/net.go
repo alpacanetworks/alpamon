@@ -2,56 +2,37 @@ package net
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/trafficperhour"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/rs/zerolog/log"
 )
 
 type Check struct {
 	base.BaseCheck
+	retryCount base.RetryCount
 }
 
 func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 	return &Check{
 		BaseCheck: base.NewBaseCheck(args),
+		retryCount: base.RetryCount{
+			MaxGetRetries:    3,
+			MaxDeleteRetries: 2,
+			MaxRetryTime:     base.MAX_RETRY_TIMES,
+			Delay:            base.DEFAULT_DELAY,
+		},
 	}
 }
 
 func (c *Check) Execute(ctx context.Context) {
-	var checkError base.CheckError
-
-	queryset, err := c.getTrafficPerHour(ctx)
+	metric, err := c.queryTrafficPerHour(ctx)
 	if err != nil {
-		checkError.GetQueryError = err
-	}
-
-	metric := base.MetricData{
-		Type: base.NET_PER_DAY,
-		Data: []base.CheckResult{},
-	}
-	if checkError.GetQueryError == nil {
-		for _, row := range queryset {
-			data := base.CheckResult{
-				Timestamp:       time.Now(),
-				Name:            row.Name,
-				PeakInputPkts:   uint64(row.PeakInputPkts),
-				PeakInputBytes:  uint64(row.PeakInputBytes),
-				PeakOutputPkts:  uint64(row.PeakOutputPkts),
-				PeakOutputBytes: uint64(row.PeakOutputBytes),
-				AvgInputPkts:    uint64(row.AvgInputPkts),
-				AvgInputBytes:   uint64(row.AvgInputBytes),
-				AvgOutputPkts:   uint64(row.AvgOutputPkts),
-				AvgOutputBytes:  uint64(row.AvgOutputBytes),
-			}
-			metric.Data = append(metric.Data, data)
-
-			if err := c.deleteTrafficPerHour(ctx); err != nil {
-				checkError.DeleteQueryError = err
-			}
-		}
+		return
 	}
 
 	if ctx.Err() != nil {
@@ -59,11 +40,95 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	if checkError.GetQueryError != nil || checkError.DeleteQueryError != nil {
-		buffer.FailureQueue <- metric
-	} else {
-		buffer.SuccessQueue <- metric
+	buffer.SuccessQueue <- metric
+}
+
+func (c *Check) queryTrafficPerHour(ctx context.Context) (base.MetricData, error) {
+	queryset, err := c.retryGetTrafficPerHour(ctx)
+	if err != nil {
+		return base.MetricData{}, err
 	}
+
+	var data []base.CheckResult
+	for _, row := range queryset {
+		data = append(data, base.CheckResult{
+			Timestamp:       time.Now(),
+			Name:            row.Name,
+			PeakInputPkts:   uint64(row.PeakInputPkts),
+			PeakInputBytes:  uint64(row.PeakInputBytes),
+			PeakOutputPkts:  uint64(row.PeakOutputPkts),
+			PeakOutputBytes: uint64(row.PeakOutputBytes),
+			AvgInputPkts:    uint64(row.AvgInputPkts),
+			AvgInputBytes:   uint64(row.AvgInputBytes),
+			AvgOutputPkts:   uint64(row.AvgOutputPkts),
+			AvgOutputBytes:  uint64(row.AvgOutputBytes),
+		})
+	}
+	metric := base.MetricData{
+		Type: base.NET_PER_DAY,
+		Data: data,
+	}
+
+	err = c.retryDeleteTrafficPerHour(ctx)
+	if err != nil {
+		return base.MetricData{}, err
+	}
+
+	return metric, nil
+}
+
+func (c *Check) retryGetTrafficPerHour(ctx context.Context) ([]base.TrafficQuerySet, error) {
+	start := time.Now()
+	for attempt := 0; attempt <= c.retryCount.MaxGetRetries; attempt++ {
+		if time.Since(start) >= c.retryCount.MaxRetryTime {
+			break
+		}
+
+		queryset, err := c.getTrafficPerHour(ctx)
+		if err == nil {
+			return queryset, nil
+		}
+
+		if attempt < c.retryCount.MaxGetRetries {
+			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
+			select {
+			case <-time.After(backoff):
+				log.Debug().Msgf("Retry to get traffic per hour queryset: %d attempt", attempt)
+				continue
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("failed to get traffic per hour queryset")
+}
+
+func (c *Check) retryDeleteTrafficPerHour(ctx context.Context) error {
+	start := time.Now()
+	for attempt := 0; attempt <= c.retryCount.MaxDeleteRetries; attempt++ {
+		if time.Since(start) >= c.retryCount.MaxRetryTime {
+			break
+		}
+
+		err := c.deleteTrafficPerHour(ctx)
+		if err == nil {
+			return nil
+		}
+
+		if attempt < c.retryCount.MaxDeleteRetries {
+			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
+			select {
+			case <-time.After(backoff):
+				log.Debug().Msgf("Retry to delete traffic per hour: %d attempt", attempt)
+				continue
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
+
+	return fmt.Errorf("failed to delete traffic per hour")
 }
 
 func (c *Check) getTrafficPerHour(ctx context.Context) ([]base.TrafficQuerySet, error) {

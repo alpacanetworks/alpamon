@@ -3,11 +3,14 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"math"
+	"math/rand"
 	"net/url"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v4/host"
@@ -105,4 +108,11 @@ func ConvertGroupIds(groupIds []string) []uint32 {
 		gids = append(gids, uint32(gid))
 	}
 	return gids
+}
+
+func CalculateBackOff(delay time.Duration, attempt int) time.Duration {
+	backoff := delay * time.Duration(math.Pow(2, float64(attempt)))
+	jitter := time.Duration(rand.Float64() * float64(backoff) * 0.2)
+
+	return backoff * jitter
 }

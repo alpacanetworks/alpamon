@@ -2,51 +2,38 @@ package memory
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/memory"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/rs/zerolog/log"
 )
 
 type Check struct {
 	base.BaseCheck
+	retryCount base.RetryCount
 }
 
 func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 	return &Check{
 		BaseCheck: base.NewBaseCheck(args),
+		retryCount: base.RetryCount{
+			MaxGetRetries:    base.GET_MAX_RETRIES,
+			MaxSaveRetries:   base.SAVE_MAX_RETRIES,
+			MaxDeleteRetries: base.DELETE_MAX_RETRIES,
+			MaxRetryTime:     base.MAX_RETRY_TIMES,
+			Delay:            base.DEFAULT_DELAY,
+		},
 	}
 }
 
 func (c *Check) Execute(ctx context.Context) {
-	var checkError base.CheckError
-
-	queryset, err := c.getMemory(ctx)
+	metric, err := c.queryMemoryUsage(ctx)
 	if err != nil {
-		checkError.GetQueryError = err
-	}
-
-	metric := base.MetricData{
-		Type: base.MEM_PER_HOUR,
-		Data: []base.CheckResult{},
-	}
-	if checkError.GetQueryError == nil {
-		data := base.CheckResult{
-			Timestamp: time.Now(),
-			PeakUsage: queryset[0].Max,
-			AvgUsage:  queryset[0].AVG,
-		}
-		metric.Data = append(metric.Data, data)
-
-		if err := c.saveMemoryPerHour(ctx, data); err != nil {
-			checkError.SaveQueryError = err
-		}
-
-		if err := c.deleteMemory(ctx); err != nil {
-			checkError.DeleteQueryError = err
-		}
+		return
 	}
 
 	if ctx.Err() != nil {
@@ -54,14 +41,117 @@ func (c *Check) Execute(ctx context.Context) {
 	}
 
 	buffer := c.GetBuffer()
-	isFailed := checkError.GetQueryError != nil ||
-		checkError.SaveQueryError != nil ||
-		checkError.DeleteQueryError != nil
-	if isFailed {
-		buffer.FailureQueue <- metric
-	} else {
-		buffer.SuccessQueue <- metric
+	buffer.SuccessQueue <- metric
+}
+
+func (c *Check) queryMemoryUsage(ctx context.Context) (base.MetricData, error) {
+	queryset, err := c.retryGetMemory(ctx)
+	if err != nil {
+		return base.MetricData{}, err
 	}
+
+	data := base.CheckResult{
+		Timestamp: time.Now(),
+		PeakUsage: queryset[0].Max,
+		AvgUsage:  queryset[0].AVG,
+	}
+	metric := base.MetricData{
+		Type: base.MEM_PER_HOUR,
+		Data: []base.CheckResult{data},
+	}
+
+	err = c.retrySaveMemoryPerHour(ctx, data)
+	if err != nil {
+		return base.MetricData{}, err
+	}
+
+	err = c.retryDeleteMemory(ctx)
+	if err != nil {
+		return base.MetricData{}, err
+	}
+
+	return metric, nil
+}
+
+func (c *Check) retryGetMemory(ctx context.Context) ([]base.MemoryQuerySet, error) {
+	start := time.Now()
+	for attempt := 0; attempt <= c.retryCount.MaxGetRetries; attempt++ {
+		if time.Since(start) >= c.retryCount.MaxRetryTime {
+			break
+		}
+
+		queryset, err := c.getMemory(ctx)
+		if err == nil {
+			return queryset, nil
+		}
+
+		if attempt < c.retryCount.MaxGetRetries {
+			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
+			select {
+			case <-time.After(backoff):
+				log.Debug().Msgf("Retry to get memory queryset: %d attempt", attempt)
+				continue
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("failed to get memory queryset")
+}
+
+func (c *Check) retrySaveMemoryPerHour(ctx context.Context, data base.CheckResult) error {
+	start := time.Now()
+	for attempt := 0; attempt <= c.retryCount.MaxSaveRetries; attempt++ {
+		if time.Since(start) >= c.retryCount.MaxRetryTime {
+			break
+		}
+
+		err := c.saveMemoryPerHour(ctx, data)
+		if err == nil {
+			return nil
+		}
+
+		if attempt < c.retryCount.MaxSaveRetries {
+			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
+			select {
+			case <-time.After(backoff):
+				log.Debug().Msgf("Retry to save memory usage per hour: %d attempt", attempt)
+				continue
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
+
+	return fmt.Errorf("failed to save memory usage per hour")
+}
+
+func (c *Check) retryDeleteMemory(ctx context.Context) error {
+	start := time.Now()
+	for attempt := 0; attempt <= c.retryCount.MaxDeleteRetries; attempt++ {
+		if time.Since(start) >= c.retryCount.MaxRetryTime {
+			break
+		}
+
+		err := c.deleteMemory(ctx)
+		if err == nil {
+			return nil
+		}
+
+		if attempt < c.retryCount.MaxDeleteRetries {
+			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
+			select {
+			case <-time.After(backoff):
+				log.Debug().Msgf("Retry to delete memory usage: %d attempt", attempt)
+				continue
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
+
+	return fmt.Errorf("failed to delete memory usage")
 }
 
 func (c *Check) getMemory(ctx context.Context) ([]base.MemoryQuerySet, error) {
