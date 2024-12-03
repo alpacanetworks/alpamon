@@ -85,7 +85,7 @@ func NewCollector(args collectorArgs) (*Collector, error) {
 		return nil, err
 	}
 
-	checkBuffer := base.NewCheckBuffer(10)
+	checkBuffer := base.NewCheckBuffer(len(args.conf) * 2)
 
 	collector := &Collector{
 		transporter: transporter,
@@ -121,7 +121,7 @@ func NewCollector(args collectorArgs) (*Collector, error) {
 func (c *Collector) Start(ctx context.Context) error {
 	go c.scheduler.Start(ctx)
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < c.buffer.Capacity; i++ {
 		c.wg.Add(1)
 		go c.successQueueWorker(ctx)
 	}
@@ -151,7 +151,6 @@ func (c *Collector) successQueueWorker(ctx context.Context) {
 			}
 		}
 	}
-
 }
 
 func (c *Collector) failureQueueWorker(ctx context.Context) {
