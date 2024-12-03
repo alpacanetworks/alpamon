@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
+	cleanup "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/cleanup"
 	cpudaily "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/cpu"
 	diskiodaily "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/disk/io"
 	diskusagedaily "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/disk/usage"
@@ -38,6 +39,7 @@ var checkFactories = map[base.CheckType]newCheck{
 	base.NET:                 net.NewCheck,
 	base.NET_PER_HOUR:        nethourly.NewCheck,
 	base.NET_PER_DAY:         netdaily.NewCheck,
+	base.CLEANUP:             cleanup.NewCheck,
 }
 
 type Check interface {
