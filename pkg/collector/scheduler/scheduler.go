@@ -18,7 +18,6 @@ type ScheduledTask struct {
 	check    base.CheckStrategy
 	nextRun  time.Time
 	interval time.Duration
-	running  bool
 }
 
 func NewScheduler() *Scheduler {
@@ -37,7 +36,6 @@ func (s *Scheduler) AddTask(check base.CheckStrategy) error {
 		check:    check,
 		nextRun:  time.Now().Add(interval),
 		interval: interval,
-		running:  false,
 	}
 	return nil
 }
@@ -56,8 +54,7 @@ func (s *Scheduler) Start(ctx context.Context) {
 			s.mu.RLock()
 			now := time.Now()
 			for _, task := range s.tasks {
-				if now.After(task.nextRun) && !task.running {
-					task.running = true
+				if now.After(task.nextRun) {
 					go s.executeTask(ctx, task)
 				}
 			}
@@ -73,7 +70,6 @@ func (s *Scheduler) Stop() {
 func (s *Scheduler) executeTask(ctx context.Context, task *ScheduledTask) {
 	defer func() {
 		s.mu.Lock()
-		task.running = false
 		task.nextRun = time.Now().Add(task.interval)
 		s.mu.Unlock()
 	}()
