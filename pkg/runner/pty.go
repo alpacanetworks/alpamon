@@ -15,6 +15,7 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type PtyClient struct {
@@ -31,7 +32,17 @@ type PtyClient struct {
 	sessionID     string
 }
 
+type latencyMessage struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
 var terminals map[string]*PtyClient
+
+const (
+	latencyMessageType = "latency_message"
+	pingInterval       = 5 * time.Second
+)
 
 func init() {
 	terminals = make(map[string]*PtyClient)
@@ -85,12 +96,9 @@ func (pc *PtyClient) RunPtyBackground() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go func() {
-		pc.readFromWebsocket(ctx, cancel)
-	}()
-	go func() {
-		pc.readFromPTY(ctx, cancel)
-	}()
+	go pc.readFromWebsocket(ctx, cancel)
+	go pc.readFromPTY(ctx, cancel)
+	go pc.latencyMeasurementLoop(ctx, cancel)
 
 	terminals[pc.sessionID] = pc
 
@@ -165,6 +173,62 @@ func (pc *PtyClient) readFromPTY(ctx context.Context, cancel context.CancelFunc)
 			}
 		}
 	}
+}
+
+func (pc *PtyClient) latencyMeasurementLoop(ctx context.Context, cancel context.CancelFunc) {
+	ticker := time.NewTicker(pingInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			err := pc.calculateAndSendLatency()
+			if err != nil {
+				cancel()
+				return
+			}
+		}
+	}
+}
+
+func (pc *PtyClient) calculateAndSendLatency() error {
+	pongReceived := make(chan bool)
+	timeout := time.After(pingInterval)
+
+	pc.conn.SetPongHandler(func(appData string) error {
+		pongReceived <- true
+		return nil
+	})
+
+	start := time.Now()
+	err := pc.conn.WriteMessage(websocket.PingMessage, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to send ping message")
+		return err
+	}
+
+	var latency time.Duration
+	select {
+	case <-pongReceived:
+		latency = time.Since(start)
+	case <-timeout:
+		return errors.New("pong response timeout")
+	}
+
+	message := &latencyMessage{
+		Type:  latencyMessageType,
+		Value: fmt.Sprintf("%.2f", latency.Seconds()*1000),
+	}
+
+	err = pc.conn.WriteJSON(message)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to send latency message")
+		return err
+	}
+
+	return nil
 }
 
 func (pc *PtyClient) resize(rows, cols uint16) error {
