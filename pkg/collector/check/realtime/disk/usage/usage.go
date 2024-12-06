@@ -19,6 +19,7 @@ var excludedFileSystems = map[string]bool{
 	"sysfs":    true,
 	"cgroup":   true,
 	"overlay":  true,
+	"autofs":   true,
 }
 
 type Check struct {

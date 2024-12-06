@@ -101,8 +101,8 @@ func (c *Check) parseDiskIO(ioCounters map[string]disk.IOCountersStat) []base.Ch
 			readBytes = ioCounter.ReadBytes - lastCounter.ReadBytes
 			writeBytes = ioCounter.WriteBytes - lastCounter.WriteBytes
 		} else {
-			readBytes = ioCounter.ReadBytes
-			writeBytes = ioCounter.WriteBytes
+			readBytes = 0
+			writeBytes = 0
 		}
 
 		c.lastMetric[name] = ioCounter
