@@ -91,6 +91,7 @@ var remoteLogThresholds = map[string]int{
 	"client.go":   30,
 	"reporter.go": 30,
 	"command.go":  30,
+	"commit.go":   30,
 	"pty.go":      30,
 }
 
