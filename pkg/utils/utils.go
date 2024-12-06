@@ -14,6 +14,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v4/host"
+	"github.com/shirou/gopsutil/v4/net"
 )
 
 var (
@@ -115,4 +116,34 @@ func CalculateBackOff(delay time.Duration, attempt int) time.Duration {
 	jitter := time.Duration(rand.Float64() * float64(backoff) * 0.2)
 
 	return backoff * jitter
+}
+
+func CalculateBps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputBps float64, outputBps float64) {
+	if interval == 0 {
+		return 0, 0
+	}
+
+	inputBytesDiff := float64(current.BytesRecv - last.BytesRecv)
+	outputBytesDiff := float64(current.BytesSent - last.BytesSent)
+	seconds := interval.Seconds()
+
+	inputBps = (inputBytesDiff * 8) / seconds
+	outputBps = (outputBytesDiff * 8) / seconds
+
+	return inputBps, outputBps
+}
+
+func CalculatePps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputPps float64, outputPps float64) {
+	if interval == 0 {
+		return 0, 0
+	}
+
+	inputPktsDiff := float64(current.PacketsRecv - last.PacketsRecv)
+	outputPktsDiff := float64(current.PacketsSent - last.PacketsSent)
+	seconds := interval.Seconds()
+
+	inputPps = (inputPktsDiff * 8) / seconds
+	outputPps = (outputPktsDiff * 8) / seconds
+
+	return inputPps, outputPps
 }
