@@ -18,14 +18,14 @@ func (TrafficPerHour) Fields() []ent.Field {
 	return []ent.Field{
 		field.Time("timestamp").Default(time.Now()),
 		field.String("name"),
-		field.Int64("peak_input_pkts"),
-		field.Int64("peak_input_bytes"),
-		field.Int64("peak_output_pkts"),
-		field.Int64("peak_output_bytes"),
-		field.Int64("avg_input_pkts"),
-		field.Int64("avg_input_bytes"),
-		field.Int64("avg_output_pkts"),
-		field.Int64("avg_output_bytes"),
+		field.Float("peak_input_pps"),
+		field.Float("peak_input_bps"),
+		field.Float("peak_output_pps"),
+		field.Float("peak_output_bps"),
+		field.Float("avg_input_pps"),
+		field.Float("avg_input_bps"),
+		field.Float("avg_output_pps"),
+		field.Float("avg_output_bps"),
 	}
 }
 

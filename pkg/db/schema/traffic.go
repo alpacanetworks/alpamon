@@ -18,10 +18,10 @@ func (Traffic) Fields() []ent.Field {
 	return []ent.Field{
 		field.Time("timestamp").Default(time.Now()),
 		field.String("name"),
-		field.Int64("input_pkts"),
-		field.Int64("input_bytes"),
-		field.Int64("output_pkts"),
-		field.Int64("output_bytes"),
+		field.Float("input_pps"),
+		field.Float("input_bps"),
+		field.Float("output_pps"),
+		field.Float("output_bps"),
 	}
 }
 

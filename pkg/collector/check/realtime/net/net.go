@@ -97,28 +97,26 @@ func (c *Check) parseTraffic(ioCOunters []net.IOCountersStat, interfaces map[str
 	var data []base.CheckResult
 	for _, ioCounter := range ioCOunters {
 		if _, ok := interfaces[ioCounter.Name]; ok {
-			var inputPkts, inputBytes, outputPkts, outputBytes uint64
+			var inputPps, inputBps, outputPps, outputBps float64
 
 			if lastCounter, exists := c.lastMetric[ioCounter.Name]; exists {
-				inputPkts = ioCounter.PacketsRecv - lastCounter.PacketsRecv
-				inputBytes = ioCounter.BytesRecv - lastCounter.BytesRecv
-				outputPkts = ioCounter.PacketsSent - lastCounter.PacketsSent
-				outputBytes = ioCounter.BytesSent - lastCounter.BytesSent
+				inputPps, outputPps = utils.CalculatePps(ioCounter, lastCounter, c.GetInterval())
+				inputBps, outputBps = utils.CalculateBps(ioCounter, lastCounter, c.GetInterval())
 			} else {
-				inputPkts = ioCounter.PacketsRecv
-				inputBytes = ioCounter.BytesRecv
-				outputPkts = ioCounter.PacketsSent
-				outputBytes = ioCounter.BytesSent
+				inputPps = 0
+				inputBps = 0
+				outputPps = 0
+				outputBps = 0
 			}
 
 			c.lastMetric[ioCounter.Name] = ioCounter
 			data = append(data, base.CheckResult{
-				Timestamp:   time.Now(),
-				Name:        ioCounter.Name,
-				InputPkts:   inputPkts,
-				InputBytes:  inputBytes,
-				OutputPkts:  outputPkts,
-				OutputBytes: outputBytes,
+				Timestamp: time.Now(),
+				Name:      ioCounter.Name,
+				InputPps:  inputPps,
+				InputBps:  inputBps,
+				OutputPps: outputPps,
+				OutputBps: outputBps,
 			})
 		}
 	}
@@ -184,10 +182,10 @@ func (c *Check) saveTraffic(ctx context.Context, data []base.CheckResult) error 
 	err := client.Traffic.MapCreateBulk(data, func(q *ent.TrafficCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
 			SetName(data[i].Name).
-			SetInputPkts(int64(data[i].InputPkts)).
-			SetInputBytes(int64(data[i].InputBytes)).
-			SetOutputPkts(int64(data[i].OutputPkts)).
-			SetOutputBytes(int64(data[i].OutputBytes))
+			SetInputPps(data[i].InputPps).
+			SetInputBps(data[i].InputBps).
+			SetOutputPps(data[i].OutputPps).
+			SetOutputBps(data[i].OutputBps)
 	}).Exec(ctx)
 	if err != nil {
 		return err

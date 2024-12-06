@@ -53,16 +53,16 @@ func (c *Check) queryTraffic(ctx context.Context) (base.MetricData, error) {
 	var data []base.CheckResult
 	for _, row := range queryset {
 		data = append(data, base.CheckResult{
-			Timestamp:       time.Now(),
-			Name:            row.Name,
-			PeakInputPkts:   uint64(row.PeakInputPkts),
-			PeakInputBytes:  uint64(row.PeakInputBytes),
-			PeakOutputPkts:  uint64(row.PeakOutputPkts),
-			PeakOutputBytes: uint64(row.PeakOutputBytes),
-			AvgInputPkts:    uint64(row.AvgInputPkts),
-			AvgInputBytes:   uint64(row.AvgInputBytes),
-			AvgOutputPkts:   uint64(row.AvgOutputPkts),
-			AvgOutputBytes:  uint64(row.AvgOutputBytes),
+			Timestamp:     time.Now(),
+			Name:          row.Name,
+			PeakInputPps:  row.PeakInputPps,
+			PeakInputBps:  row.PeakInputBps,
+			PeakOutputPps: row.PeakOutputPps,
+			PeakOutputBps: row.PeakOutputBps,
+			AvgInputPps:   row.AvgInputPps,
+			AvgInputBps:   row.AvgInputBps,
+			AvgOutputPps:  row.AvgOutputPps,
+			AvgOutputBps:  row.AvgOutputBps,
 		})
 	}
 	metric := base.MetricData{
@@ -174,16 +174,15 @@ func (c *Check) getTraffic(ctx context.Context) ([]base.TrafficQuerySet, error) 
 		Where(traffic.TimestampGTE(from), traffic.TimestampLTE(now)).
 		GroupBy(traffic.FieldName).
 		Aggregate(
-			ent.As(ent.Max(traffic.FieldInputPkts), "peak_input_pkts"),
-			ent.As(ent.Max(traffic.FieldInputBytes), "peak_input_bytes"),
-			ent.As(ent.Max(traffic.FieldOutputPkts), "peak_output_pkts"),
-			ent.As(ent.Max(traffic.FieldOutputBytes), "peak_output_bytes"),
-			ent.As(ent.Mean(traffic.FieldInputPkts), "avg_input_pkts"),
-			ent.As(ent.Mean(traffic.FieldInputBytes), "avg_input_bytes"),
-			ent.As(ent.Mean(traffic.FieldOutputPkts), "avg_output_pkts"),
-			ent.As(ent.Mean(traffic.FieldOutputBytes), "avg_output_bytes"),
-		).
-		Scan(ctx, &queryset)
+			ent.As(ent.Max(traffic.FieldInputPps), "peak_input_pps"),
+			ent.As(ent.Max(traffic.FieldInputBps), "peak_input_bps"),
+			ent.As(ent.Max(traffic.FieldOutputPps), "peak_output_pps"),
+			ent.As(ent.Max(traffic.FieldOutputBps), "peak_output_bps"),
+			ent.As(ent.Mean(traffic.FieldInputPps), "avg_input_pps"),
+			ent.As(ent.Mean(traffic.FieldInputBps), "avg_input_bps"),
+			ent.As(ent.Mean(traffic.FieldOutputPps), "avg_output_pps"),
+			ent.As(ent.Mean(traffic.FieldOutputBps), "avg_output_bps"),
+		).Scan(ctx, &queryset)
 	if err != nil {
 		log.Debug().Msg(err.Error())
 		return queryset, err
@@ -197,14 +196,14 @@ func (c *Check) saveTrafficPerHour(ctx context.Context, data []base.CheckResult)
 	err := client.TrafficPerHour.MapCreateBulk(data, func(q *ent.TrafficPerHourCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
 			SetName(data[i].Name).
-			SetPeakInputPkts(int64(data[i].PeakInputPkts)).
-			SetPeakInputBytes(int64(data[i].PeakInputBytes)).
-			SetPeakOutputPkts(int64(data[i].PeakOutputPkts)).
-			SetPeakOutputBytes(int64(data[i].PeakOutputBytes)).
-			SetAvgInputPkts(int64(data[i].AvgInputPkts)).
-			SetAvgInputBytes(int64(data[i].AvgInputBytes)).
-			SetAvgOutputPkts(int64(data[i].AvgOutputPkts)).
-			SetAvgOutputBytes(int64(data[i].AvgOutputBytes))
+			SetPeakInputPps(data[i].PeakInputPps).
+			SetPeakInputBps(data[i].PeakInputBps).
+			SetPeakOutputPps(data[i].PeakOutputPps).
+			SetPeakOutputBps(data[i].PeakOutputBps).
+			SetAvgInputPps(data[i].AvgInputPps).
+			SetAvgInputBps(data[i].AvgInputBps).
+			SetAvgOutputPps(data[i].AvgOutputPps).
+			SetAvgOutputBps(data[i].AvgOutputBps)
 	}).Exec(ctx)
 	if err != nil {
 		return err
