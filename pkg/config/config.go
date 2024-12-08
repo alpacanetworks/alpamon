@@ -24,7 +24,7 @@ var (
 const (
 	wsPath             = "/ws/servers/backhaul/"
 	MinConnectInterval = 5 * time.Second
-	MaxConnectInterval = 60 * time.Second
+	MaxConnectInterval = 300 * time.Second
 )
 
 func InitSettings(settings Settings) {
