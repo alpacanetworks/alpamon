@@ -89,7 +89,7 @@ type logRecordWriter struct{}
 // If a file is not listed, all logs will be sent regardless of level.
 var remoteLogThresholds = map[string]int{
 	"client.go":   30,
-	"reporter.go": 30,
+	"reporter.go": 40,
 	"command.go":  30,
 	"commit.go":   30,
 	"pty.go":      30,
