@@ -86,12 +86,11 @@ func (r *Reporter) query(entry PriorityEntry) {
 		r.counters.failure++
 		if entry.retry > 0 {
 			backoff := time.Duration(math.Pow(2, float64(RetryLimit-entry.retry))) * time.Second
-			entry.due = time.Now().Add(backoff)
+			entry.due = entry.due.Add(backoff)
 			entry.retry--
 			err = Rqueue.queue.Offer(entry)
 			if err != nil {
 				r.counters.ignored++
-				time.Sleep(1 * time.Second)
 			}
 		} else {
 			r.counters.ignored++
@@ -117,8 +116,8 @@ func (r *Reporter) Run() {
 			err = Rqueue.queue.Offer(entry)
 			if err != nil {
 				r.counters.ignored++
-				time.Sleep(1 * time.Second)
 			}
+			time.Sleep(1 * time.Second)
 		} else {
 			r.query(entry)
 		}

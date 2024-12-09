@@ -28,12 +28,12 @@ func demote(username, groupname string) (*syscall.SysProcAttr, error) {
 
 	usr, err := user.Lookup(username)
 	if err != nil {
-		return nil, fmt.Errorf("There is no corresponding %s username in this server", username)
+		return nil, fmt.Errorf("there is no corresponding %s username in this server", username)
 	}
 
 	group, err := user.LookupGroup(groupname)
 	if err != nil {
-		return nil, fmt.Errorf("There is no corresponding %s groupname in this server", groupname)
+		return nil, fmt.Errorf("there is no corresponding %s groupname in this server", groupname)
 	}
 
 	uid, err := strconv.Atoi(usr.Uid)
