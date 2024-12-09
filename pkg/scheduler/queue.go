@@ -52,9 +52,11 @@ func (rq *RequestQueue) request(method, url string, data interface{}, priority i
 		retry: RetryLimit,
 	}
 
+	// Do not wake reporter goroutine if the queue is full or uninitialized.
 	err := rq.queue.Offer(entry)
 	if err != nil {
-		log.Error().Err(err).Msg("Error offering priority entry")
+		log.Error().Err(err).Msgf("Queue is full or uninitialized, dropping entry: %s", entry.url)
+		return
 	}
 
 	rq.cond.Signal()
