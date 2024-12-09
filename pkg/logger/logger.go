@@ -84,27 +84,27 @@ type zerologEntry struct {
 
 type logRecordWriter struct{}
 
-// remoteLogThresholds defines log level thresholds for specific callers (files).
-// Logs below the specified level for a given file will not be sent to the alpacon-server.
-// If a file is not listed, all logs will be sent regardless of level.
-var remoteLogThresholds = map[string]int{
-	"client.go":   30,
-	"reporter.go": 40,
-	"command.go":  30,
-	"commit.go":   30,
-	"pty.go":      30,
+// logRecordFileHandlers defines log level thresholds for specific files.
+// Only files listed here will have their logs sent to the remote server.
+// Logs from files not listed will be ignored entirely.
+// Logs below the specified level for a listed file will also be ignored.
+var logRecordFileHandlers = map[string]int{
+	"command.go": 30,
+	"commit.go":  10,
+	"pty.go":     30,
+	"shell.go":   20,
 }
 
 func (w *logRecordWriter) Write(p []byte) (n int, err error) {
 	var entry zerologEntry
 	err = json.Unmarshal(p, &entry)
 	if err != nil {
-		return 0, err
+		return n, err
 	}
 
 	caller := entry.Caller
 	if caller == "" {
-		return len(p), nil
+		return n, err
 	}
 
 	lineno := 0
@@ -113,10 +113,14 @@ func (w *logRecordWriter) Write(p []byte) (n int, err error) {
 	}
 
 	callerFileName := getCallerFileName(caller)
-	if levelThreshold, ok := remoteLogThresholds[callerFileName]; ok {
-		if convertLevelToNumber(entry.Level) < levelThreshold {
-			return len(p), nil
-		}
+
+	levelThreshold, exists := logRecordFileHandlers[callerFileName]
+	if !exists {
+		return len(p), nil
+	}
+
+	if convertLevelToNumber(entry.Level) < levelThreshold {
+		return len(p), nil
 	}
 
 	record := logRecord{
