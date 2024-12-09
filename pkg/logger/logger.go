@@ -104,7 +104,7 @@ func (w *logRecordWriter) Write(p []byte) (n int, err error) {
 
 	caller := entry.Caller
 	if caller == "" {
-		return n, err
+		return len(p), nil
 	}
 
 	lineno := 0
