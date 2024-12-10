@@ -144,11 +144,11 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 				log.Debug().Err(err).Msg("Failed to retrieve network addresses")
 			}
 			remoteData = &[]Address{}
-		case "packages":
-			if currentData, err = getSystemPackages(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve system packages")
-			}
-			remoteData = &[]SystemPackageData{}
+		//case "packages":
+		//	if currentData, err = getSystemPackages(); err != nil {
+		//		log.Debug().Err(err).Msg("Failed to retrieve system packages")
+		//	}
+		//	remoteData = &[]SystemPackageData{}
 		default:
 			log.Warn().Msgf("Unknown key: %s", key)
 			continue
@@ -250,9 +250,9 @@ func collectData() *commitData {
 	if data.Addresses, err = getNetworkAddresses(); err != nil {
 		log.Debug().Err(err).Msg("Failed to retrieve network addresses")
 	}
-	if data.Packages, err = getSystemPackages(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve system packages")
-	}
+	//if data.Packages, err = getSystemPackages(); err != nil {
+	//	log.Debug().Err(err).Msg("Failed to retrieve system packages")
+	//}
 
 	return data
 }
