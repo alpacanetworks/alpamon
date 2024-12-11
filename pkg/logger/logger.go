@@ -90,7 +90,7 @@ type logRecordWriter struct{}
 // Logs below the specified level for a listed file will also be ignored.
 var logRecordFileHandlers = map[string]int{
 	"command.go": 30,
-	"commit.go":  10,
+	"commit.go":  20,
 	"pty.go":     30,
 	"shell.go":   20,
 }
