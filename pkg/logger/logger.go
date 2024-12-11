@@ -90,9 +90,9 @@ type logRecordWriter struct{}
 // Logs below the specified level for a listed file will also be ignored.
 var logRecordFileHandlers = map[string]int{
 	"command.go": 30,
-	"commit.go":  20,
+	"commit.go":  30,
 	"pty.go":     30,
-	"shell.go":   20,
+	"shell.go":   30,
 }
 
 func (w *logRecordWriter) Write(p []byte) (n int, err error) {
