@@ -144,6 +144,10 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 		}
 	}
 
+	// Sends "hello" for Alpacon to verify WebSocket session status without error handling.
+	helloQuery := map[string]string{"query": "hello"}
+	_ = wc.writeJSON(helloQuery)
+
 	switch content.Query {
 	case "command":
 		scheduler.Rqueue.Post(fmt.Sprintf(eventCommandAckURL, content.Command.ID),
@@ -162,4 +166,13 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 	default:
 		log.Warn().Msgf("Not implemented query: %s", content.Query)
 	}
+}
+
+func (wc *WebsocketClient) writeJSON(data interface{}) error {
+	err := wc.conn.WriteJSON(data)
+	if err != nil {
+		log.Debug().Err(err).Msgf("Failed to write json data to websocket")
+		return err
+	}
+	return nil
 }
