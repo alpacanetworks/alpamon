@@ -63,7 +63,7 @@ func CommitAsync(session *scheduler.Session, commissioned bool) {
 }
 
 func commitSystemInfo() {
-	log.Info().Msg("Start committing system information.")
+	log.Debug().Msg("Start committing system information.")
 
 	data := collectData()
 
@@ -77,7 +77,7 @@ func commitSystemInfo() {
 }
 
 func syncSystemInfo(session *scheduler.Session, keys []string) {
-	log.Info().Msg("Start system information synchronization.")
+	log.Debug().Msg("Start system information synchronization.")
 
 	syncMutex.Lock()
 	defer syncMutex.Unlock()
