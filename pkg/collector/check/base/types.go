@@ -7,29 +7,22 @@ import (
 )
 
 const (
-	CPU                 CheckType     = "cpu"
-	CPU_PER_HOUR        CheckType     = "cpu_per_hour"
-	CPU_PER_DAY         CheckType     = "cpu_per_day"
-	MEM                 CheckType     = "memory"
-	MEM_PER_HOUR        CheckType     = "memory_per_hour"
-	MEM_PER_DAY         CheckType     = "memory_per_day"
-	DISK_USAGE          CheckType     = "disk_usage"
-	DISK_USAGE_PER_HOUR CheckType     = "disk_usage_per_hour"
-	DISK_USAGE_PER_DAY  CheckType     = "disk_usage_per_day"
-	DISK_IO             CheckType     = "disk_io"
-	DISK_IO_PER_HOUR    CheckType     = "disk_io_per_hour"
-	DISK_IO_PER_DAY     CheckType     = "disk_io_per_day"
-	NET                 CheckType     = "net"
-	NET_PER_HOUR        CheckType     = "net_per_hour"
-	NET_PER_DAY         CheckType     = "net_per_day"
-	CLEANUP             CheckType     = "cleanup"
-	MAX_RETRIES         int           = 5
-	MAX_RETRY_TIMES     time.Duration = 1 * time.Minute
-	COLLECT_MAX_RETRIES int           = 3
-	GET_MAX_RETRIES     int           = 2
-	SAVE_MAX_RETRIES    int           = 2
-	DELETE_MAX_RETRIES  int           = 1
-	DEFAULT_DELAY       time.Duration = 1 * time.Second
+	CPU                 CheckType = "cpu"
+	CPU_PER_HOUR        CheckType = "cpu_per_hour"
+	CPU_PER_DAY         CheckType = "cpu_per_day"
+	MEM                 CheckType = "memory"
+	MEM_PER_HOUR        CheckType = "memory_per_hour"
+	MEM_PER_DAY         CheckType = "memory_per_day"
+	DISK_USAGE          CheckType = "disk_usage"
+	DISK_USAGE_PER_HOUR CheckType = "disk_usage_per_hour"
+	DISK_USAGE_PER_DAY  CheckType = "disk_usage_per_day"
+	DISK_IO             CheckType = "disk_io"
+	DISK_IO_PER_HOUR    CheckType = "disk_io_per_hour"
+	DISK_IO_PER_DAY     CheckType = "disk_io_per_day"
+	NET                 CheckType = "net"
+	NET_PER_HOUR        CheckType = "net_per_hour"
+	NET_PER_DAY         CheckType = "net_per_day"
+	CLEANUP             CheckType = "cleanup"
 )
 
 type CheckType string
@@ -40,15 +33,6 @@ type CheckArgs struct {
 	Interval time.Duration
 	Buffer   *CheckBuffer
 	Client   *ent.Client
-}
-
-type RetryCount struct {
-	MaxCollectRetries int
-	MaxGetRetries     int
-	MaxSaveRetries    int
-	MaxDeleteRetries  int
-	MaxRetryTime      time.Duration
-	Delay             time.Duration
 }
 
 type CPUQuerySet struct {
@@ -97,12 +81,12 @@ type CheckResult struct {
 	Total          uint64    `json:"total,omitempty"`
 	Free           uint64    `json:"free,omitempty"`
 	Used           uint64    `json:"used,omitempty"`
-	WriteBytes     uint64    `json:"write_bytes,omitempty"`
-	ReadBytes      uint64    `json:"read_bytes,omitempty"`
-	InputPps       float64   `json:"input_pps,omitempty"`
-	InputBps       float64   `json:"input_bps,omitempty"`
-	OutputPps      float64   `json:"output_pps,omitempty"`
-	OutputBps      float64   `json:"output_bps,omitempty"`
+	WriteBytes     *uint64   `json:"write_bytes,omitempty"`
+	ReadBytes      *uint64   `json:"read_bytes,omitempty"`
+	InputPps       *float64  `json:"input_pps,omitempty"`
+	InputBps       *float64  `json:"input_bps,omitempty"`
+	OutputPps      *float64  `json:"output_pps,omitempty"`
+	OutputBps      *float64  `json:"output_bps,omitempty"`
 	PeakUsage      float64   `json:"peak_usage,omitempty"`
 	AvgUsage       float64   `json:"avg_usage,omitempty"`
 	PeakWriteBytes uint64    `json:"peak_write_bytes,omitempty"`

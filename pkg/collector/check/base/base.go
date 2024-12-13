@@ -8,7 +8,7 @@ import (
 )
 
 type CheckStrategy interface {
-	Execute(ctx context.Context)
+	Execute(ctx context.Context) error
 	GetInterval() time.Duration
 	GetName() string
 	GetBuffer() *CheckBuffer

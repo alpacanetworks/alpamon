@@ -43,7 +43,7 @@ var checkFactories = map[base.CheckType]newCheck{
 }
 
 type Check interface {
-	Execute(ctx context.Context)
+	Execute(ctx context.Context) error
 }
 
 type CheckFactory interface {

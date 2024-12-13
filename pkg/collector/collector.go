@@ -110,16 +110,14 @@ func NewCollector(args collectorArgs) (*Collector, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := collector.scheduler.AddTask(check); err != nil {
-			return nil, err
-		}
+		collector.scheduler.AddTask(check)
 	}
 
 	return collector, nil
 }
 
 func (c *Collector) Start(ctx context.Context) error {
-	go c.scheduler.Start(ctx)
+	go c.scheduler.Start(ctx, c.buffer.Capacity)
 
 	for i := 0; i < c.buffer.Capacity; i++ {
 		c.wg.Add(1)
