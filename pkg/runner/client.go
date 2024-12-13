@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	MinConnectInterval = 5 * time.Second
-	MaxConnectInterval = 60 * time.Second
+	minConnectInterval = 5 * time.Second
+	maxConnectInterval = 60 * time.Second
 
 	eventCommandAckURL = "/api/events/commands/%s/ack/"
 	eventCommandFinURL = "/api/events/commands/%s/fin/"
@@ -55,9 +55,21 @@ func (wc *WebsocketClient) RunForever() {
 			if err != nil {
 				wc.closeAndReconnect()
 			}
+			// Sends "ping" query for Alpacon to verify WebSocket session status without error handling.
+			_ = wc.sendPingQuery()
 			wc.commandRequestHandler(message)
 		}
 	}
+}
+
+func (wc *WebsocketClient) sendPingQuery() error {
+	pingQuery := map[string]string{"query": "ping"}
+	err := wc.writeJSON(pingQuery)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (wc *WebsocketClient) readMessage() (messageType int, message []byte, err error) {
@@ -70,13 +82,15 @@ func (wc *WebsocketClient) readMessage() (messageType int, message []byte, err e
 }
 
 func (wc *WebsocketClient) connect() {
+	log.Info().Msgf("Connecting to websocket at %s", config.GlobalSettings.WSPath)
+
 	wsBackoff := backoff.NewExponentialBackOff()
-	wsBackoff.InitialInterval = MinConnectInterval
-	wsBackoff.MaxInterval = MaxConnectInterval
+	wsBackoff.InitialInterval = minConnectInterval
+	wsBackoff.MaxInterval = maxConnectInterval
 	wsBackoff.MaxElapsedTime = 0      // No time limit for retries (infinite retry)
 	wsBackoff.RandomizationFactor = 0 // Retry forever
 
-	err := backoff.Retry(func() error {
+	operation := func() error {
 		conn, _, err := websocket.DefaultDialer.Dial(config.GlobalSettings.WSPath, wc.requestHeader)
 		if err != nil {
 			nextInterval := wsBackoff.NextBackOff()
@@ -87,10 +101,12 @@ func (wc *WebsocketClient) connect() {
 		wc.conn = conn
 		log.Debug().Msg("Backhaul connection established")
 		return nil
-	}, wsBackoff)
+	}
 
+	err := backoff.Retry(operation, wsBackoff)
 	if err != nil {
-		log.Error().Err(err).Msgf("Could not connect to %s: terminated unexpectedly", config.GlobalSettings.WSPath)
+		log.Error().Err(err).Msg("Unexpected error occurred during backoff")
+		return
 	}
 }
 
@@ -143,10 +159,6 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 			return
 		}
 	}
-
-	// Sends "hello" for Alpacon to verify WebSocket session status without error handling.
-	helloQuery := map[string]string{"query": "hello"}
-	_ = wc.writeJSON(helloQuery)
 
 	switch content.Query {
 	case "command":
