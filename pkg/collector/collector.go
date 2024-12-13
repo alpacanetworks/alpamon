@@ -47,7 +47,9 @@ type collectConf struct {
 
 func InitCollector(session *session.Session, client *ent.Client) *Collector {
 	checkFactory := &check.DefaultCheckFactory{}
-	transporterFactory := &transporter.DefaultTransporterFactory{}
+
+	urlResolver := transporter.NewURLResolver()
+	transporterFactory := transporter.NewDefaultTransporterFactory(urlResolver)
 
 	var conf []collectConf
 	resp, statusCode, err := session.Get(confURL, 10)
@@ -96,7 +98,7 @@ func NewCollector(args collectorArgs) (*Collector, error) {
 	}
 
 	for _, entry := range args.conf {
-		duration := time.Duration(entry.Interval) * time.Minute
+		duration := time.Duration(entry.Interval) * time.Second
 		name := string(entry.Type) + "_" + uuid.NewString()
 		checkArgs := base.CheckArgs{
 			Type:     entry.Type,
