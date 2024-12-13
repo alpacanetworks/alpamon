@@ -2,11 +2,9 @@ package cpu
 
 import (
 	"context"
-	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 )
 
 var (
@@ -40,45 +38,25 @@ type deleteQuery func(context.Context, *ent.Client) error
 
 type Check struct {
 	base.BaseCheck
-	retryCount base.RetryCount
 }
 
 func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 	return &Check{
 		BaseCheck: base.NewBaseCheck(args),
-		retryCount: base.RetryCount{
-			MaxDeleteRetries: base.MAX_RETRIES,
-			MaxRetryTime:     base.MAX_RETRY_TIMES,
-			Delay:            base.DEFAULT_DELAY,
-		},
 	}
 }
 
-func (c *Check) Execute(ctx context.Context) {
-	start := time.Now()
-
-	for attempt := 0; attempt <= c.retryCount.MaxDeleteRetries; attempt++ {
-		if time.Since(start) >= c.retryCount.MaxRetryTime {
-			break
-		}
-
-		if err := c.deleteAllMetric(ctx); err != nil {
-			if attempt < c.retryCount.MaxDeleteRetries {
-				backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
-				select {
-				case <-time.After(backoff):
-					continue
-				case <-ctx.Done():
-					return
-				}
-			}
-		}
-		break
+func (c *Check) Execute(ctx context.Context) error {
+	err := c.deleteAllMetric(ctx)
+	if err != nil {
+		return err
 	}
 
 	if ctx.Err() != nil {
-		return
+		return ctx.Err()
 	}
+
+	return nil
 }
 
 func (c *Check) deleteAllMetric(ctx context.Context) error {
@@ -94,91 +72,171 @@ func (c *Check) deleteAllMetric(ctx context.Context) error {
 }
 
 func deleteAllCPU(ctx context.Context, client *ent.Client) error {
-	_, err := client.CPU.Delete().Exec(ctx)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	_, err = tx.CPU.Delete().Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }
 
 func deleteAllCPUPerHour(ctx context.Context, client *ent.Client) error {
-	_, err := client.CPUPerHour.Delete().Exec(ctx)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	_, err = tx.CPUPerHour.Delete().Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }
 
 func deleteAllMemory(ctx context.Context, client *ent.Client) error {
-	_, err := client.Memory.Delete().Exec(ctx)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	_, err = tx.Memory.Delete().Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }
 
 func deleteAllMemoryPerHour(ctx context.Context, client *ent.Client) error {
-	_, err := client.MemoryPerHour.Delete().Exec(ctx)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	_, err = tx.MemoryPerHour.Delete().Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }
 
 func deleteAllDiskUsage(ctx context.Context, client *ent.Client) error {
-	_, err := client.DiskUsage.Delete().Exec(ctx)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	_, err = tx.DiskUsage.Delete().Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }
 
 func deleteAllDiskUsagePerHour(ctx context.Context, client *ent.Client) error {
-	_, err := client.DiskIOPerHour.Delete().Exec(ctx)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	_, err = tx.DiskIOPerHour.Delete().Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }
 
 func deleteAllDiskIO(ctx context.Context, client *ent.Client) error {
-	_, err := client.DiskIO.Delete().Exec(ctx)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	_, err = client.DiskIO.Delete().Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }
 
 func deleteAllDiskIOPerHour(ctx context.Context, client *ent.Client) error {
-	_, err := client.DiskIOPerHour.Delete().Exec(ctx)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	_, err = tx.DiskIOPerHour.Delete().Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }
 
 func deleteAllTraffic(ctx context.Context, client *ent.Client) error {
-	_, err := client.Traffic.Delete().Exec(ctx)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	_, err = tx.Traffic.Delete().Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }
 
 func deleteAllTrafficPerHour(ctx context.Context, client *ent.Client) error {
-	_, err := client.TrafficPerHour.Delete().Exec(ctx)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	_, err = tx.TrafficPerHour.Delete().Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }

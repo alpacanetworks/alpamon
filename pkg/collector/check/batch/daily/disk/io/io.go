@@ -2,49 +2,41 @@ package io
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/diskioperhour"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/rs/zerolog/log"
 )
 
 type Check struct {
 	base.BaseCheck
-	retryCount base.RetryCount
 }
 
 func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 	return &Check{
 		BaseCheck: base.NewBaseCheck(args),
-		retryCount: base.RetryCount{
-			MaxGetRetries:    3,
-			MaxDeleteRetries: 2,
-			MaxRetryTime:     base.MAX_RETRY_TIMES,
-			Delay:            base.DEFAULT_DELAY,
-		},
 	}
 }
 
-func (c *Check) Execute(ctx context.Context) {
+func (c *Check) Execute(ctx context.Context) error {
 	metric, err := c.queryDiskIOPerHour(ctx)
 	if err != nil {
-		return
+		return err
 	}
 
 	if ctx.Err() != nil {
-		return
+		return ctx.Err()
 	}
 
 	buffer := c.GetBuffer()
 	buffer.SuccessQueue <- metric
+
+	return nil
 }
 
 func (c *Check) queryDiskIOPerHour(ctx context.Context) (base.MetricData, error) {
-	queryset, err := c.retryGetDiskIOPerHour(ctx)
+	queryset, err := c.getDiskIOPerHour(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -65,66 +57,12 @@ func (c *Check) queryDiskIOPerHour(ctx context.Context) (base.MetricData, error)
 		Data: data,
 	}
 
-	err = c.retryDeleteDiskIOPerHour(ctx)
+	err = c.deleteDiskIOPerHour(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
 
 	return metric, nil
-}
-
-func (c *Check) retryGetDiskIOPerHour(ctx context.Context) ([]base.DiskIOQuerySet, error) {
-	start := time.Now()
-	for attempt := 0; attempt <= c.retryCount.MaxGetRetries; attempt++ {
-		if time.Since(start) >= c.retryCount.MaxRetryTime {
-			break
-		}
-
-		queryset, err := c.getDiskIOPerHour(ctx)
-		if err == nil {
-			return queryset, nil
-		}
-
-		if attempt < c.retryCount.MaxGetRetries {
-			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
-			select {
-			case <-time.After(backoff):
-				log.Debug().Msgf("Retry to get disk io per hour queryset: %d attempt", attempt)
-				continue
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("failed to get disk io per hour queryset")
-}
-
-func (c *Check) retryDeleteDiskIOPerHour(ctx context.Context) error {
-	start := time.Now()
-	for attempt := 0; attempt <= c.retryCount.MaxDeleteRetries; attempt++ {
-		if time.Since(start) >= c.retryCount.MaxRetryTime {
-			break
-		}
-
-		err := c.deleteDiskIOPerHour(ctx)
-		if err == nil {
-			return nil
-		}
-
-		if attempt < c.retryCount.MaxDeleteRetries {
-			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
-			select {
-			case <-time.After(backoff):
-				log.Debug().Msgf("Retry to delete disk io per hour: %d attempt", attempt)
-				continue
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		}
-	}
-
-	return fmt.Errorf("failed to delete disk io per hour")
 }
 
 func (c *Check) getDiskIOPerHour(ctx context.Context) ([]base.DiskIOQuerySet, error) {
@@ -141,10 +79,8 @@ func (c *Check) getDiskIOPerHour(ctx context.Context) ([]base.DiskIOQuerySet, er
 			ent.As(ent.Max(diskioperhour.FieldPeakWriteBytes), "peak_write_bytes"),
 			ent.As(ent.Mean(diskioperhour.FieldAvgReadBytes), "avg_read_bytes"),
 			ent.As(ent.Mean(diskioperhour.FieldAvgWriteBytes), "avg_write_bytes"),
-		).
-		Scan(ctx, &queryset)
+		).Scan(ctx, &queryset)
 	if err != nil {
-		log.Debug().Msg(err.Error())
 		return queryset, err
 	}
 
@@ -152,16 +88,22 @@ func (c *Check) getDiskIOPerHour(ctx context.Context) ([]base.DiskIOQuerySet, er
 }
 
 func (c *Check) deleteDiskIOPerHour(ctx context.Context) error {
-	client := c.GetClient()
-	now := time.Now()
-	from := now.Add(-24 * time.Hour)
-
-	_, err := client.DiskIOPerHour.Delete().
-		Where(diskioperhour.TimestampGTE(from), diskioperhour.TimestampLTE(now)).
-		Exec(ctx)
+	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	now := time.Now()
+	from := now.Add(-24 * time.Hour)
+
+	_, err = tx.DiskIOPerHour.Delete().
+		Where(diskioperhour.TimestampGTE(from), diskioperhour.TimestampLTE(now)).Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }

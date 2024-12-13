@@ -2,49 +2,41 @@ package cpu
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/cpuperhour"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/rs/zerolog/log"
 )
 
 type Check struct {
 	base.BaseCheck
-	retryCount base.RetryCount
 }
 
 func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 	return &Check{
 		BaseCheck: base.NewBaseCheck(args),
-		retryCount: base.RetryCount{
-			MaxGetRetries:    3,
-			MaxDeleteRetries: 2,
-			MaxRetryTime:     base.MAX_RETRY_TIMES,
-			Delay:            base.DEFAULT_DELAY,
-		},
 	}
 }
 
-func (c *Check) Execute(ctx context.Context) {
+func (c *Check) Execute(ctx context.Context) error {
 	metric, err := c.queryCPUPerHour(ctx)
 	if err != nil {
-		return
+		return err
 	}
 
 	if ctx.Err() != nil {
-		return
+		return ctx.Err()
 	}
 
 	buffer := c.GetBuffer()
 	buffer.SuccessQueue <- metric
+
+	return nil
 }
 
 func (c *Check) queryCPUPerHour(ctx context.Context) (base.MetricData, error) {
-	queryset, err := c.retryGetCPUPerHour(ctx)
+	queryset, err := c.getCPUPerHour(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -59,66 +51,12 @@ func (c *Check) queryCPUPerHour(ctx context.Context) (base.MetricData, error) {
 		Data: []base.CheckResult{data},
 	}
 
-	err = c.retryDeleteCPUPerHour(ctx)
+	err = c.deleteCPUPerHour(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
 
 	return metric, nil
-}
-
-func (c *Check) retryGetCPUPerHour(ctx context.Context) ([]base.CPUQuerySet, error) {
-	start := time.Now()
-	for attempt := 0; attempt <= c.retryCount.MaxGetRetries; attempt++ {
-		if time.Since(start) >= c.retryCount.MaxRetryTime {
-			break
-		}
-
-		queryset, err := c.getCPUPerHour(ctx)
-		if err == nil {
-			return queryset, nil
-		}
-
-		if attempt < c.retryCount.MaxGetRetries {
-			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
-			select {
-			case <-time.After(backoff):
-				log.Debug().Msgf("Retry to get cpu usage per hour queryset: %d attempt", attempt)
-				continue
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("failed to get cpu usage per hour queryset")
-}
-
-func (c *Check) retryDeleteCPUPerHour(ctx context.Context) error {
-	start := time.Now()
-	for attempt := 0; attempt <= c.retryCount.MaxDeleteRetries; attempt++ {
-		if time.Since(start) >= c.retryCount.MaxRetryTime {
-			break
-		}
-
-		err := c.deleteCPUPerHour(ctx)
-		if err == nil {
-			return nil
-		}
-
-		if attempt < c.retryCount.MaxDeleteRetries {
-			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
-			select {
-			case <-time.After(backoff):
-				log.Debug().Msgf("Retry to delete cpu usage per hour: %d attempt", attempt)
-				continue
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		}
-	}
-
-	return fmt.Errorf("failed to delete cpu usage per hour")
 }
 
 func (c *Check) getCPUPerHour(ctx context.Context) ([]base.CPUQuerySet, error) {
@@ -132,10 +70,8 @@ func (c *Check) getCPUPerHour(ctx context.Context) ([]base.CPUQuerySet, error) {
 		Aggregate(
 			ent.Max(cpuperhour.FieldPeakUsage),
 			ent.Mean(cpuperhour.FieldAvgUsage),
-		).
-		Scan(ctx, &queryset)
+		).Scan(ctx, &queryset)
 	if err != nil {
-		log.Debug().Msg(err.Error())
 		return queryset, err
 	}
 
@@ -143,16 +79,22 @@ func (c *Check) getCPUPerHour(ctx context.Context) ([]base.CPUQuerySet, error) {
 }
 
 func (c *Check) deleteCPUPerHour(ctx context.Context) error {
-	client := c.GetClient()
-	now := time.Now()
-	from := now.Add(-24 * time.Hour)
-
-	_, err := client.CPUPerHour.Delete().
-		Where(cpuperhour.TimestampGTE(from), cpuperhour.TimestampLTE(now)).
-		Exec(ctx)
+	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	now := time.Now()
+	from := now.Add(-24 * time.Hour)
+
+	_, err = tx.CPUPerHour.Delete().
+		Where(cpuperhour.TimestampGTE(from), cpuperhour.TimestampLTE(now)).Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_ = tx.Commit()
 
 	return nil
 }

@@ -2,13 +2,10 @@ package diskusage
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v4/disk"
 )
 
@@ -24,37 +21,32 @@ var excludedFileSystems = map[string]bool{
 
 type Check struct {
 	base.BaseCheck
-	retryCount base.RetryCount
 }
 
 func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 	return &Check{
 		BaseCheck: base.NewBaseCheck(args),
-		retryCount: base.RetryCount{
-			MaxCollectRetries: base.COLLECT_MAX_RETRIES,
-			MaxSaveRetries:    base.SAVE_MAX_RETRIES,
-			MaxRetryTime:      base.MAX_RETRY_TIMES,
-			Delay:             base.DEFAULT_DELAY,
-		},
 	}
 }
 
-func (c *Check) Execute(ctx context.Context) {
+func (c *Check) Execute(ctx context.Context) error {
 	metric, err := c.collectAndSaveDiskUsage(ctx)
 	if err != nil {
-		return
+		return err
 	}
 
 	if ctx.Err() != nil {
-		return
+		return ctx.Err()
 	}
 
 	buffer := c.GetBuffer()
 	buffer.SuccessQueue <- metric
+
+	return nil
 }
 
 func (c *Check) collectAndSaveDiskUsage(ctx context.Context) (base.MetricData, error) {
-	partitions, err := c.retryCollectDiskPartitions(ctx)
+	partitions, err := c.collectDiskPartitions()
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -64,39 +56,12 @@ func (c *Check) collectAndSaveDiskUsage(ctx context.Context) (base.MetricData, e
 		Data: c.parseDiskUsage(partitions),
 	}
 
-	err = c.retrySaveDiskUsage(ctx, metric.Data)
+	err = c.saveDiskUsage(metric.Data, ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
 
 	return metric, nil
-}
-
-func (c *Check) retryCollectDiskPartitions(ctx context.Context) ([]disk.PartitionStat, error) {
-	start := time.Now()
-	for attempt := 0; attempt <= c.retryCount.MaxCollectRetries; attempt++ {
-		if time.Since(start) >= c.retryCount.MaxRetryTime {
-			break
-		}
-
-		partitions, err := c.collectDiskPartitions()
-		if err == nil && len(partitions) > 0 {
-			return partitions, nil
-		}
-
-		if attempt < c.retryCount.MaxCollectRetries {
-			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
-			select {
-			case <-time.After(backoff):
-				log.Debug().Msgf("Retry to collect disk partitions: %d attempt", attempt)
-				continue
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("failed to collect disk partitions")
 }
 
 func (c *Check) parseDiskUsage(partitions []disk.PartitionStat) []base.CheckResult {
@@ -117,33 +82,6 @@ func (c *Check) parseDiskUsage(partitions []disk.PartitionStat) []base.CheckResu
 	}
 
 	return data
-}
-
-func (c *Check) retrySaveDiskUsage(ctx context.Context, data []base.CheckResult) error {
-	start := time.Now()
-	for attempt := 0; attempt <= c.retryCount.MaxSaveRetries; attempt++ {
-		if time.Since(start) >= c.retryCount.MaxRetryTime {
-			break
-		}
-
-		err := c.saveDiskUsage(ctx, data)
-		if err == nil {
-			return nil
-		}
-
-		if attempt < c.retryCount.MaxSaveRetries {
-			backoff := utils.CalculateBackOff(c.retryCount.Delay, attempt)
-			select {
-			case <-time.After(backoff):
-				log.Debug().Msgf("Retry to save disk usage: %d attempt", attempt)
-				continue
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		}
-	}
-
-	return fmt.Errorf("failed to save disk usage")
 }
 
 func (c *Check) collectDiskPartitions() ([]disk.PartitionStat, error) {
@@ -171,7 +109,7 @@ func (c *Check) collectDiskUsage(path string) (*disk.UsageStat, error) {
 	return usage, nil
 }
 
-func (c *Check) saveDiskUsage(ctx context.Context, data []base.CheckResult) error {
+func (c *Check) saveDiskUsage(data []base.CheckResult, ctx context.Context) error {
 	client := c.GetClient()
 	err := client.DiskUsage.MapCreateBulk(data, func(q *ent.DiskUsageCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
