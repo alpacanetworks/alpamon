@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	minConnectInterval = 5 * time.Second
-	maxConnectInterval = 60 * time.Second
+	minConnectInterval    = 5 * time.Second
+	maxConnectInterval    = 60 * time.Second
+	connectionReadTimeout = 35 * time.Minute
 
 	eventCommandAckURL = "/api/events/commands/%s/ack/"
 	eventCommandFinURL = "/api/events/commands/%s/fin/"
@@ -51,6 +52,10 @@ func (wc *WebsocketClient) RunForever() {
 		case <-wc.quitChan:
 			return
 		default:
+			err := wc.conn.SetReadDeadline(time.Now().Add(connectionReadTimeout))
+			if err != nil {
+				wc.closeAndReconnect()
+			}
 			_, message, err := wc.readMessage()
 			if err != nil {
 				wc.closeAndReconnect()
