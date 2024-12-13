@@ -1,6 +1,8 @@
 package transporter
 
 import (
+	"fmt"
+
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
 )
@@ -44,9 +46,13 @@ func (t *Transporter) Send(data base.MetricData) error {
 		return err
 	}
 
-	_, _, err = t.session.Post(url, data.Data, 10)
+	resp, statusCode, err := t.session.Post(url, data.Data, 10)
 	if err != nil {
 		return err
+	}
+
+	if statusCode > 300 {
+		return fmt.Errorf("%d Bad Request: %s", statusCode, resp)
 	}
 
 	return nil
