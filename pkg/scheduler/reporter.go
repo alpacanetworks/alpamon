@@ -51,7 +51,7 @@ func reportStartupEvent() {
 	eventData, _ := json.Marshal(map[string]string{
 		"reporter":    "alpamon",
 		"record":      "started",
-		"description": fmt.Sprintf("alpamon-go %s started running.", version.Version),
+		"description": fmt.Sprintf("alpamon %s started running.", version.Version),
 	})
 
 	Rqueue.Post(startUpEventURL, eventData, 10, time.Time{})
