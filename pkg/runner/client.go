@@ -87,7 +87,7 @@ func (wc *WebsocketClient) readMessage() (messageType int, message []byte, err e
 }
 
 func (wc *WebsocketClient) connect() {
-	log.Info().Msgf("Connecting to websocket at %s", config.GlobalSettings.WSPath)
+	log.Info().Msgf("Connecting to websocket at %s...", config.GlobalSettings.WSPath)
 
 	wsBackoff := backoff.NewExponentialBackOff()
 	wsBackoff.InitialInterval = minConnectInterval
@@ -99,18 +99,18 @@ func (wc *WebsocketClient) connect() {
 		conn, _, err := websocket.DefaultDialer.Dial(config.GlobalSettings.WSPath, wc.requestHeader)
 		if err != nil {
 			nextInterval := wsBackoff.NextBackOff()
-			log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds", config.GlobalSettings.WSPath, int(nextInterval.Seconds()))
+			log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds.", config.GlobalSettings.WSPath, int(nextInterval.Seconds()))
 			return err
 		}
 
 		wc.conn = conn
-		log.Debug().Msg("Backhaul connection established")
+		log.Debug().Msg("Backhaul connection established.")
 		return nil
 	}
 
 	err := backoff.Retry(operation, wsBackoff)
 	if err != nil {
-		log.Error().Err(err).Msg("Unexpected error occurred during backoff")
+		log.Error().Err(err).Msg("Unexpected error occurred during backoff.")
 		return
 	}
 }
@@ -127,7 +127,7 @@ func (wc *WebsocketClient) close() {
 	if wc.conn != nil {
 		err := wc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		if err != nil {
-			log.Debug().Err(err).Msg("Failed to write close message to websocket")
+			log.Debug().Err(err).Msg("Failed to write close message to websocket.")
 		}
 		_ = wc.conn.Close()
 	}
@@ -188,7 +188,7 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 func (wc *WebsocketClient) writeJSON(data interface{}) error {
 	err := wc.conn.WriteJSON(data)
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to write json data to websocket")
+		log.Debug().Err(err).Msgf("Failed to write json data to websocket.")
 		return err
 	}
 	return nil
