@@ -137,16 +137,16 @@ type Address struct {
 }
 
 type commitData struct {
-	Version    string      `json:"version"`
-	Load       float64     `json:"load"`
-	Info       SystemData  `json:"info"`
-	OS         OSData      `json:"os"`
-	Time       TimeData    `json:"time"`
-	Users      []UserData  `json:"users"`
-	Groups     []GroupData `json:"groups"`
-	Interfaces []Interface `json:"interfaces"`
-	Addresses  []Address   `json:"addresses"`
-	// Packages   []SystemPackageData `json:"packages"`
+	Version    string              `json:"version"`
+	Load       float64             `json:"load"`
+	Info       SystemData          `json:"info"`
+	OS         OSData              `json:"os"`
+	Time       TimeData            `json:"time"`
+	Users      []UserData          `json:"users"`
+	Groups     []GroupData         `json:"groups"`
+	Interfaces []Interface         `json:"interfaces"`
+	Addresses  []Address           `json:"addresses"`
+	Packages   []SystemPackageData `json:"packages"`
 }
 
 // Defines the ComparableData interface for comparing different types.
