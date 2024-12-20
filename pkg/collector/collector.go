@@ -117,7 +117,7 @@ func NewCollector(args collectorArgs) (*Collector, error) {
 
 func (c *Collector) initTasks(args collectorArgs) error {
 	for _, entry := range args.conf {
-		duration := time.Duration(entry.Interval) * time.Second
+		duration := time.Duration(entry.Interval) * time.Minute
 		name := string(entry.Type) + "_" + uuid.NewString()
 		checkArgs := base.CheckArgs{
 			Type:     entry.Type,
