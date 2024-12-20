@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"sync"
 
 	"entgo.io/ent/dialect"
@@ -14,10 +15,11 @@ var (
 	initErr error
 )
 
-func GetClient() (*ent.Client, error) {
+func GetClient(path string) (*ent.Client, error) {
 	once.Do(func() {
 		var err error
-		client, err = ent.Open(dialect.SQLite, "file:./metrics.db?cache=shared&_fk=1")
+		url := fmt.Sprintf("file:%s?cache=shared&_fk=1", path)
+		client, err = ent.Open(dialect.SQLite, url)
 		if err != nil {
 			initErr = err
 			client = nil

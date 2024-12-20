@@ -65,18 +65,10 @@ func runAgent() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	client, err := db.GetClient()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to open database client")
-		return
-	}
-	defer db.Close()
+	// DB
+	client := db.InitDB(ctx)
 
-	if err := db.RunMigration(ctx, client); err != nil {
-		log.Error().Err(err).Msg("Failed to migrate schema")
-		return
-	}
-
+	// Collector
 	collector := collector.InitCollector(session, client)
 	if err := collector.Start(ctx); err != nil {
 		log.Error().Err(err).Msg("Failed to start collector")
