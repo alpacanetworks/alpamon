@@ -75,7 +75,13 @@ func (pc *PtyClient) RunPtyBackground() {
 	}
 
 	pc.setPtyCmdSysProcAttrAndEnv(uid, gid, groupIds, env)
-	pc.ptmx, err = pty.Start(pc.cmd)
+
+	initialSize := &pty.Winsize{
+		Rows: pc.rows,
+		Cols: pc.cols,
+	}
+
+	pc.ptmx, err = pty.StartWithSize(pc.cmd, initialSize)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to start pty")
 		pc.close()

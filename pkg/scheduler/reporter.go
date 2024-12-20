@@ -51,7 +51,7 @@ func reportStartupEvent() {
 	eventData, _ := json.Marshal(map[string]string{
 		"reporter":    "alpamon",
 		"record":      "started",
-		"description": fmt.Sprintf("alpamon-go %s started running.", version.Version),
+		"description": fmt.Sprintf("alpamon %s started running.", version.Version),
 	})
 
 	Rqueue.Post(startUpEventURL, eventData, 10, time.Time{})
@@ -91,7 +91,6 @@ func (r *Reporter) query(entry PriorityEntry) {
 			err = Rqueue.queue.Offer(entry)
 			if err != nil {
 				r.counters.ignored++
-				time.Sleep(1 * time.Second)
 			}
 		} else {
 			r.counters.ignored++
@@ -117,8 +116,8 @@ func (r *Reporter) Run() {
 			err = Rqueue.queue.Offer(entry)
 			if err != nil {
 				r.counters.ignored++
-				time.Sleep(1 * time.Second)
 			}
+			time.Sleep(1 * time.Second)
 		} else {
 			r.query(entry)
 		}

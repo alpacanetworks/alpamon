@@ -88,6 +88,38 @@ go run main.go
 ```
 Ensure that you are in the correct directory (`/cmd/alpamon`), as this is where the `main.go` file resides.
 
+### Docker
+You can also use docker to test alpamon in various Linux distributions. We use Docker Desktop to test alpamon on following distributions.
+
+- Ubuntu: 18.04, 20.04, 22.04
+- Debian: 10, 11
+- RedHat: 8, 9
+- CentOS: 7
+
+#### Build
+Build docker images with the build script.
+```
+./Dockerfiles/build.sh
+```
+
+#### Run
+You can run containers for these images in Docker Desktop or using command line like below.
+```
+docker run alpamon:ubuntu-22.04
+```
+- Note : This will run the container with the default workspace URL (http://localhost:8000), plugin ID, and key values. 
+For more details, refer to the `entrypoint.sh` file in the Dockerfiles directory corresponding to each operating system.
+
+To run the container with a custom workspace URL, plugin ID, and key, use the following command:
+```
+docker run \
+  -e ALPACON_URL="your_workspace_url" \
+  -e PLUGIN_ID="your_plugin_id" \
+  -e PLUGIN_KEY="your_plugin_key" \
+  alpamon:latest
+```
+- Replace the environment variable values (your_workspace_url, your_plugin_id, your_plugin_key) with your actual workspace configuration.
+
 ### Deploy as a service
 
 For Linux systems supporting `systemd`, you can run `alpamon` as a systemd service. In this case, you need to adapt `alpamon/config/alpamon.service` for your environment.

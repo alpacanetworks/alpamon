@@ -76,7 +76,7 @@ func (session *Session) CheckSession() bool {
 			return commissioned
 		} else {
 			log.Error().Msg("Unable to find 'commissioned' field in the response")
-			return false
+			continue
 		}
 	}
 }

@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	"os"
 	"syscall"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/alpacanetworks/alpamon-go/pkg/runner"
 	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -43,10 +43,11 @@ func runAgent() {
 	}
 	defer func() { _ = os.Remove(pidFilePath) }()
 
+	fmt.Printf("alpamon version %s starting.\n", version.Version)
+
 	// Config & Settings
 	settings := config.LoadConfig()
 	config.InitSettings(settings)
-	fmt.Printf("alpamon-go %s starting.\n", version.Version)
 
 	// Session
 	session := scheduler.InitSession()
@@ -58,6 +59,7 @@ func runAgent() {
 	// Logger
 	logFile := logger.InitLogger()
 	defer func() { _ = logFile.Close() }()
+	log.Info().Msg("alpamon initialized and running.")
 
 	// Commit
 	runner.CommitAsync(session, commissioned)

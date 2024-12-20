@@ -46,6 +46,8 @@ func (cr *CommandRunner) Run() {
 	var exitCode int
 	var result string
 
+	log.Debug().Msgf("Received command: %s> %s", cr.command.Shell, cr.command.Line)
+
 	start := time.Now()
 	switch cr.command.Shell {
 	case "internal":
@@ -91,10 +93,9 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 	case "upgrade":
 		if utils.PlatformLike == "debian" {
 			cmd = "apt-get update -y && " +
-				"apt-get upgrade -y alpamon"
+				"apt-get install --only-upgrade alpamon"
 		} else if utils.PlatformLike == "rhel" {
-			cmd = "yum update- y &&" +
-				"yum upgrade -y alpamon"
+			cmd = "yum update -y alpamon"
 		} else {
 			return 1, fmt.Sprintf("Platform '%s' not supported.", utils.PlatformLike)
 		}

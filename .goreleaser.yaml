@@ -44,7 +44,7 @@ nfpms:
 
     scripts:
       postinstall: "scripts/postinstall.sh"
-      postremove: "scripts/postremove.sh"
+      preremove: "scripts/preremove.sh"
 
 changelog:
   sort: asc

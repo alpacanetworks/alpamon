@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	MinConnectInterval = 5 * time.Second
-	MaxConnectInterval = 60 * time.Second
+	minConnectInterval    = 5 * time.Second
+	maxConnectInterval    = 60 * time.Second
+	connectionReadTimeout = 35 * time.Minute
 
 	eventCommandAckURL = "/api/events/commands/%s/ack/"
 	eventCommandFinURL = "/api/events/commands/%s/fin/"
@@ -51,13 +52,29 @@ func (wc *WebsocketClient) RunForever() {
 		case <-wc.quitChan:
 			return
 		default:
+			err := wc.conn.SetReadDeadline(time.Now().Add(connectionReadTimeout))
+			if err != nil {
+				wc.closeAndReconnect()
+			}
 			_, message, err := wc.readMessage()
 			if err != nil {
 				wc.closeAndReconnect()
 			}
+			// Sends "ping" query for Alpacon to verify WebSocket session status without error handling.
+			_ = wc.sendPingQuery()
 			wc.commandRequestHandler(message)
 		}
 	}
+}
+
+func (wc *WebsocketClient) sendPingQuery() error {
+	pingQuery := map[string]string{"query": "ping"}
+	err := wc.writeJSON(pingQuery)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (wc *WebsocketClient) readMessage() (messageType int, message []byte, err error) {
@@ -70,27 +87,31 @@ func (wc *WebsocketClient) readMessage() (messageType int, message []byte, err e
 }
 
 func (wc *WebsocketClient) connect() {
+	log.Info().Msgf("Connecting to websocket at %s...", config.GlobalSettings.WSPath)
+
 	wsBackoff := backoff.NewExponentialBackOff()
-	wsBackoff.InitialInterval = MinConnectInterval
-	wsBackoff.MaxInterval = MaxConnectInterval
+	wsBackoff.InitialInterval = minConnectInterval
+	wsBackoff.MaxInterval = maxConnectInterval
 	wsBackoff.MaxElapsedTime = 0      // No time limit for retries (infinite retry)
 	wsBackoff.RandomizationFactor = 0 // Retry forever
 
-	err := backoff.Retry(func() error {
+	operation := func() error {
 		conn, _, err := websocket.DefaultDialer.Dial(config.GlobalSettings.WSPath, wc.requestHeader)
 		if err != nil {
 			nextInterval := wsBackoff.NextBackOff()
-			log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds", config.GlobalSettings.WSPath, int(nextInterval.Seconds()))
+			log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds.", config.GlobalSettings.WSPath, int(nextInterval.Seconds()))
 			return err
 		}
 
 		wc.conn = conn
-		log.Debug().Msg("Backhaul connection established")
+		log.Debug().Msg("Backhaul connection established.")
 		return nil
-	}, wsBackoff)
+	}
 
+	err := backoff.Retry(operation, wsBackoff)
 	if err != nil {
-		log.Error().Err(err).Msgf("Could not connect to %s: terminated unexpectedly", config.GlobalSettings.WSPath)
+		log.Error().Err(err).Msg("Unexpected error occurred during backoff.")
+		return
 	}
 }
 
@@ -106,7 +127,7 @@ func (wc *WebsocketClient) close() {
 	if wc.conn != nil {
 		err := wc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		if err != nil {
-			log.Debug().Err(err).Msg("Failed to write close message to websocket")
+			log.Debug().Err(err).Msg("Failed to write close message to websocket.")
 		}
 		_ = wc.conn.Close()
 	}
@@ -162,4 +183,13 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 	default:
 		log.Warn().Msgf("Not implemented query: %s", content.Query)
 	}
+}
+
+func (wc *WebsocketClient) writeJSON(data interface{}) error {
+	err := wc.conn.WriteJSON(data)
+	if err != nil {
+		log.Debug().Err(err).Msgf("Failed to write json data to websocket.")
+		return err
+	}
+	return nil
 }
