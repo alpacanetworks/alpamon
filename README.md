@@ -34,7 +34,7 @@ sudo yum install alpamon
 #### Clone the source code
 To get started on macOS, clone the source code from the repository:
 ```bash
-git clone https://github.com/alpacanetworks/alpamon-go.git
+git clone https://github.com/alpacanetworks/alpamon.git
 ```
 
 #### Install Go dependencies
@@ -82,7 +82,7 @@ debug = true
 
 To run Alpamon in a local development environment, navigate to the cmd/alpamon directory and run the application using Go:
 ```sh
-cd /path/to/alpamon-go/cmd/alpamon
+cd /path/to/alpamon/cmd/alpamon
 
 go run main.go
 ```
