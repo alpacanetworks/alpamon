@@ -1,4 +1,4 @@
-# alpamon-go
+# Alpamon
 New Go-based Secure Server Agent for Alpacon
 
 **Alpamon** is a server agent for **Alpacon**. Each server should have Alpamon installed to be controlled via Alpacon.
