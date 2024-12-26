@@ -19,7 +19,7 @@ CREATE TABLE `disk_usages` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `ti
 -- Create index "diskusage_timestamp" to table: "disk_usages"
 CREATE INDEX `diskusage_timestamp` ON `disk_usages` (`timestamp`);
 -- Create "disk_usage_per_hours" table
-CREATE TABLE `disk_usage_per_hours` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `device` text NOT NULL, `mount_point` text NOT NULL, `peak_usage` real NOT NULL, `avg_usage` real NOT NULL);
+CREATE TABLE `disk_usage_per_hours` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `device` text NOT NULL, `peak_usage` real NOT NULL, `avg_usage` real NOT NULL);
 -- Create index "diskusageperhour_timestamp" to table: "disk_usage_per_hours"
 CREATE INDEX `diskusageperhour_timestamp` ON `disk_usage_per_hours` (`timestamp`);
 -- Create "memories" table
