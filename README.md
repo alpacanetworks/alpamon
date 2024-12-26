@@ -55,8 +55,8 @@ It is recommended to use `/etc/alpamon/alpamon.conf` for deployment, but you can
 ```ini
 [server]
 url = http://localhost:8000
-id = 
-key = 
+id = 7a50ea6c-2138-4d3f-9633-e50694c847c4
+key = alpaca
 
 [ssl]
 verify = true
