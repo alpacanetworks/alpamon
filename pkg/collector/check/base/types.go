@@ -54,10 +54,9 @@ type DiskIOQuerySet struct {
 }
 
 type DiskUsageQuerySet struct {
-	Device     string  `json:"device"`
-	MountPoint string  `json:"mount_point"`
-	Max        float64 `json:"max"`
-	AVG        float64 `json:"avg"`
+	Device string  `json:"device"`
+	Max    float64 `json:"max"`
+	AVG    float64 `json:"avg"`
 }
 
 type TrafficQuerySet struct {

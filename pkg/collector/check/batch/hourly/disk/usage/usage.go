@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/diskusage"
@@ -44,11 +45,10 @@ func (c *Check) queryDiskUsage(ctx context.Context) (base.MetricData, error) {
 	var data []base.CheckResult
 	for _, row := range queryset {
 		data = append(data, base.CheckResult{
-			Timestamp:  time.Now(),
-			Device:     row.Device,
-			MountPoint: row.MountPoint,
-			PeakUsage:  row.Max,
-			AvgUsage:   row.AVG,
+			Timestamp: time.Now(),
+			Device:    row.Device,
+			PeakUsage: row.Max,
+			AvgUsage:  row.AVG,
 		})
 	}
 	metric := base.MetricData{
@@ -71,17 +71,35 @@ func (c *Check) queryDiskUsage(ctx context.Context) (base.MetricData, error) {
 
 func (c *Check) getDiskUsage(ctx context.Context) ([]base.DiskUsageQuerySet, error) {
 	client := c.GetClient()
-	now := time.Now()
-	from := now.Add(-1 * time.Hour)
 
 	var queryset []base.DiskUsageQuerySet
 	err := client.DiskUsage.Query().
-		Where(diskusage.TimestampGTE(from), diskusage.TimestampLTE(now)).
-		GroupBy(diskusage.FieldDevice, diskusage.FieldMountPoint).
-		Aggregate(
-			ent.Max(diskusage.FieldUsage),
-			ent.Mean(diskusage.FieldUsage),
-		).Scan(ctx, &queryset)
+		Modify(func(s *sql.Selector) {
+			now := time.Now()
+			from := now.Add(-1 * time.Hour)
+			usageExpr := "(CAST(SUM(used) AS FLOAT) * 100.0) / NULLIF(SUM(total), 0)"
+			t := sql.Table(diskusage.Table)
+
+			subq := sql.Select(
+				"device",
+				"timestamp",
+				sql.As(usageExpr, "usage"),
+			).
+				From(t).
+				Where(
+					sql.And(
+						sql.GTE(t.C(diskusage.FieldTimestamp), from),
+						sql.LTE(t.C(diskusage.FieldTimestamp), now),
+					),
+				).
+				GroupBy("device", "timestamp")
+
+			*s = *sql.Select(
+				"device",
+				sql.As(sql.Max("usage"), "max"),
+				sql.As(sql.Avg("usage"), "avg"),
+			).From(subq).GroupBy("device")
+		}).Scan(ctx, &queryset)
 	if err != nil {
 		return queryset, err
 	}
@@ -99,7 +117,6 @@ func (c *Check) saveDiskUsagePerHour(data []base.CheckResult, ctx context.Contex
 	err = tx.DiskUsagePerHour.MapCreateBulk(data, func(q *ent.DiskUsagePerHourCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
 			SetDevice(data[i].Device).
-			SetMountPoint(data[i].MountPoint).
 			SetPeakUsage(data[i].PeakUsage).
 			SetAvgUsage(data[i].AvgUsage)
 	}).Exec(ctx)

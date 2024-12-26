@@ -44,11 +44,10 @@ func (c *Check) queryDiskUsagePerHour(ctx context.Context) (base.MetricData, err
 	var data []base.CheckResult
 	for _, row := range queryset {
 		data = append(data, base.CheckResult{
-			Timestamp:  time.Now(),
-			Device:     row.Device,
-			MountPoint: row.MountPoint,
-			PeakUsage:  row.Max,
-			AvgUsage:   row.AVG,
+			Timestamp: time.Now(),
+			Device:    row.Device,
+			PeakUsage: row.Max,
+			AvgUsage:  row.AVG,
 		})
 	}
 	metric := base.MetricData{
@@ -72,7 +71,7 @@ func (c *Check) getDiskUsagePerHour(ctx context.Context) ([]base.DiskUsageQueryS
 	var queryset []base.DiskUsageQuerySet
 	err := client.DiskUsagePerHour.Query().
 		Where(diskusageperhour.TimestampGTE(from), diskusageperhour.TimestampLTE(now)).
-		GroupBy(diskusageperhour.FieldDevice, diskusageperhour.FieldMountPoint).
+		GroupBy(diskusageperhour.FieldDevice).
 		Aggregate(
 			ent.Max(diskusageperhour.FieldPeakUsage),
 			ent.Mean(diskusageperhour.FieldAvgUsage),
