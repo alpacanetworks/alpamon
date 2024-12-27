@@ -81,21 +81,6 @@ For testing with the `Alpacon-Server`, you can use the following values:
 - `id` = `7a50ea6c-2138-4d3f-9633-e50694c847c4`
 - `key` = `alpaca`
 
-For testing with the Alpacon-server, you can use the following values:
-```ini
-[server]
-url = http://localhost:8000
-id = 7a50ea6c-2138-4d3f-9633-e50694c847c4
-key = alpaca
-
-[ssl]
-verify = true
-ca_cert =
-
-[logging]
-debug = true
-```
-
 
 ## Run
 
