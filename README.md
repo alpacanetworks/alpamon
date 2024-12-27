@@ -55,8 +55,8 @@ It is recommended to use `/etc/alpamon/alpamon.conf` for deployment, but you can
 ```ini
 [server]
 url = http://localhost:8000
-id = 7a50ea6c-2138-4d3f-9633-e50694c847c4
-key = alpaca
+id = 
+key = 
 
 [ssl]
 verify = true
@@ -75,6 +75,22 @@ debug = true
     - `ca_cert`: Path for the CA certificate
 - `logging`: Logging settings
     - `debug`: Whether to print debug logs or not
+ 
+For testing with the Alpacon-server, you can use the following values:
+
+```ini
+[server]
+url = http://localhost:8000
+id = 7a50ea6c-2138-4d3f-9633-e50694c847c4
+key = alpaca
+
+[ssl]
+verify = true
+ca_cert =
+
+[logging]
+debug = true
+```
 
 ## Run
 
