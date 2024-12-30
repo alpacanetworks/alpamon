@@ -37,6 +37,18 @@ To get started on macOS, clone the source code from the repository:
 git clone https://github.com/alpacanetworks/alpamon-go.git
 ```
 
+#### Generate Ent Schema Code with Entgo
+To generate Ent schema code with custom features, navigate to the root of the project and use the following command:
+```bash
+go run -mod=mod entgo.io/ent/cmd/ent@v0.14.0 generate --feature sql/modifier --target ./pkg/db/ent ./pkg/db/schema
+```
+
+#### Install Atlas CLI
+To enable versioned migrations, install Atlas CLI using the following command:
+```bash
+curl -sSf https://atlasgo.sh | sh
+```
+
 #### Install Go dependencies
 Make sure you have Go installed. Then, navigate to the project root and download the necessary Go packages:
 ```bash
