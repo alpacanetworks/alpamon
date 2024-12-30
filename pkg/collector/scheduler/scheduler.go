@@ -124,9 +124,7 @@ func (s *Scheduler) executeTask(ctx context.Context, task *ScheduledTask) {
 					return
 				}
 			}
-			return
 		}
 		break
 	}
-
 }
