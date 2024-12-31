@@ -2,12 +2,13 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/glebarez/go-sqlite"
 	"github.com/rs/zerolog/log"
 )
 
@@ -28,6 +29,8 @@ func InitDB(ctx context.Context) *ent.Client {
 		_, _ = fmt.Fprintf(os.Stderr, "Failed to open db file: %v\n", err)
 		os.Exit(1)
 	}
+
+	sql.Register("sqlite3", &sqlite.Driver{})
 
 	err = RunMigration(dbFile.Name(), ctx)
 	if err != nil {

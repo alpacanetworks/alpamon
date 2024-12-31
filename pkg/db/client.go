@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"entgo.io/ent/dialect"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/glebarez/go-sqlite"
 )
 
 var (
@@ -18,8 +17,8 @@ var (
 func GetClient(path string) (*ent.Client, error) {
 	once.Do(func() {
 		var err error
-		url := fmt.Sprintf("file:%s?cache=shared&_fk=1", path)
-		client, err = ent.Open(dialect.SQLite, url)
+		url := fmt.Sprintf("file:%s?cache=shared&__pragma=foreign_keys(1)", path)
+		client, err = ent.Open("sqlite3", url)
 		if err != nil {
 			initErr = err
 			client = nil
