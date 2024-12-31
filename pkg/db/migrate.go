@@ -2,17 +2,27 @@ package db
 
 import (
 	"context"
+	"embed"
 	"fmt"
-	"os"
+	"io/fs"
 
 	"ariga.io/atlas-go-sdk/atlasexec"
 	"github.com/rs/zerolog/log"
 )
 
+//go:embed migration/*
+var migrations embed.FS
+
 func RunMigration(path string, ctx context.Context) error {
+	migrationFS, err := getMigrationDir()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get migration filesystem")
+		return err
+	}
+
 	workDir, err := atlasexec.NewWorkingDir(
 		atlasexec.WithMigrations(
-			os.DirFS("../../pkg/db/migration"),
+			migrationFS,
 		),
 	)
 	if err != nil {
@@ -39,4 +49,13 @@ func RunMigration(path string, ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func getMigrationDir() (fs.FS, error) {
+	migrationFS, err := fs.Sub(migrations, "migration")
+	if err != nil {
+		return nil, err
+	}
+
+	return migrationFS, nil
 }
