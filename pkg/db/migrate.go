@@ -26,7 +26,7 @@ func RunMigration(path string, ctx context.Context) error {
 		),
 	)
 	if err != nil {
-		log.Error().Err(err).Msgf("failed to get migration dir: %v", err)
+		log.Error().Err(err).Msgf("failed to open migration dir: %v", err)
 		return err
 	}
 	defer workDir.Close()

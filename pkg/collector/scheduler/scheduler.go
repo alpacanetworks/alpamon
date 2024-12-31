@@ -7,6 +7,7 @@ import (
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -115,6 +116,7 @@ func (s *Scheduler) executeTask(ctx context.Context, task *ScheduledTask) {
 	for attempt := 0; attempt <= s.retryConf.MaxRetries; attempt++ {
 		err := task.check.Execute(ctx)
 		if err != nil {
+			log.Error().Err(err).Msgf("failed to execute check: %v", err)
 			if attempt < s.retryConf.MaxRetries {
 				backoff := utils.CalculateBackOff(s.retryConf.Delay, attempt)
 				select {
