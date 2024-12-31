@@ -11,9 +11,7 @@ builds:
     ldflags:
       - -X github.com/alpacanetworks/alpamon-go/pkg/version.Version={{.Version}}
     env:
-      - CGO_ENABLED=1
-      - CGO_CFLAGS=-I/usr/include
-      - CGO_LDFLAGS=-L/usr/lib
+      - CGO_ENABLED=0
     goos:
       - linux
       - darwin
