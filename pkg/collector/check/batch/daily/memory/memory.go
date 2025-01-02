@@ -83,7 +83,7 @@ func (c *Check) deleteMemoryPerHour(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now()
 	from := now.Add(-24 * time.Hour)

@@ -105,7 +105,7 @@ func (c *Check) saveTrafficPerHour(data []base.CheckResult, ctx context.Context)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	err = tx.TrafficPerHour.MapCreateBulk(data, func(q *ent.TrafficPerHourCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
@@ -133,7 +133,7 @@ func (c *Check) deleteTraffic(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now()
 	from := now.Add(-1 * time.Hour)

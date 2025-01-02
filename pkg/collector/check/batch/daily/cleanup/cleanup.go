@@ -76,7 +76,7 @@ func deleteAllCPU(ctx context.Context, client *ent.Client) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.CPU.Delete().Exec(ctx)
 	if err != nil {
@@ -93,7 +93,7 @@ func deleteAllCPUPerHour(ctx context.Context, client *ent.Client) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.CPUPerHour.Delete().Exec(ctx)
 	if err != nil {
@@ -110,7 +110,7 @@ func deleteAllMemory(ctx context.Context, client *ent.Client) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.Memory.Delete().Exec(ctx)
 	if err != nil {
@@ -127,7 +127,7 @@ func deleteAllMemoryPerHour(ctx context.Context, client *ent.Client) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.MemoryPerHour.Delete().Exec(ctx)
 	if err != nil {
@@ -144,7 +144,7 @@ func deleteAllDiskUsage(ctx context.Context, client *ent.Client) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.DiskUsage.Delete().Exec(ctx)
 	if err != nil {
@@ -161,7 +161,7 @@ func deleteAllDiskUsagePerHour(ctx context.Context, client *ent.Client) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.DiskIOPerHour.Delete().Exec(ctx)
 	if err != nil {
@@ -178,7 +178,7 @@ func deleteAllDiskIO(ctx context.Context, client *ent.Client) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = client.DiskIO.Delete().Exec(ctx)
 	if err != nil {
@@ -195,7 +195,7 @@ func deleteAllDiskIOPerHour(ctx context.Context, client *ent.Client) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.DiskIOPerHour.Delete().Exec(ctx)
 	if err != nil {
@@ -212,7 +212,7 @@ func deleteAllTraffic(ctx context.Context, client *ent.Client) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.Traffic.Delete().Exec(ctx)
 	if err != nil {
@@ -229,7 +229,7 @@ func deleteAllTrafficPerHour(ctx context.Context, client *ent.Client) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.TrafficPerHour.Delete().Exec(ctx)
 	if err != nil {

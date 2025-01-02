@@ -112,7 +112,7 @@ func (c *Check) saveDiskUsagePerHour(data []base.CheckResult, ctx context.Contex
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	err = tx.DiskUsagePerHour.MapCreateBulk(data, func(q *ent.DiskUsagePerHourCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
@@ -134,7 +134,7 @@ func (c *Check) deleteDiskUsage(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now()
 	from := now.Add(-1 * time.Hour)

@@ -88,7 +88,7 @@ func (c *Check) saveMemoryPerHour(data base.CheckResult, ctx context.Context) er
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	err = tx.MemoryPerHour.Create().
 		SetTimestamp(data.Timestamp).
@@ -108,7 +108,7 @@ func (c *Check) deleteMemory(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now()
 	from := now.Add(-1 * time.Hour)

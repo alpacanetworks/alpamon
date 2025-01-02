@@ -97,7 +97,7 @@ func (c *Check) saveDiskIOPerHour(data []base.CheckResult, ctx context.Context) 
 	if err != nil {
 		return nil
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	err = tx.DiskIOPerHour.MapCreateBulk(data, func(q *ent.DiskIOPerHourCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
@@ -121,7 +121,7 @@ func (c *Check) deleteDiskIO(ctx context.Context) error {
 	if err != nil {
 		return nil
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now()
 	from := now.Add(-1 * time.Hour)

@@ -88,7 +88,7 @@ func (c *Check) saveCPUPerHour(data base.CheckResult, ctx context.Context) error
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	err = tx.CPUPerHour.Create().
 		SetTimestamp(data.Timestamp).
@@ -108,7 +108,7 @@ func (c *Check) deleteCPU(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now()
 	from := now.Add(-1 * time.Hour)
