@@ -6,14 +6,15 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/config"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/alpacanetworks/alpamon-go/pkg/config"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -169,4 +170,13 @@ func (session *Session) MultipartRequest(url string, body bytes.Buffer, contentT
 	}
 
 	return responseBody, resp.StatusCode, nil
+}
+
+func (session *Session) Post(url string, rawBody interface{}, timeout time.Duration) ([]byte, int, error) {
+	req, err := session.newRequest(http.MethodPost, url, rawBody)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return session.do(req, timeout)
 }

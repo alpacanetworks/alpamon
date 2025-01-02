@@ -6,6 +6,7 @@ main() {
   check_root_permission
   check_systemd_status
   check_alpamon_binary
+  install_atlas_cli
   install_alpamon
   start_systemd_service
 }
@@ -27,6 +28,15 @@ check_systemd_status() {
 check_alpamon_binary() {
   if [ ! -f "$ALPAMON_BIN" ]; then
     echo "Error: Alpamon binary not found at $ALPAMON_BIN"
+    exit 1
+  fi
+}
+
+install_atlas_cli() {
+  echo "Installing Atlas CLI..."
+  curl -sSf https://atlasgo.sh | sh -s -- -y
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to install Atlas CLI."
     exit 1
   fi
 }
