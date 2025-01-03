@@ -103,3 +103,20 @@ type commandFin struct {
 	Result      string  `json:"result"`
 	ElapsedTime float64 `json:"elapsed_time"`
 }
+
+var nonZipExt = map[string]bool{
+	".jar":   true,
+	".war":   true,
+	".ear":   true,
+	".apk":   true,
+	".xpi":   true,
+	".vsix":  true,
+	".crx":   true,
+	".egg":   true,
+	".whl":   true,
+	".appx":  true,
+	".msix":  true,
+	".ipk":   true,
+	".nupkg": true,
+	".kmz":   true,
+}

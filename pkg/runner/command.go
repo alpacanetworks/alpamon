@@ -756,7 +756,7 @@ func fileDownload(data CommandData, sysProcAttr *syscall.SysProcAttr) (exitCode 
 		return 1, err.Error()
 	}
 
-	isZip := isZipFile(content)
+	isZip := isZipFile(content, filepath.Ext(data.Path))
 	if isZip {
 		command := fmt.Sprintf("tee -a %s > /dev/null && unzip -n %s -d %s; rm %s",
 			strings.ReplaceAll(data.Path, " ", "\\ "),
@@ -780,7 +780,11 @@ func fileDownload(data CommandData, sysProcAttr *syscall.SysProcAttr) (exitCode 
 	return 0, fmt.Sprintf("Successfully downloaded %s.", data.Path)
 }
 
-func isZipFile(content []byte) bool {
+func isZipFile(content []byte, ext string) bool {
+	if _, found := nonZipExt[ext]; found {
+		return false
+	}
+
 	_, err := zip.NewReader(bytes.NewReader(content), int64(len(content)))
 
 	return err == nil
