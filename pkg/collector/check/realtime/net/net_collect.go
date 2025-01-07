@@ -10,20 +10,13 @@ import (
 	"github.com/shirou/gopsutil/v4/net"
 )
 
-type Check struct {
+type CollectCheck struct {
 	base.BaseCheck
 	lastMetric map[string]net.IOCountersStat
 }
 
-func NewCheck(args *base.CheckArgs) base.CheckStrategy {
-	return &Check{
-		BaseCheck:  base.NewBaseCheck(args),
-		lastMetric: make(map[string]net.IOCountersStat),
-	}
-}
-
-func (c *Check) Execute(ctx context.Context) error {
-	metric, err := c.collectAndSaveTraffic(ctx)
+func (c *CollectCheck) Execute(ctx context.Context) error {
+	err := c.collectAndSaveTraffic(ctx)
 	if err != nil {
 		return err
 	}
@@ -32,32 +25,24 @@ func (c *Check) Execute(ctx context.Context) error {
 		return ctx.Err()
 	}
 
-	buffer := c.GetBuffer()
-	buffer.SuccessQueue <- metric
+	return nil
+}
+
+func (c *CollectCheck) collectAndSaveTraffic(ctx context.Context) error {
+	ioCounters, interfaces, err := c.collectTraffic()
+	if err != nil {
+		return err
+	}
+
+	err = c.saveTraffic(c.parseTraffic(ioCounters, interfaces), ctx)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (c *Check) collectAndSaveTraffic(ctx context.Context) (base.MetricData, error) {
-	ioCounters, interfaces, err := c.collectTraffic()
-	if err != nil {
-		return base.MetricData{}, err
-	}
-
-	metric := base.MetricData{
-		Type: base.NET,
-		Data: c.parseTraffic(ioCounters, interfaces),
-	}
-
-	err = c.saveTraffic(metric.Data, ctx)
-	if err != nil {
-		return base.MetricData{}, err
-	}
-
-	return metric, nil
-}
-
-func (c *Check) collectTraffic() ([]net.IOCountersStat, map[string]net.InterfaceStat, error) {
+func (c *CollectCheck) collectTraffic() ([]net.IOCountersStat, map[string]net.InterfaceStat, error) {
 	ioCounters, err := c.collectIOCounters()
 	if err != nil {
 		return nil, nil, err
@@ -71,15 +56,15 @@ func (c *Check) collectTraffic() ([]net.IOCountersStat, map[string]net.Interface
 	return ioCounters, interfaces, nil
 }
 
-func (c *Check) parseTraffic(ioCOunters []net.IOCountersStat, interfaces map[string]net.InterfaceStat) []base.CheckResult {
+func (c *CollectCheck) parseTraffic(ioCOunters []net.IOCountersStat, interfaces map[string]net.InterfaceStat) []base.CheckResult {
 	var data []base.CheckResult
 	for _, ioCounter := range ioCOunters {
 		if _, ok := interfaces[ioCounter.Name]; ok {
 			var inputPps, inputBps, outputPps, outputBps float64
 
 			if lastCounter, exists := c.lastMetric[ioCounter.Name]; exists {
-				inputPps, outputPps = utils.CalculatePps(ioCounter, lastCounter, c.GetInterval())
-				inputBps, outputBps = utils.CalculateBps(ioCounter, lastCounter, c.GetInterval())
+				inputPps, outputPps = utils.CalculateNetworkPps(ioCounter, lastCounter, c.GetInterval())
+				inputBps, outputBps = utils.CalculateNetworkBps(ioCounter, lastCounter, c.GetInterval())
 			} else {
 				inputPps = 0
 				inputBps = 0
@@ -101,7 +86,7 @@ func (c *Check) parseTraffic(ioCOunters []net.IOCountersStat, interfaces map[str
 	return data
 }
 
-func (c *Check) collectInterfaces() (map[string]net.InterfaceStat, error) {
+func (c *CollectCheck) collectInterfaces() (map[string]net.InterfaceStat, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
@@ -119,7 +104,7 @@ func (c *Check) collectInterfaces() (map[string]net.InterfaceStat, error) {
 	return interfaces, nil
 }
 
-func (c *Check) collectIOCounters() ([]net.IOCountersStat, error) {
+func (c *CollectCheck) collectIOCounters() ([]net.IOCountersStat, error) {
 	ioCounters, err := net.IOCounters(true)
 	if err != nil {
 		return nil, err
@@ -128,7 +113,7 @@ func (c *Check) collectIOCounters() ([]net.IOCountersStat, error) {
 	return ioCounters, nil
 }
 
-func (c *Check) saveTraffic(data []base.CheckResult, ctx context.Context) error {
+func (c *CollectCheck) saveTraffic(data []base.CheckResult, ctx context.Context) error {
 	client := c.GetClient()
 	err := client.Traffic.MapCreateBulk(data, func(q *ent.TrafficCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
