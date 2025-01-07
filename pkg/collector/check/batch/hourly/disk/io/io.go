@@ -44,12 +44,12 @@ func (c *Check) queryDiskIO(ctx context.Context) (base.MetricData, error) {
 	var data []base.CheckResult
 	for _, row := range queryset {
 		data = append(data, base.CheckResult{
-			Timestamp:      time.Now(),
-			Device:         row.Device,
-			PeakWriteBytes: uint64(row.PeakWriteBytes),
-			PeakReadBytes:  uint64(row.PeakReadBytes),
-			AvgWriteBytes:  uint64(row.AvgWriteBytes),
-			AvgReadBytes:   uint64(row.AvgReadBytes),
+			Timestamp:    time.Now(),
+			Device:       row.Device,
+			PeakWriteBps: row.PeakWriteBps,
+			PeakReadBps:  row.PeakReadBps,
+			AvgWriteBps:  row.AvgWriteBps,
+			AvgReadBps:   row.AvgReadBps,
 		})
 	}
 	metric := base.MetricData{
@@ -80,10 +80,10 @@ func (c *Check) getDiskIO(ctx context.Context) ([]base.DiskIOQuerySet, error) {
 		Where(diskio.TimestampGTE(from), diskio.TimestampLTE(now)).
 		GroupBy(diskio.FieldDevice).
 		Aggregate(
-			ent.As(ent.Max(diskio.FieldReadBytes), "peak_read_bytes"),
-			ent.As(ent.Max(diskio.FieldWriteBytes), "peak_write_bytes"),
-			ent.As(ent.Mean(diskio.FieldReadBytes), "avg_read_bytes"),
-			ent.As(ent.Mean(diskio.FieldWriteBytes), "avg_write_bytes"),
+			ent.As(ent.Max(diskio.FieldReadBps), "peak_read_bps"),
+			ent.As(ent.Max(diskio.FieldWriteBps), "peak_write_bps"),
+			ent.As(ent.Mean(diskio.FieldReadBps), "avg_read_bps"),
+			ent.As(ent.Mean(diskio.FieldWriteBps), "avg_write_bps"),
 		).Scan(ctx, &queryset)
 	if err != nil {
 		return queryset, err
@@ -102,10 +102,10 @@ func (c *Check) saveDiskIOPerHour(data []base.CheckResult, ctx context.Context) 
 	err = tx.DiskIOPerHour.MapCreateBulk(data, func(q *ent.DiskIOPerHourCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
 			SetDevice(data[i].Device).
-			SetPeakReadBytes(int64(data[i].PeakReadBytes)).
-			SetPeakWriteBytes(int64(data[i].PeakWriteBytes)).
-			SetAvgReadBytes(int64(data[i].AvgReadBytes)).
-			SetAvgWriteBytes(int64(data[i].AvgWriteBytes))
+			SetPeakReadBps(data[i].PeakReadBps).
+			SetPeakWriteBps(data[i].PeakWriteBps).
+			SetAvgReadBps(data[i].AvgReadBps).
+			SetAvgWriteBps(data[i].AvgWriteBps)
 	}).Exec(ctx)
 	if err != nil {
 		return err
@@ -123,11 +123,10 @@ func (c *Check) deleteDiskIO(ctx context.Context) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	now := time.Now()
-	from := now.Add(-1 * time.Hour)
+	from := time.Now().Add(-1 * time.Hour)
 
 	_, err = tx.DiskIO.Delete().
-		Where(diskio.TimestampGTE(from), diskio.TimestampLTE(now)).Exec(ctx)
+		Where(diskio.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

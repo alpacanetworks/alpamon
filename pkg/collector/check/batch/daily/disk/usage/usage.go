@@ -46,8 +46,8 @@ func (c *Check) queryDiskUsagePerHour(ctx context.Context) (base.MetricData, err
 		data = append(data, base.CheckResult{
 			Timestamp: time.Now(),
 			Device:    row.Device,
-			PeakUsage: row.Max,
-			AvgUsage:  row.AVG,
+			Peak:      row.Max,
+			Avg:       row.AVG,
 		})
 	}
 	metric := base.MetricData{
@@ -73,8 +73,8 @@ func (c *Check) getDiskUsagePerHour(ctx context.Context) ([]base.DiskUsageQueryS
 		Where(diskusageperhour.TimestampGTE(from), diskusageperhour.TimestampLTE(now)).
 		GroupBy(diskusageperhour.FieldDevice).
 		Aggregate(
-			ent.Max(diskusageperhour.FieldPeakUsage),
-			ent.Mean(diskusageperhour.FieldAvgUsage),
+			ent.Max(diskusageperhour.FieldPeak),
+			ent.Mean(diskusageperhour.FieldAvg),
 		).Scan(ctx, &queryset)
 	if err != nil {
 		return queryset, err
@@ -90,11 +90,10 @@ func (c *Check) deleteDiskUsagePerHour(ctx context.Context) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	now := time.Now()
-	from := now.Add(-24 * time.Hour)
+	from := time.Now().Add(-24 * time.Hour)
 
 	_, err = tx.DiskUsagePerHour.Delete().
-		Where(diskusageperhour.TimestampGTE(from), diskusageperhour.TimestampLTE(now)).Exec(ctx)
+		Where(diskusageperhour.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

@@ -18,8 +18,8 @@ func (DiskUsagePerHour) Fields() []ent.Field {
 	return []ent.Field{
 		field.Time("timestamp").Default(time.Now()),
 		field.String("device"),
-		field.Float("peak_usage"),
-		field.Float("avg_usage"),
+		field.Float("peak"),
+		field.Float("avg"),
 	}
 }
 

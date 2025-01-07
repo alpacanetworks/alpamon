@@ -43,8 +43,8 @@ func (c *Check) queryMemoryUsage(ctx context.Context) (base.MetricData, error) {
 
 	data := base.CheckResult{
 		Timestamp: time.Now(),
-		PeakUsage: queryset[0].Max,
-		AvgUsage:  queryset[0].AVG,
+		Peak:      queryset[0].Max,
+		Avg:       queryset[0].AVG,
 	}
 	metric := base.MetricData{
 		Type: base.MEM_PER_HOUR,
@@ -92,8 +92,8 @@ func (c *Check) saveMemoryPerHour(data base.CheckResult, ctx context.Context) er
 
 	err = tx.MemoryPerHour.Create().
 		SetTimestamp(data.Timestamp).
-		SetPeakUsage(data.PeakUsage).
-		SetAvgUsage(data.AvgUsage).Exec(ctx)
+		SetPeak(data.Peak).
+		SetAvg(data.Avg).Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -110,11 +110,10 @@ func (c *Check) deleteMemory(ctx context.Context) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	now := time.Now()
-	from := now.Add(-1 * time.Hour)
+	from := time.Now().Add(-1 * time.Hour)
 
 	_, err = tx.Memory.Delete().
-		Where(memory.TimestampGTE(from), memory.TimestampLTE(now)).Exec(ctx)
+		Where(memory.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

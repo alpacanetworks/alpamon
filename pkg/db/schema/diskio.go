@@ -18,8 +18,8 @@ func (DiskIO) Fields() []ent.Field {
 	return []ent.Field{
 		field.Time("timestamp").Default(time.Now()),
 		field.String("device"),
-		field.Int64("read_bytes"),
-		field.Int64("write_bytes"),
+		field.Float("read_bps"),
+		field.Float("write_bps"),
 	}
 }
 

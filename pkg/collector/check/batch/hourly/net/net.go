@@ -135,11 +135,10 @@ func (c *Check) deleteTraffic(ctx context.Context) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	now := time.Now()
-	from := now.Add(-1 * time.Hour)
+	from := time.Now().Add(-1 * time.Hour)
 
 	_, err = tx.Traffic.Delete().
-		Where(traffic.TimestampGTE(from), traffic.TimestampLTE(now)).Exec(ctx)
+		Where(traffic.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

@@ -47,8 +47,8 @@ func (c *Check) queryDiskUsage(ctx context.Context) (base.MetricData, error) {
 		data = append(data, base.CheckResult{
 			Timestamp: time.Now(),
 			Device:    row.Device,
-			PeakUsage: row.Max,
-			AvgUsage:  row.AVG,
+			Peak:      row.Max,
+			Avg:       row.AVG,
 		})
 	}
 	metric := base.MetricData{
@@ -117,8 +117,8 @@ func (c *Check) saveDiskUsagePerHour(data []base.CheckResult, ctx context.Contex
 	err = tx.DiskUsagePerHour.MapCreateBulk(data, func(q *ent.DiskUsagePerHourCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
 			SetDevice(data[i].Device).
-			SetPeakUsage(data[i].PeakUsage).
-			SetAvgUsage(data[i].AvgUsage)
+			SetPeak(data[i].Peak).
+			SetAvg(data[i].Avg)
 	}).Exec(ctx)
 	if err != nil {
 		return err
@@ -136,11 +136,10 @@ func (c *Check) deleteDiskUsage(ctx context.Context) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	now := time.Now()
-	from := now.Add(-1 * time.Hour)
+	from := time.Now().Add(-1 * time.Hour)
 
 	_, err = tx.DiskUsage.Delete().
-		Where(diskusage.TimestampGTE(from), diskusage.TimestampLTE(now)).Exec(ctx)
+		Where(diskusage.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

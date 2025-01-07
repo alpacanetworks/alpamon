@@ -102,11 +102,10 @@ func (c *Check) deleteTrafficPerHour(ctx context.Context) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	now := time.Now()
-	from := now.Add(-24 * time.Hour)
+	from := time.Now().Add(-24 * time.Hour)
 
 	_, err = tx.TrafficPerHour.Delete().
-		Where(trafficperhour.TimestampGTE(from), trafficperhour.TimestampLTE(now)).Exec(ctx)
+		Where(trafficperhour.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

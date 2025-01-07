@@ -44,12 +44,12 @@ func (c *Check) queryDiskIOPerHour(ctx context.Context) (base.MetricData, error)
 	var data []base.CheckResult
 	for _, row := range queryset {
 		data = append(data, base.CheckResult{
-			Timestamp:      time.Now(),
-			Device:         row.Device,
-			PeakWriteBytes: uint64(row.PeakWriteBytes),
-			PeakReadBytes:  uint64(row.PeakReadBytes),
-			AvgWriteBytes:  uint64(row.AvgWriteBytes),
-			AvgReadBytes:   uint64(row.AvgReadBytes),
+			Timestamp:    time.Now(),
+			Device:       row.Device,
+			PeakWriteBps: row.PeakWriteBps,
+			PeakReadBps:  row.PeakReadBps,
+			AvgWriteBps:  row.AvgWriteBps,
+			AvgReadBps:   row.AvgReadBps,
 		})
 	}
 	metric := base.MetricData{
@@ -75,10 +75,10 @@ func (c *Check) getDiskIOPerHour(ctx context.Context) ([]base.DiskIOQuerySet, er
 		Where(diskioperhour.TimestampGTE(from), diskioperhour.TimestampLTE(now)).
 		GroupBy(diskioperhour.FieldDevice).
 		Aggregate(
-			ent.As(ent.Max(diskioperhour.FieldPeakReadBytes), "peak_read_bytes"),
-			ent.As(ent.Max(diskioperhour.FieldPeakWriteBytes), "peak_write_bytes"),
-			ent.As(ent.Mean(diskioperhour.FieldAvgReadBytes), "avg_read_bytes"),
-			ent.As(ent.Mean(diskioperhour.FieldAvgWriteBytes), "avg_write_bytes"),
+			ent.As(ent.Max(diskioperhour.FieldPeakReadBps), "peak_read_bps"),
+			ent.As(ent.Max(diskioperhour.FieldPeakWriteBps), "peak_write_bps"),
+			ent.As(ent.Mean(diskioperhour.FieldAvgReadBps), "avg_read_bps"),
+			ent.As(ent.Mean(diskioperhour.FieldAvgWriteBps), "avg_write_bps"),
 		).Scan(ctx, &queryset)
 	if err != nil {
 		return queryset, err
@@ -94,11 +94,10 @@ func (c *Check) deleteDiskIOPerHour(ctx context.Context) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	now := time.Now()
-	from := now.Add(-24 * time.Hour)
+	from := time.Now().Add(-24 * time.Hour)
 
 	_, err = tx.DiskIOPerHour.Delete().
-		Where(diskioperhour.TimestampGTE(from), diskioperhour.TimestampLTE(now)).Exec(ctx)
+		Where(diskioperhour.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

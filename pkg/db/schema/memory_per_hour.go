@@ -17,8 +17,8 @@ type MemoryPerHour struct {
 func (MemoryPerHour) Fields() []ent.Field {
 	return []ent.Field{
 		field.Time("timestamp").Default(time.Now()),
-		field.Float("peak_usage"),
-		field.Float("avg_usage"),
+		field.Float("peak"),
+		field.Float("avg"),
 	}
 }
 

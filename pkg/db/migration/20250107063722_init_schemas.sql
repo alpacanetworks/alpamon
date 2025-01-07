@@ -3,15 +3,15 @@ CREATE TABLE `cp_us` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestam
 -- Create index "cpu_timestamp" to table: "cp_us"
 CREATE INDEX `cpu_timestamp` ON `cp_us` (`timestamp`);
 -- Create "cpu_per_hours" table
-CREATE TABLE `cpu_per_hours` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `peak_usage` real NOT NULL, `avg_usage` real NOT NULL);
+CREATE TABLE `cpu_per_hours` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `peak` real NOT NULL, `avg` real NOT NULL);
 -- Create index "cpuperhour_timestamp" to table: "cpu_per_hours"
 CREATE INDEX `cpuperhour_timestamp` ON `cpu_per_hours` (`timestamp`);
 -- Create "disk_ios" table
-CREATE TABLE `disk_ios` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `device` text NOT NULL, `read_bytes` integer NOT NULL, `write_bytes` integer NOT NULL);
+CREATE TABLE `disk_ios` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `device` text NOT NULL, `read_bps` real NOT NULL, `write_bps` real NOT NULL);
 -- Create index "diskio_timestamp" to table: "disk_ios"
 CREATE INDEX `diskio_timestamp` ON `disk_ios` (`timestamp`);
 -- Create "disk_io_per_hours" table
-CREATE TABLE `disk_io_per_hours` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `device` text NOT NULL, `peak_read_bytes` integer NOT NULL, `peak_write_bytes` integer NOT NULL, `avg_read_bytes` integer NOT NULL, `avg_write_bytes` integer NOT NULL);
+CREATE TABLE `disk_io_per_hours` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `device` text NOT NULL, `peak_read_bps` real NOT NULL, `peak_write_bps` real NOT NULL, `avg_read_bps` real NOT NULL, `avg_write_bps` real NOT NULL);
 -- Create index "diskioperhour_timestamp" to table: "disk_io_per_hours"
 CREATE INDEX `diskioperhour_timestamp` ON `disk_io_per_hours` (`timestamp`);
 -- Create "disk_usages" table
@@ -19,7 +19,7 @@ CREATE TABLE `disk_usages` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `ti
 -- Create index "diskusage_timestamp" to table: "disk_usages"
 CREATE INDEX `diskusage_timestamp` ON `disk_usages` (`timestamp`);
 -- Create "disk_usage_per_hours" table
-CREATE TABLE `disk_usage_per_hours` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `device` text NOT NULL, `peak_usage` real NOT NULL, `avg_usage` real NOT NULL);
+CREATE TABLE `disk_usage_per_hours` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `device` text NOT NULL, `peak` real NOT NULL, `avg` real NOT NULL);
 -- Create index "diskusageperhour_timestamp" to table: "disk_usage_per_hours"
 CREATE INDEX `diskusageperhour_timestamp` ON `disk_usage_per_hours` (`timestamp`);
 -- Create "memories" table
@@ -27,7 +27,7 @@ CREATE TABLE `memories` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `times
 -- Create index "memory_timestamp" to table: "memories"
 CREATE INDEX `memory_timestamp` ON `memories` (`timestamp`);
 -- Create "memory_per_hours" table
-CREATE TABLE `memory_per_hours` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `peak_usage` real NOT NULL, `avg_usage` real NOT NULL);
+CREATE TABLE `memory_per_hours` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `timestamp` datetime NOT NULL, `peak` real NOT NULL, `avg` real NOT NULL);
 -- Create index "memoryperhour_timestamp" to table: "memory_per_hours"
 CREATE INDEX `memoryperhour_timestamp` ON `memory_per_hours` (`timestamp`);
 -- Create "traffics" table

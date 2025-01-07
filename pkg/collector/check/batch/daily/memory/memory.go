@@ -43,8 +43,8 @@ func (c *Check) queryMemoryPerHour(ctx context.Context) (base.MetricData, error)
 
 	data := base.CheckResult{
 		Timestamp: time.Now(),
-		PeakUsage: queryset[0].Max,
-		AvgUsage:  queryset[0].AVG,
+		Peak:      queryset[0].Max,
+		Avg:       queryset[0].AVG,
 	}
 	metric := base.MetricData{
 		Type: base.MEM_PER_DAY,
@@ -68,8 +68,8 @@ func (c *Check) getMemoryPerHour(ctx context.Context) ([]base.MemoryQuerySet, er
 	err := client.MemoryPerHour.Query().
 		Where(memoryperhour.TimestampGTE(from), memoryperhour.TimestampLTE(now)).
 		Aggregate(
-			ent.Max(memoryperhour.FieldPeakUsage),
-			ent.Mean(memoryperhour.FieldAvgUsage),
+			ent.Max(memoryperhour.FieldPeak),
+			ent.Mean(memoryperhour.FieldAvg),
 		).Scan(ctx, &queryset)
 	if err != nil {
 		return queryset, err
@@ -85,11 +85,10 @@ func (c *Check) deleteMemoryPerHour(ctx context.Context) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	now := time.Now()
-	from := now.Add(-24 * time.Hour)
+	from := time.Now().Add(-24 * time.Hour)
 
 	_, err = tx.MemoryPerHour.Delete().
-		Where(memoryperhour.TimestampGTE(from), memoryperhour.TimestampLTE(now)).Exec(ctx)
+		Where(memoryperhour.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

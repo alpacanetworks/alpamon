@@ -43,8 +43,8 @@ func (c *Check) queryCPUPerHour(ctx context.Context) (base.MetricData, error) {
 
 	data := base.CheckResult{
 		Timestamp: time.Now(),
-		PeakUsage: queryset[0].Max,
-		AvgUsage:  queryset[0].AVG,
+		Peak:      queryset[0].Max,
+		Avg:       queryset[0].AVG,
 	}
 	metric := base.MetricData{
 		Type: base.CPU_PER_DAY,
@@ -68,8 +68,8 @@ func (c *Check) getCPUPerHour(ctx context.Context) ([]base.CPUQuerySet, error) {
 	err := client.CPUPerHour.Query().
 		Where(cpuperhour.TimestampGTE(from), cpuperhour.TimestampLTE(now)).
 		Aggregate(
-			ent.Max(cpuperhour.FieldPeakUsage),
-			ent.Mean(cpuperhour.FieldAvgUsage),
+			ent.Max(cpuperhour.FieldPeak),
+			ent.Mean(cpuperhour.FieldAvg),
 		).Scan(ctx, &queryset)
 	if err != nil {
 		return queryset, err
@@ -85,11 +85,10 @@ func (c *Check) deleteCPUPerHour(ctx context.Context) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	now := time.Now()
-	from := now.Add(-24 * time.Hour)
+	from := time.Now().Add(-24 * time.Hour)
 
 	_, err = tx.CPUPerHour.Delete().
-		Where(cpuperhour.TimestampGTE(from), cpuperhour.TimestampLTE(now)).Exec(ctx)
+		Where(cpuperhour.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

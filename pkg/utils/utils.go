@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/net"
 )
@@ -118,7 +119,7 @@ func CalculateBackOff(delay time.Duration, attempt int) time.Duration {
 	return backoff * jitter
 }
 
-func CalculateBps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputBps float64, outputBps float64) {
+func CalculateNetworkBps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputBps float64, outputBps float64) {
 	if interval == 0 {
 		return 0, 0
 	}
@@ -133,7 +134,7 @@ func CalculateBps(current net.IOCountersStat, last net.IOCountersStat, interval 
 	return inputBps, outputBps
 }
 
-func CalculatePps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputPps float64, outputPps float64) {
+func CalculateNetworkPps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputPps float64, outputPps float64) {
 	if interval == 0 {
 		return 0, 0
 	}
@@ -142,8 +143,23 @@ func CalculatePps(current net.IOCountersStat, last net.IOCountersStat, interval 
 	outputPktsDiff := float64(current.PacketsSent - last.PacketsSent)
 	seconds := interval.Seconds()
 
-	inputPps = (inputPktsDiff * 8) / seconds
-	outputPps = (outputPktsDiff * 8) / seconds
+	inputPps = inputPktsDiff / seconds
+	outputPps = outputPktsDiff / seconds
 
 	return inputPps, outputPps
+}
+
+func CalculateDiskIOBps(current disk.IOCountersStat, last disk.IOCountersStat, interval time.Duration) (readBps float64, writeBps float64) {
+	if interval == 0 {
+		return 0, 0
+	}
+
+	readBytesDiff := float64(current.ReadBytes - last.ReadBytes)
+	writeBytesDiff := float64(current.WriteBytes - last.WriteBytes)
+	seconds := interval.Seconds()
+
+	readBps = readBytesDiff / seconds
+	writeBps = writeBytesDiff / seconds
+
+	return readBps, writeBps
 }

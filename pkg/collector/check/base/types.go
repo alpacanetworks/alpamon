@@ -17,9 +17,11 @@ const (
 	DISK_USAGE_PER_HOUR CheckType = "disk_usage_per_hour"
 	DISK_USAGE_PER_DAY  CheckType = "disk_usage_per_day"
 	DISK_IO             CheckType = "disk_io"
+	DISK_IO_COLLECTOR   CheckType = "disk_io_collector"
 	DISK_IO_PER_HOUR    CheckType = "disk_io_per_hour"
 	DISK_IO_PER_DAY     CheckType = "disk_io_per_day"
 	NET                 CheckType = "net"
+	NET_COLLECTOR       CheckType = "net_collector"
 	NET_PER_HOUR        CheckType = "net_per_hour"
 	NET_PER_DAY         CheckType = "net_per_day"
 	CLEANUP             CheckType = "cleanup"
@@ -46,11 +48,11 @@ type MemoryQuerySet struct {
 }
 
 type DiskIOQuerySet struct {
-	Device         string  `json:"device" db:"device"`
-	PeakReadBytes  float64 `json:"peak_read_bytes"`
-	PeakWriteBytes float64 `json:"peak_write_bytes"`
-	AvgReadBytes   float64 `json:"avg_read_bytes"`
-	AvgWriteBytes  float64 `json:"avg_write_bytes"`
+	Device       string  `json:"device" db:"device"`
+	PeakReadBps  float64 `json:"peak_read_bps"`
+	PeakWriteBps float64 `json:"peak_write_bps"`
+	AvgReadBps   float64 `json:"avg_read_bps"`
+	AvgWriteBps  float64 `json:"avg_write_bps"`
 }
 
 type DiskUsageQuerySet struct {
@@ -72,34 +74,34 @@ type TrafficQuerySet struct {
 }
 
 type CheckResult struct {
-	Timestamp      time.Time `json:"timestamp"`
-	Usage          float64   `json:"usage,omitempty"`
-	Name           string    `json:"name,omitempty"`
-	Device         string    `json:"device,omitempty"`
-	MountPoint     string    `json:"mount_point,omitempty"`
-	Total          uint64    `json:"total,omitempty"`
-	Free           uint64    `json:"free,omitempty"`
-	Used           uint64    `json:"used,omitempty"`
-	WriteBytes     *uint64   `json:"write_bytes,omitempty"`
-	ReadBytes      *uint64   `json:"read_bytes,omitempty"`
-	InputPps       *float64  `json:"input_pps,omitempty"`
-	InputBps       *float64  `json:"input_bps,omitempty"`
-	OutputPps      *float64  `json:"output_pps,omitempty"`
-	OutputBps      *float64  `json:"output_bps,omitempty"`
-	PeakUsage      float64   `json:"peak_usage,omitempty"`
-	AvgUsage       float64   `json:"avg_usage,omitempty"`
-	PeakWriteBytes uint64    `json:"peak_write_bytes,omitempty"`
-	PeakReadBytes  uint64    `json:"peak_read_bytes,omitempty"`
-	AvgWriteBytes  uint64    `json:"avg_write_bytes,omitempty"`
-	AvgReadBytes   uint64    `json:"avg_read_bytes,omitempty"`
-	PeakInputPps   float64   `json:"peak_input_pps,omitempty"`
-	PeakInputBps   float64   `json:"peak_input_bps,omitempty"`
-	PeakOutputPps  float64   `json:"peak_output_pps,omitempty"`
-	PeakOutputBps  float64   `json:"peak_output_bps,omitempty"`
-	AvgInputPps    float64   `json:"avg_input_pps,omitempty"`
-	AvgInputBps    float64   `json:"avg_input_bps,omitempty"`
-	AvgOutputPps   float64   `json:"avg_output_pps,omitempty"`
-	AvgOutputBps   float64   `json:"avg_output_bps,omitempty"`
+	Timestamp     time.Time `json:"timestamp"`
+	Usage         float64   `json:"usage,omitempty"`
+	Name          string    `json:"name,omitempty"`
+	Device        string    `json:"device,omitempty"`
+	MountPoint    string    `json:"mount_point,omitempty"`
+	Total         uint64    `json:"total,omitempty"`
+	Free          uint64    `json:"free,omitempty"`
+	Used          uint64    `json:"used,omitempty"`
+	WriteBps      *float64  `json:"write_bps,omitempty"`
+	ReadBps       *float64  `json:"read_bps,omitempty"`
+	InputPps      *float64  `json:"input_pps,omitempty"`
+	InputBps      *float64  `json:"input_bps,omitempty"`
+	OutputPps     *float64  `json:"output_pps,omitempty"`
+	OutputBps     *float64  `json:"output_bps,omitempty"`
+	Peak          float64   `json:"peak,omitempty"`
+	Avg           float64   `json:"avg,omitempty"`
+	PeakWriteBps  float64   `json:"peak_write_bps,omitempty"`
+	PeakReadBps   float64   `json:"peak_read_bps,omitempty"`
+	AvgWriteBps   float64   `json:"avg_write_bps,omitempty"`
+	AvgReadBps    float64   `json:"avg_read_bps,omitempty"`
+	PeakInputPps  float64   `json:"peak_input_pps,omitempty"`
+	PeakInputBps  float64   `json:"peak_input_bps,omitempty"`
+	PeakOutputPps float64   `json:"peak_output_pps,omitempty"`
+	PeakOutputBps float64   `json:"peak_output_bps,omitempty"`
+	AvgInputPps   float64   `json:"avg_input_pps,omitempty"`
+	AvgInputBps   float64   `json:"avg_input_bps,omitempty"`
+	AvgOutputPps  float64   `json:"avg_output_pps,omitempty"`
+	AvgOutputBps  float64   `json:"avg_output_bps,omitempty"`
 }
 
 type MetricData struct {
