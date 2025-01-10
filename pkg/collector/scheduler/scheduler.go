@@ -2,18 +2,18 @@ package scheduler
 
 import (
 	"context"
+	"math"
 	"sync"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/rs/zerolog/log"
 )
 
 const (
-	MAX_RETRIES     int           = 5
-	MAX_RETRY_TIMES time.Duration = 1 * time.Minute
-	DEFAULT_DELAY   time.Duration = 1 * time.Second
+	MAX_RETRIES     = 5
+	MAX_RETRY_TIMES = 1 * time.Minute
+	DEFAULT_DELAY   = 1 * time.Second
 )
 
 type Scheduler struct {
@@ -24,15 +24,23 @@ type Scheduler struct {
 }
 
 type ScheduledTask struct {
-	check    base.CheckStrategy
-	nextRun  time.Time
-	interval time.Duration
+	check       base.CheckStrategy
+	nextRun     time.Time
+	retryStatus RetryStatus
+	isSuccess   bool
+	interval    time.Duration
 }
 
 type RetryConf struct {
 	MaxRetries   int
 	MaxRetryTime time.Duration
 	Delay        time.Duration
+}
+
+type RetryStatus struct {
+	due     time.Time
+	expiry  time.Time
+	attempt int
 }
 
 func NewScheduler() *Scheduler {
@@ -49,10 +57,17 @@ func NewScheduler() *Scheduler {
 
 func (s *Scheduler) AddTask(check base.CheckStrategy) {
 	interval := check.GetInterval()
+	retryStatus := RetryStatus{
+		due:     time.Now(),
+		expiry:  time.Now().Add(s.retryConf.MaxRetryTime),
+		attempt: 0,
+	}
 	task := &ScheduledTask{
-		check:    check,
-		nextRun:  time.Now().Add(interval),
-		interval: interval,
+		check:       check,
+		nextRun:     time.Now().Add(interval),
+		retryStatus: retryStatus,
+		isSuccess:   true,
+		interval:    interval,
 	}
 	s.tasks.Store(check.GetName(), task)
 }
@@ -89,8 +104,14 @@ func (s *Scheduler) dispatcher(ctx context.Context) {
 				}
 
 				if now.After(task.nextRun) {
+					task.nextRun = now.Add(task.interval)
 					s.taskQueue <- task
 				}
+
+				if task.isRetryRequired(now) {
+					s.taskQueue <- task
+				}
+
 				return true
 			})
 		}
@@ -109,24 +130,29 @@ func (s *Scheduler) worker(ctx context.Context) {
 }
 
 func (s *Scheduler) executeTask(ctx context.Context, task *ScheduledTask) {
-	defer func() {
-		task.nextRun = time.Now().Add(task.interval)
-	}()
+	err := task.check.Execute(ctx)
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to execute check: %v", err)
 
-	for attempt := 0; attempt <= s.retryConf.MaxRetries; attempt++ {
-		err := task.check.Execute(ctx)
-		if err != nil {
-			log.Error().Err(err).Msgf("failed to execute check: %v", err)
-			if attempt < s.retryConf.MaxRetries {
-				backoff := utils.CalculateBackOff(s.retryConf.Delay, attempt)
-				select {
-				case <-time.After(backoff):
-					continue
-				case <-ctx.Done():
-					return
-				}
-			}
+		if task.retryStatus.attempt < s.retryConf.MaxRetries {
+			now := time.Now()
+			backoff := time.Duration(math.Pow(2, float64(task.retryStatus.attempt))) * time.Second
+
+			task.isSuccess = false
+			task.retryStatus.due = now.Add(backoff)
+			task.retryStatus.expiry = now.Add(s.retryConf.MaxRetryTime)
+			task.retryStatus.attempt++
 		}
-		break
+	} else {
+		task.isSuccess = true
+		task.retryStatus.attempt = 0
 	}
+}
+
+func (st *ScheduledTask) isRetryRequired(now time.Time) bool {
+	isRetryTask := !st.isSuccess
+	isDue := now.After(st.retryStatus.due)
+	isExpire := now.After(st.retryStatus.expiry)
+
+	return isRetryTask && isDue && !isExpire
 }
