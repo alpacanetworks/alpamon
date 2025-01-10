@@ -93,26 +93,26 @@ func fetchConfig(session *session.Session) ([]collectConf, error) {
 }
 
 func NewCollector(args collectorArgs) (*Collector, error) {
-	transporter, err := args.transportFactory.CreateTransporter(args.session)
+	metricTransporter, err := args.transportFactory.CreateTransporter(args.session)
 	if err != nil {
 		return nil, err
 	}
 
 	checkBuffer := base.NewCheckBuffer(len(args.conf) * 2)
-	collector := &Collector{
-		transporter: transporter,
+	metricCollector := &Collector{
+		transporter: metricTransporter,
 		scheduler:   scheduler.NewScheduler(),
 		buffer:      checkBuffer,
 		errorChan:   make(chan error, 10),
 		stopChan:    make(chan struct{}),
 	}
 
-	err = collector.initTasks(args)
+	err = metricCollector.initTasks(args)
 	if err != nil {
 		return nil, err
 	}
 
-	return collector, nil
+	return metricCollector, nil
 }
 
 func (c *Collector) initTasks(args collectorArgs) error {
@@ -127,16 +127,16 @@ func (c *Collector) initTasks(args collectorArgs) error {
 			Client:   args.client,
 		}
 
-		check, err := args.checkFactory.CreateCheck(&checkArgs)
+		metricCheck, err := args.checkFactory.CreateCheck(&checkArgs)
 		if err != nil {
 			return err
 		}
-		c.scheduler.AddTask(check)
+		c.scheduler.AddTask(metricCheck)
 	}
 	return nil
 }
 
-func (c *Collector) Start(ctx context.Context) error {
+func (c *Collector) Start(ctx context.Context) {
 	go c.scheduler.Start(ctx, c.buffer.Capacity)
 
 	for i := 0; i < c.buffer.Capacity; i++ {
@@ -146,8 +146,6 @@ func (c *Collector) Start(ctx context.Context) error {
 
 	c.wg.Add(1)
 	go c.failureQueueWorker(ctx)
-
-	return nil
 }
 
 func (c *Collector) successQueueWorker(ctx context.Context) {
@@ -160,12 +158,9 @@ func (c *Collector) successQueueWorker(ctx context.Context) {
 		case <-c.stopChan:
 			return
 		case metric := <-c.buffer.SuccessQueue:
-			if err := c.transporter.Send(metric); err != nil {
-				select {
-				case c.buffer.FailureQueue <- metric:
-				default:
-					c.errorChan <- fmt.Errorf("failed to move metric to failure queue: %v", err)
-				}
+			err := c.transporter.Send(metric)
+			if err != nil {
+				c.buffer.FailureQueue <- metric
 			}
 		}
 	}

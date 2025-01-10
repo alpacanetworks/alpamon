@@ -36,13 +36,13 @@ func (c *Check) Execute(ctx context.Context) error {
 }
 
 func (c *Check) queryTrafficPerHour(ctx context.Context) (base.MetricData, error) {
-	queryset, err := c.getTrafficPerHour(ctx)
+	querySet, err := c.getTrafficPerHour(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
 
 	var data []base.CheckResult
-	for _, row := range queryset {
+	for _, row := range querySet {
 		data = append(data, base.CheckResult{
 			Timestamp:     time.Now(),
 			Name:          row.Name,
@@ -74,7 +74,7 @@ func (c *Check) getTrafficPerHour(ctx context.Context) ([]base.TrafficQuerySet, 
 	now := time.Now()
 	from := now.Add(-24 * time.Hour)
 
-	var queryset []base.TrafficQuerySet
+	var querySet []base.TrafficQuerySet
 	err := client.TrafficPerHour.Query().
 		Where(trafficperhour.TimestampGTE(from), trafficperhour.TimestampLTE(now)).
 		GroupBy(trafficperhour.FieldName).
@@ -87,12 +87,12 @@ func (c *Check) getTrafficPerHour(ctx context.Context) ([]base.TrafficQuerySet, 
 			ent.As(ent.Mean(trafficperhour.FieldAvgInputBps), "avg_input_bps"),
 			ent.As(ent.Mean(trafficperhour.FieldAvgOutputPps), "avg_output_pps"),
 			ent.As(ent.Mean(trafficperhour.FieldAvgOutputBps), "avg_output_bps"),
-		).Scan(ctx, &queryset)
+		).Scan(ctx, &querySet)
 	if err != nil {
-		return queryset, err
+		return querySet, err
 	}
 
-	return queryset, nil
+	return querySet, nil
 }
 
 func (c *Check) deleteTrafficPerHour(ctx context.Context) error {

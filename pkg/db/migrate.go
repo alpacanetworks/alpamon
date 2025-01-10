@@ -29,7 +29,7 @@ func RunMigration(path string, ctx context.Context) error {
 		log.Error().Err(err).Msgf("failed to open migration dir: %v", err)
 		return err
 	}
-	defer workDir.Close()
+	defer func() { _ = workDir.Close() }()
 
 	client, err := atlasexec.NewClient(workDir.Path(), "atlas")
 	if err != nil {

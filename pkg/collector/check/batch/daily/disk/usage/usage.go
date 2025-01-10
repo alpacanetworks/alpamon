@@ -36,13 +36,13 @@ func (c *Check) Execute(ctx context.Context) error {
 }
 
 func (c *Check) queryDiskUsagePerHour(ctx context.Context) (base.MetricData, error) {
-	queryset, err := c.getDiskUsagePerHour(ctx)
+	querySet, err := c.getDiskUsagePerHour(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
 
 	var data []base.CheckResult
-	for _, row := range queryset {
+	for _, row := range querySet {
 		data = append(data, base.CheckResult{
 			Timestamp: time.Now(),
 			Device:    row.Device,
@@ -68,19 +68,19 @@ func (c *Check) getDiskUsagePerHour(ctx context.Context) ([]base.DiskUsageQueryS
 	now := time.Now()
 	from := now.Add(-24 * time.Hour)
 
-	var queryset []base.DiskUsageQuerySet
+	var querySet []base.DiskUsageQuerySet
 	err := client.DiskUsagePerHour.Query().
 		Where(diskusageperhour.TimestampGTE(from), diskusageperhour.TimestampLTE(now)).
 		GroupBy(diskusageperhour.FieldDevice).
 		Aggregate(
 			ent.Max(diskusageperhour.FieldPeak),
 			ent.Mean(diskusageperhour.FieldAvg),
-		).Scan(ctx, &queryset)
+		).Scan(ctx, &querySet)
 	if err != nil {
-		return queryset, err
+		return querySet, err
 	}
 
-	return queryset, nil
+	return querySet, nil
 }
 
 func (c *Check) deleteDiskUsagePerHour(ctx context.Context) error {

@@ -36,13 +36,13 @@ func (c *Check) Execute(ctx context.Context) error {
 }
 
 func (c *Check) queryDiskIOPerHour(ctx context.Context) (base.MetricData, error) {
-	queryset, err := c.getDiskIOPerHour(ctx)
+	querySet, err := c.getDiskIOPerHour(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
 
 	var data []base.CheckResult
-	for _, row := range queryset {
+	for _, row := range querySet {
 		data = append(data, base.CheckResult{
 			Timestamp:    time.Now(),
 			Device:       row.Device,
@@ -70,7 +70,7 @@ func (c *Check) getDiskIOPerHour(ctx context.Context) ([]base.DiskIOQuerySet, er
 	now := time.Now()
 	from := now.Add(-24 * time.Hour)
 
-	var queryset []base.DiskIOQuerySet
+	var querySet []base.DiskIOQuerySet
 	err := client.DiskIOPerHour.Query().
 		Where(diskioperhour.TimestampGTE(from), diskioperhour.TimestampLTE(now)).
 		GroupBy(diskioperhour.FieldDevice).
@@ -79,12 +79,12 @@ func (c *Check) getDiskIOPerHour(ctx context.Context) ([]base.DiskIOQuerySet, er
 			ent.As(ent.Max(diskioperhour.FieldPeakWriteBps), "peak_write_bps"),
 			ent.As(ent.Mean(diskioperhour.FieldAvgReadBps), "avg_read_bps"),
 			ent.As(ent.Mean(diskioperhour.FieldAvgWriteBps), "avg_write_bps"),
-		).Scan(ctx, &queryset)
+		).Scan(ctx, &querySet)
 	if err != nil {
-		return queryset, err
+		return querySet, err
 	}
 
-	return queryset, nil
+	return querySet, nil
 }
 
 func (c *Check) deleteDiskIOPerHour(ctx context.Context) error {

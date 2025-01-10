@@ -3,8 +3,6 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"math"
-	"math/rand"
 	"net/url"
 	"os"
 	"runtime"
@@ -110,13 +108,6 @@ func ConvertGroupIds(groupIds []string) []uint32 {
 		gids = append(gids, uint32(gid))
 	}
 	return gids
-}
-
-func CalculateBackOff(delay time.Duration, attempt int) time.Duration {
-	backoff := delay * time.Duration(math.Pow(2, float64(attempt)))
-	jitter := time.Duration(rand.Float64() * float64(backoff) * 0.2)
-
-	return backoff * jitter
 }
 
 func CalculateNetworkBps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputBps float64, outputBps float64) {

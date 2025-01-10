@@ -30,13 +30,13 @@ func (c *SendCheck) Execute(ctx context.Context) error {
 }
 
 func (c *SendCheck) queryDiskIO(ctx context.Context) (base.MetricData, error) {
-	queryset, err := c.getDiskIO(ctx)
+	querySet, err := c.getDiskIO(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
 
 	var data []base.CheckResult
-	for _, row := range queryset {
+	for _, row := range querySet {
 		data = append(data, base.CheckResult{
 			Timestamp:    time.Now(),
 			Device:       row.Device,
@@ -60,7 +60,7 @@ func (c *SendCheck) getDiskIO(ctx context.Context) ([]base.DiskIOQuerySet, error
 	now := time.Now()
 	from := now.Add(-1 * interval * time.Second)
 
-	var queryset []base.DiskIOQuerySet
+	var querySet []base.DiskIOQuerySet
 	err := client.DiskIO.Query().
 		Where(diskio.TimestampGTE(from), diskio.TimestampLTE(now)).
 		GroupBy(diskio.FieldDevice).
@@ -69,10 +69,10 @@ func (c *SendCheck) getDiskIO(ctx context.Context) ([]base.DiskIOQuerySet, error
 			ent.As(ent.Max(diskio.FieldWriteBps), "peak_write_bps"),
 			ent.As(ent.Mean(diskio.FieldReadBps), "avg_read_bps"),
 			ent.As(ent.Mean(diskio.FieldWriteBps), "avg_write_bps"),
-		).Scan(ctx, &queryset)
+		).Scan(ctx, &querySet)
 	if err != nil {
-		return queryset, err
+		return querySet, err
 	}
 
-	return queryset, nil
+	return querySet, nil
 }

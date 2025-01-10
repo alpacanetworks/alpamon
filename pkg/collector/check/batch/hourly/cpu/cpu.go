@@ -36,15 +36,15 @@ func (c *Check) Execute(ctx context.Context) error {
 }
 
 func (c *Check) queryCPUUsage(ctx context.Context) (base.MetricData, error) {
-	queryset, err := c.getCPU(ctx)
+	querySet, err := c.getCPU(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
 
 	data := base.CheckResult{
 		Timestamp: time.Now(),
-		Peak:      queryset[0].Max,
-		Avg:       queryset[0].AVG,
+		Peak:      querySet[0].Max,
+		Avg:       querySet[0].AVG,
 	}
 	metric := base.MetricData{
 		Type: base.CPU_PER_HOUR,
@@ -69,18 +69,18 @@ func (c *Check) getCPU(ctx context.Context) ([]base.CPUQuerySet, error) {
 	now := time.Now()
 	from := now.Add(-1 * time.Hour)
 
-	var queryset []base.CPUQuerySet
+	var querySet []base.CPUQuerySet
 	err := client.CPU.Query().
 		Where(cpu.TimestampGTE(from), cpu.TimestampLTE(now)).
 		Aggregate(
 			ent.Max(cpu.FieldUsage),
 			ent.Mean(cpu.FieldUsage),
-		).Scan(ctx, &queryset)
+		).Scan(ctx, &querySet)
 	if err != nil {
-		return queryset, err
+		return querySet, err
 	}
 
-	return queryset, nil
+	return querySet, nil
 }
 
 func (c *Check) saveCPUPerHour(data base.CheckResult, ctx context.Context) error {

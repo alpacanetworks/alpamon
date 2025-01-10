@@ -2,9 +2,11 @@ package transporter
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 )
 
 type TransportStrategy interface {
@@ -49,11 +51,13 @@ func (t *Transporter) Send(data base.MetricData) error {
 	resp, statusCode, err := t.session.Post(url, data.Data, 10)
 	if err != nil {
 		return err
+	} else if utils.IsSuccessStatusCode(statusCode) {
+		return nil
+	} else {
+		if statusCode == http.StatusBadRequest {
+			return fmt.Errorf("%d Bad Request: %s", statusCode, resp)
+		} else {
+			return fmt.Errorf("%s %s Error: %d %s", "POST", url, statusCode, resp)
+		}
 	}
-
-	if statusCode > 300 {
-		return fmt.Errorf("%d Bad Request: %s", statusCode, resp)
-	}
-
-	return nil
 }

@@ -30,13 +30,13 @@ func (c *SendCheck) Execute(ctx context.Context) error {
 }
 
 func (c *SendCheck) queryTraffic(ctx context.Context) (base.MetricData, error) {
-	queryset, err := c.getTraffic(ctx)
+	querySet, err := c.getTraffic(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
 
 	var data []base.CheckResult
-	for _, row := range queryset {
+	for _, row := range querySet {
 		data = append(data, base.CheckResult{
 			Timestamp:     time.Now(),
 			Name:          row.Name,
@@ -64,7 +64,7 @@ func (c *SendCheck) getTraffic(ctx context.Context) ([]base.TrafficQuerySet, err
 	now := time.Now()
 	from := now.Add(-1 * interval * time.Second)
 
-	var queryset []base.TrafficQuerySet
+	var querySet []base.TrafficQuerySet
 	err := client.Traffic.Query().
 		Where(traffic.TimestampGTE(from), traffic.TimestampLTE(now)).
 		GroupBy(traffic.FieldName).
@@ -77,10 +77,10 @@ func (c *SendCheck) getTraffic(ctx context.Context) ([]base.TrafficQuerySet, err
 			ent.As(ent.Mean(traffic.FieldInputBps), "avg_input_bps"),
 			ent.As(ent.Mean(traffic.FieldOutputPps), "avg_output_pps"),
 			ent.As(ent.Mean(traffic.FieldOutputBps), "avg_output_bps"),
-		).Scan(ctx, &queryset)
+		).Scan(ctx, &querySet)
 	if err != nil {
-		return queryset, err
+		return querySet, err
 	}
 
-	return queryset, nil
+	return querySet, nil
 }

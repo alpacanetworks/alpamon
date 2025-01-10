@@ -37,13 +37,13 @@ func (c *Check) Execute(ctx context.Context) error {
 }
 
 func (c *Check) queryDiskUsage(ctx context.Context) (base.MetricData, error) {
-	queryset, err := c.getDiskUsage(ctx)
+	querySet, err := c.getDiskUsage(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
 
 	var data []base.CheckResult
-	for _, row := range queryset {
+	for _, row := range querySet {
 		data = append(data, base.CheckResult{
 			Timestamp: time.Now(),
 			Device:    row.Device,
@@ -72,7 +72,7 @@ func (c *Check) queryDiskUsage(ctx context.Context) (base.MetricData, error) {
 func (c *Check) getDiskUsage(ctx context.Context) ([]base.DiskUsageQuerySet, error) {
 	client := c.GetClient()
 
-	var queryset []base.DiskUsageQuerySet
+	var querySet []base.DiskUsageQuerySet
 	err := client.DiskUsage.Query().
 		Modify(func(s *sql.Selector) {
 			now := time.Now()
@@ -99,12 +99,12 @@ func (c *Check) getDiskUsage(ctx context.Context) ([]base.DiskUsageQuerySet, err
 				sql.As(sql.Max("usage"), "max"),
 				sql.As(sql.Avg("usage"), "avg"),
 			).From(subq).GroupBy("device")
-		}).Scan(ctx, &queryset)
+		}).Scan(ctx, &querySet)
 	if err != nil {
-		return queryset, err
+		return querySet, err
 	}
 
-	return queryset, nil
+	return querySet, nil
 }
 
 func (c *Check) saveDiskUsagePerHour(data []base.CheckResult, ctx context.Context) error {

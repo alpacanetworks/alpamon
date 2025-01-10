@@ -36,15 +36,15 @@ func (c *Check) Execute(ctx context.Context) error {
 }
 
 func (c *Check) queryMemoryUsage(ctx context.Context) (base.MetricData, error) {
-	queryset, err := c.getMemory(ctx)
+	querySet, err := c.getMemory(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
 
 	data := base.CheckResult{
 		Timestamp: time.Now(),
-		Peak:      queryset[0].Max,
-		Avg:       queryset[0].AVG,
+		Peak:      querySet[0].Max,
+		Avg:       querySet[0].AVG,
 	}
 	metric := base.MetricData{
 		Type: base.MEM_PER_HOUR,
@@ -69,18 +69,18 @@ func (c *Check) getMemory(ctx context.Context) ([]base.MemoryQuerySet, error) {
 	now := time.Now()
 	from := now.Add(-1 * time.Hour)
 
-	var queryset []base.MemoryQuerySet
+	var querySet []base.MemoryQuerySet
 	err := client.Memory.Query().
 		Where(memory.TimestampGTE(from), memory.TimestampLTE(now)).
 		Aggregate(
 			ent.Max(memory.FieldUsage),
 			ent.Mean(memory.FieldUsage),
-		).Scan(ctx, &queryset)
+		).Scan(ctx, &querySet)
 	if err != nil {
-		return queryset, err
+		return querySet, err
 	}
 
-	return queryset, nil
+	return querySet, nil
 }
 
 func (c *Check) saveMemoryPerHour(data base.CheckResult, ctx context.Context) error {

@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	"os"
 	"syscall"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/alpacanetworks/alpamon-go/pkg/runner"
 	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -71,17 +71,12 @@ func runAgent() {
 	client := db.InitDB(ctx)
 
 	// Collector
-	collector := collector.InitCollector(session, client)
-	if err := collector.Start(ctx); err != nil {
-		log.Error().Err(err).Msg("Failed to start collector")
-		return
-	}
+	metricCollector := collector.InitCollector(session, client)
+	metricCollector.Start(ctx)
 
-	go func() {
-		for err := range collector.Errors() {
-			log.Error().Err(err).Msg("Collector error")
-		}
-	}()
+	for err := range metricCollector.Errors() {
+		log.Error().Err(err).Msgf("Collector error: %v", err)
+	}
 
 	// Websocket Client
 	wsClient := runner.NewWebsocketClient(session)
