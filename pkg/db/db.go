@@ -38,7 +38,8 @@ func InitDB(ctx context.Context) *ent.Client {
 		os.Exit(1)
 	}
 
-	client, err := GetClient(dbFile.Name())
+	dbManager := NewDBClientManager(dbFile.Name())
+	client, err := dbManager.GetClient()
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to get db client: %v\n", err)
 		os.Exit(1)

@@ -8,28 +8,23 @@ import (
 	_ "github.com/glebarez/go-sqlite"
 )
 
-var (
-	client  *ent.Client
-	once    sync.Once
-	initErr error
-)
-
-func GetClient(path string) (*ent.Client, error) {
-	once.Do(func() {
-		var err error
-		url := fmt.Sprintf("file:%s?cache=shared&__pragma=foreign_keys(1)", path)
-		client, err = ent.Open("sqlite3", url)
-		if err != nil {
-			initErr = err
-			client = nil
-		}
-	})
-	return client, initErr
+type DBClientManager struct {
+	client *ent.Client
+	once   sync.Once
+	path   string
 }
 
-func Close() error {
-	if client != nil {
-		return client.Close()
+func NewDBClientManager(path string) *DBClientManager {
+	return &DBClientManager{
+		path: path,
 	}
-	return nil
+}
+
+func (cm *DBClientManager) GetClient() (*ent.Client, error) {
+	var err error
+	cm.once.Do(func() {
+		url := fmt.Sprintf("file:%s?cache=shared&__pragma=foreign_keys(1)", cm.path)
+		cm.client, err = ent.Open("sqlite3", url)
+	})
+	return cm.client, err
 }
