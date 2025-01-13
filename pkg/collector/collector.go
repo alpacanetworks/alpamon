@@ -191,7 +191,7 @@ func (c *Collector) retryWithBackoff(ctx context.Context, metric base.MetricData
 	for retryCount < maxRetryCount {
 		select {
 		case <-ctx.Done():
-			return nil
+			return ctx.Err()
 		case <-time.After(time.Duration(1<<retryCount) * delay):
 			err := c.transporter.Send(metric)
 			if err != nil {
