@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
@@ -9,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -16,6 +18,7 @@ const (
 	minConnectInterval    = 5 * time.Second
 	maxConnectInterval    = 60 * time.Second
 	connectionReadTimeout = 35 * time.Minute
+	maxRetryTimeout       = 3 * 24 * time.Hour
 
 	eventCommandAckURL = "/api/events/commands/%s/ack/"
 	eventCommandFinURL = "/api/events/commands/%s/fin/"
@@ -89,6 +92,9 @@ func (wc *WebsocketClient) readMessage() (messageType int, message []byte, err e
 func (wc *WebsocketClient) connect() {
 	log.Info().Msgf("Connecting to websocket at %s...", config.GlobalSettings.WSPath)
 
+	ctx, cancel := context.WithTimeout(context.Background(), maxRetryTimeout)
+	defer cancel()
+
 	wsBackoff := backoff.NewExponentialBackOff()
 	wsBackoff.InitialInterval = minConnectInterval
 	wsBackoff.MaxInterval = maxConnectInterval
@@ -96,21 +102,27 @@ func (wc *WebsocketClient) connect() {
 	wsBackoff.RandomizationFactor = 0 // Retry forever
 
 	operation := func() error {
-		conn, _, err := websocket.DefaultDialer.Dial(config.GlobalSettings.WSPath, wc.requestHeader)
-		if err != nil {
-			nextInterval := wsBackoff.NextBackOff()
-			log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds.", config.GlobalSettings.WSPath, int(nextInterval.Seconds()))
-			return err
-		}
+		select {
+		case <-ctx.Done():
+			log.Error().Msg("Maximum retry duration reached. Shutting down.")
+			return ctx.Err()
+		default:
+			conn, _, err := websocket.DefaultDialer.Dial(config.GlobalSettings.WSPath, wc.requestHeader)
+			if err != nil {
+				nextInterval := wsBackoff.NextBackOff()
+				log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds.", config.GlobalSettings.WSPath, int(nextInterval.Seconds()))
+				return err
+			}
 
-		wc.conn = conn
-		log.Debug().Msg("Backhaul connection established.")
-		return nil
+			wc.conn = conn
+			log.Debug().Msg("Backhaul connection established.")
+			return nil
+		}
 	}
 
-	err := backoff.Retry(operation, wsBackoff)
+	err := backoff.Retry(operation, backoff.WithContext(wsBackoff, ctx))
 	if err != nil {
-		log.Error().Err(err).Msg("Unexpected error occurred during backoff.")
+		os.Exit(1)
 		return
 	}
 }
