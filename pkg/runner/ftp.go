@@ -185,7 +185,6 @@ func (fc *FtpClient) listRecursive(path string, depth, current int, showHidden b
 		Name:     filepath.Base(path),
 		Type:     "folder",
 		Path:     path,
-		Size:     int64(0),
 		ModTime:  nil,
 		Children: []CommandResult{},
 	}
@@ -230,7 +229,6 @@ func (fc *FtpClient) listRecursive(path string, depth, current int, showHidden b
 			Name:    entry.Name(),
 			Path:    fullPath,
 			Code:    returnCodes[List].Success,
-			Size:    info.Size(),
 			ModTime: &modTime,
 		}
 
@@ -247,10 +245,10 @@ func (fc *FtpClient) listRecursive(path string, depth, current int, showHidden b
 		} else {
 			child.Type = "file"
 			child.Code = returnCodes[List].Success
+			child.Size = info.Size()
 		}
 
 		result.Children = append(result.Children, child)
-		result.Size += child.Size
 	}
 
 	dirInfo, err := os.Stat(path)
