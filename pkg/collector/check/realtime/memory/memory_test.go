@@ -13,13 +13,12 @@ import (
 
 func setUp() *Check {
 	buffer := base.NewCheckBuffer(10)
-	ctx := context.Background()
 	args := &base.CheckArgs{
 		Type:     base.MEM,
 		Name:     string(base.MEM) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
-		Client:   db.InitDB(ctx),
+		Client:   db.InitDB(),
 	}
 
 	check := NewCheck(args).(*Check)

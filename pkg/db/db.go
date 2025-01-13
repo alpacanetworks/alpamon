@@ -18,7 +18,7 @@ const (
 	dbFileName = "alpamon.db"
 )
 
-func InitDB(parentCtx context.Context) *ent.Client {
+func InitDB() *ent.Client {
 	fileName := fmt.Sprintf("%s/%s", dbDir, dbFileName)
 	if _, err := os.Stat(dbDir); os.IsNotExist(err) {
 		fileName, _ = filepath.Abs(dbFileName)
@@ -33,10 +33,10 @@ func InitDB(parentCtx context.Context) *ent.Client {
 
 	sql.Register("sqlite3", &sqlite.Driver{})
 
-	migrationCtx, migrationCancle := context.WithTimeout(parentCtx, 5*time.Minute)
-	defer migrationCancle()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
-	err = RunMigration(dbFile.Name(), migrationCtx)
+	err = RunMigration(dbFile.Name(), ctx)
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to migrate db: %v\n", err)
 		os.Exit(1)

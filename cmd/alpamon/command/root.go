@@ -68,7 +68,7 @@ func runAgent() {
 	defer cancel()
 
 	// DB
-	client := db.InitDB(ctx)
+	client := db.InitDB()
 
 	// Collector
 	metricCollector := collector.InitCollector(session, client)
