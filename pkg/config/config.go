@@ -63,13 +63,13 @@ func LoadConfig() Settings {
 
 	iniData, err = ini.Load(validConfigFile)
 	if err != nil {
-		log.Fatal().Err(err).Msgf("Failed to load config file %s", validConfigFile)
+		log.Fatal().Err(err).Msgf("failed to load config file %s", validConfigFile)
 	}
 
 	var config Config
 	err = iniData.MapTo(&config)
 	if err != nil {
-		log.Fatal().Err(err).Msgf("Failed to parse config file %s", validConfigFile)
+		log.Fatal().Err(err).Msgf("failed to parse config file %s", validConfigFile)
 	}
 
 	if config.Logging.Debug {
