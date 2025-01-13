@@ -31,7 +31,8 @@ type Collector struct {
 	buffer      *base.CheckBuffer
 	errorChan   chan error
 	wg          sync.WaitGroup
-	stopChan    chan struct{}
+	ctx         context.Context
+	cancel      context.CancelFunc
 }
 
 type collectConf struct {
@@ -104,7 +105,6 @@ func NewCollector(args collectorArgs) (*Collector, error) {
 		scheduler:   scheduler.NewScheduler(),
 		buffer:      checkBuffer,
 		errorChan:   make(chan error, 10),
-		stopChan:    make(chan struct{}),
 	}
 
 	err = metricCollector.initTasks(args)
@@ -136,16 +136,20 @@ func (c *Collector) initTasks(args collectorArgs) error {
 	return nil
 }
 
-func (c *Collector) Start(ctx context.Context) {
-	go c.scheduler.Start(ctx, c.buffer.Capacity)
+func (c *Collector) Start() {
+	c.ctx, c.cancel = context.WithCancel(context.Background())
+
+	go c.scheduler.Start(c.ctx, c.buffer.Capacity)
 
 	for i := 0; i < c.buffer.Capacity; i++ {
 		c.wg.Add(1)
-		go c.successQueueWorker(ctx)
+		go c.successQueueWorker(c.ctx)
 	}
 
 	c.wg.Add(1)
-	go c.failureQueueWorker(ctx)
+	go c.failureQueueWorker(c.ctx)
+
+	go c.handleErrors()
 }
 
 func (c *Collector) successQueueWorker(ctx context.Context) {
@@ -155,9 +159,11 @@ func (c *Collector) successQueueWorker(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-c.stopChan:
-			return
-		case metric := <-c.buffer.SuccessQueue:
+		case metric, ok := <-c.buffer.SuccessQueue:
+			if !ok {
+				return
+			}
+
 			err := c.transporter.Send(metric)
 			if err != nil {
 				c.buffer.FailureQueue <- metric
@@ -176,10 +182,12 @@ func (c *Collector) failureQueueWorker(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-c.stopChan:
-			return
 		case <-retryTicker.C:
-			metric := <-c.buffer.FailureQueue
+			metric, ok := <-c.buffer.FailureQueue
+			if !ok {
+				return
+			}
+
 			err := c.retryWithBackoff(ctx, metric)
 			if err != nil {
 				log.Error().Err(err).Msgf("Failed to check metric: %s", metric.Type)
@@ -208,16 +216,21 @@ func (c *Collector) retryWithBackoff(ctx context.Context, metric base.MetricData
 	return fmt.Errorf("max retries exceeded for metric %s", metric.Type)
 }
 
+func (c *Collector) handleErrors() {
+	for err := range c.errorChan {
+		log.Error().Err(err).Msgf("Collector error: %v", err)
+	}
+}
+
 func (c *Collector) Stop() {
-	close(c.stopChan)
+	if c.cancel != nil {
+		c.cancel()
+	}
+
 	c.scheduler.Stop()
 	c.wg.Wait()
 
 	close(c.buffer.SuccessQueue)
 	close(c.buffer.FailureQueue)
 	close(c.errorChan)
-}
-
-func (c *Collector) Errors() <-chan error {
-	return c.errorChan
 }

@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"syscall"
@@ -64,19 +63,13 @@ func runAgent() {
 	// Commit
 	runner.CommitAsync(session, commissioned)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// DB
 	client := db.InitDB()
 
 	// Collector
 	metricCollector := collector.InitCollector(session, client)
-	metricCollector.Start(ctx)
-
-	for err := range metricCollector.Errors() {
-		log.Error().Err(err).Msgf("Collector error: %v", err)
-	}
+	metricCollector.Start()
+	defer metricCollector.Stop()
 
 	// Websocket Client
 	wsClient := runner.NewWebsocketClient(session)
