@@ -57,7 +57,7 @@ func (t *Transporter) Send(data base.MetricData) error {
 		if statusCode == http.StatusBadRequest {
 			return fmt.Errorf("%d Bad Request: %s", statusCode, resp)
 		} else {
-			return fmt.Errorf("%s %s Error: %d %s", "POST", url, statusCode, resp)
+			return fmt.Errorf("%s %s Error: %d %s", http.MethodPost, url, statusCode, resp)
 		}
 	}
 }

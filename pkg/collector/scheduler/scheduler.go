@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	MAX_RETRIES     = 5
-	MAX_RETRY_TIMES = 1 * time.Minute
-	DEFAULT_DELAY   = 1 * time.Second
+	MaxRetries    = 5
+	MaxRetryTimes = 1 * time.Minute
+	DefaultDelay  = 1 * time.Second
 )
 
 type Scheduler struct {
@@ -46,9 +46,9 @@ type RetryStatus struct {
 func NewScheduler() *Scheduler {
 	return &Scheduler{
 		retryConf: RetryConf{
-			MaxRetries:   MAX_RETRIES,
-			MaxRetryTime: MAX_RETRY_TIMES,
-			Delay:        DEFAULT_DELAY,
+			MaxRetries:   MaxRetries,
+			MaxRetryTime: MaxRetryTimes,
+			Delay:        DefaultDelay,
 		},
 		taskQueue: make(chan *ScheduledTask),
 		stopChan:  make(chan struct{}),
