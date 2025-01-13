@@ -14,41 +14,51 @@ import (
 var migrations embed.FS
 
 func RunMigration(path string, ctx context.Context) error {
-	migrationFS, err := getMigrationDir()
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get migration filesystem")
+	if err := ctx.Err(); err != nil {
+		log.Error().Err(err).Msgf("context cancelled before migration: %v", err)
 		return err
 	}
 
-	workDir, err := atlasexec.NewWorkingDir(
-		atlasexec.WithMigrations(
-			migrationFS,
-		),
-	)
-	if err != nil {
-		log.Error().Err(err).Msgf("failed to open migration dir: %v", err)
-		return err
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		migrationFS, err := getMigrationDir()
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get migration filesystem")
+			return err
+		}
+
+		workDir, err := atlasexec.NewWorkingDir(
+			atlasexec.WithMigrations(
+				migrationFS,
+			),
+		)
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to open migration dir: %v", err)
+			return err
+		}
+		defer func() { _ = workDir.Close() }()
+
+		client, err := atlasexec.NewClient(workDir.Path(), "atlas")
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to get atlas client: %v", err)
+			return err
+		}
+
+		url := fmt.Sprintf("sqlite://%s", path)
+
+		_, err = client.MigrateApply(ctx, &atlasexec.MigrateApplyParams{
+			URL: url,
+		})
+
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to migrate db: %v", err)
+			return err
+		}
+
+		return nil
 	}
-	defer func() { _ = workDir.Close() }()
-
-	client, err := atlasexec.NewClient(workDir.Path(), "atlas")
-	if err != nil {
-		log.Error().Err(err).Msgf("failed to get atlas client: %v", err)
-		return err
-	}
-
-	url := fmt.Sprintf("sqlite://%s", path)
-
-	_, err = client.MigrateApply(ctx, &atlasexec.MigrateApplyParams{
-		URL: url,
-	})
-
-	if err != nil {
-		log.Error().Err(err).Msgf("failed to migrate db: %v", err)
-		return err
-	}
-
-	return nil
 }
 
 func getMigrationDir() (fs.FS, error) {

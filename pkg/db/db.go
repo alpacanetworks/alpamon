@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/glebarez/go-sqlite"
@@ -17,7 +18,7 @@ const (
 	dbFileName = "alpamon.db"
 )
 
-func InitDB(ctx context.Context) *ent.Client {
+func InitDB(parentCtx context.Context) *ent.Client {
 	fileName := fmt.Sprintf("%s/%s", dbDir, dbFileName)
 	if _, err := os.Stat(dbDir); os.IsNotExist(err) {
 		fileName, _ = filepath.Abs(dbFileName)
@@ -32,7 +33,10 @@ func InitDB(ctx context.Context) *ent.Client {
 
 	sql.Register("sqlite3", &sqlite.Driver{})
 
-	err = RunMigration(dbFile.Name(), ctx)
+	migrationCtx, migrationCancle := context.WithTimeout(parentCtx, 5*time.Minute)
+	defer migrationCancle()
+
+	err = RunMigration(dbFile.Name(), migrationCtx)
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to migrate db: %v\n", err)
 		os.Exit(1)
