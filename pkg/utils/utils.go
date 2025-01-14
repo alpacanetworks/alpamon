@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -15,6 +16,7 @@ import (
 
 var (
 	PlatformLike string
+	pattern      = regexp.MustCompile(`[^\w@%+=:,./-]`)
 )
 
 func InitPlatform() {
@@ -105,4 +107,16 @@ func ConvertGroupIds(groupIds []string) []uint32 {
 		gids = append(gids, uint32(gid))
 	}
 	return gids
+}
+
+func Quote(s string) string {
+	if len(s) == 0 {
+		return "''"
+	}
+
+	if pattern.MatchString(s) {
+		return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
+	}
+
+	return s
 }
