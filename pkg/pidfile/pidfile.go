@@ -31,7 +31,7 @@ func WritePID() (string, error) {
 		pidStr := strings.TrimSpace(string(byteContent))
 		pid, err := strconv.Atoi(pidStr)
 		if err == nil && isProcess(pid) {
-			return "", fmt.Errorf("Pidfile already exists, please check %s isn't running or remove %s",
+			return "", fmt.Errorf("pidfile already exists, please check %s isn't running or remove %s",
 				os.Args[0], pidFilePath)
 		}
 	}

@@ -2,16 +2,18 @@ package command
 
 import (
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	"os"
 	"syscall"
 
+	"github.com/alpacanetworks/alpamon-go/pkg/collector"
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
+	"github.com/alpacanetworks/alpamon-go/pkg/db"
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/alpacanetworks/alpamon-go/pkg/pidfile"
 	"github.com/alpacanetworks/alpamon-go/pkg/runner"
 	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -60,6 +62,14 @@ func runAgent() {
 
 	// Commit
 	runner.CommitAsync(session, commissioned)
+
+	// DB
+	client := db.InitDB()
+
+	// Collector
+	metricCollector := collector.InitCollector(session, client)
+	metricCollector.Start()
+	defer metricCollector.Stop()
 
 	// Websocket Client
 	wsClient := runner.NewWebsocketClient(session)
