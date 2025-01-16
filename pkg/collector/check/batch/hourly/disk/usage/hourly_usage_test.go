@@ -15,8 +15,8 @@ import (
 func setUp() *Check {
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
-		Type:     base.DISK_USAGE_PER_HOUR,
-		Name:     string(base.DISK_USAGE_PER_HOUR) + "_" + uuid.NewString(),
+		Type:     base.HOURLY_DISK_USAGE,
+		Name:     string(base.HOURLY_DISK_USAGE) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
 		Client:   db.InitDB(),
@@ -46,7 +46,7 @@ func TestGetDiskUsage(t *testing.T) {
 	assert.NotEmpty(t, querySet, "Disk usage queryset should not be empty")
 }
 
-func TestSaveDiskUsagePerHour(t *testing.T) {
+func TestSaveHourlyDiskUsage(t *testing.T) {
 	check := setUp()
 	ctx := context.Background()
 	data := []base.CheckResult{
@@ -64,8 +64,8 @@ func TestSaveDiskUsagePerHour(t *testing.T) {
 		},
 	}
 
-	err := check.saveDiskUsagePerHour(data, ctx)
-	assert.NoError(t, err, "Failed to save disk usage per hour.")
+	err := check.saveHourlyDiskUsage(data, ctx)
+	assert.NoError(t, err, "Failed to save hourly disk usage.")
 }
 
 func TestDeleteDiskUsage(t *testing.T) {

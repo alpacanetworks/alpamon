@@ -47,11 +47,11 @@ func (c *Check) queryCPUUsage(ctx context.Context) (base.MetricData, error) {
 		Avg:       querySet[0].AVG,
 	}
 	metric := base.MetricData{
-		Type: base.CPU_PER_HOUR,
+		Type: base.HOURLY_CPU_USAGE,
 		Data: []base.CheckResult{data},
 	}
 
-	err = c.saveCPUPerHour(data, ctx)
+	err = c.saveHourlyCPUUsage(data, ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -83,14 +83,14 @@ func (c *Check) getCPU(ctx context.Context) ([]base.CPUQuerySet, error) {
 	return querySet, nil
 }
 
-func (c *Check) saveCPUPerHour(data base.CheckResult, ctx context.Context) error {
+func (c *Check) saveHourlyCPUUsage(data base.CheckResult, ctx context.Context) error {
 	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	err = tx.CPUPerHour.Create().
+	err = tx.HourlyCPUUsage.Create().
 		SetTimestamp(data.Timestamp).
 		SetPeak(data.Peak).
 		SetAvg(data.Avg).Exec(ctx)

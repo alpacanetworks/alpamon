@@ -8,13 +8,13 @@ import (
 	"entgo.io/ent/schema/index"
 )
 
-// CPUPerHour holds the schema definition for the CPUPerHour entity.
-type CPUPerHour struct {
+// HourlyCPUUsage holds the schema definition for the HourlyCPUUsage entity.
+type HourlyCPUUsage struct {
 	ent.Schema
 }
 
-// Fields of the CPUPerHour.
-func (CPUPerHour) Fields() []ent.Field {
+// Fields of the HourlyCPUUsage.
+func (HourlyCPUUsage) Fields() []ent.Field {
 	return []ent.Field{
 		field.Time("timestamp").Default(time.Now()),
 		field.Float("peak"),
@@ -22,7 +22,7 @@ func (CPUPerHour) Fields() []ent.Field {
 	}
 }
 
-func (CPUPerHour) Indexes() []ent.Index {
+func (HourlyCPUUsage) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("timestamp"),
 	}

@@ -52,11 +52,11 @@ func (c *Check) queryDiskUsage(ctx context.Context) (base.MetricData, error) {
 		})
 	}
 	metric := base.MetricData{
-		Type: base.DISK_USAGE_PER_HOUR,
+		Type: base.HOURLY_DISK_USAGE,
 		Data: data,
 	}
 
-	err = c.saveDiskUsagePerHour(data, ctx)
+	err = c.saveHourlyDiskUsage(data, ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -107,14 +107,14 @@ func (c *Check) getDiskUsage(ctx context.Context) ([]base.DiskUsageQuerySet, err
 	return querySet, nil
 }
 
-func (c *Check) saveDiskUsagePerHour(data []base.CheckResult, ctx context.Context) error {
+func (c *Check) saveHourlyDiskUsage(data []base.CheckResult, ctx context.Context) error {
 	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	err = tx.DiskUsagePerHour.MapCreateBulk(data, func(q *ent.DiskUsagePerHourCreate, i int) {
+	err = tx.HourlyDiskUsage.MapCreateBulk(data, func(q *ent.HourlyDiskUsageCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
 			SetDevice(data[i].Device).
 			SetPeak(data[i].Peak).

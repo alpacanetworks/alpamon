@@ -6,7 +6,7 @@ import (
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/cpuperhour"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlycpuusage"
 )
 
 type Check struct {
@@ -20,7 +20,7 @@ func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 }
 
 func (c *Check) Execute(ctx context.Context) error {
-	metric, err := c.queryCPUPerHour(ctx)
+	metric, err := c.queryHourlyCPUUsage(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,8 +35,8 @@ func (c *Check) Execute(ctx context.Context) error {
 	return nil
 }
 
-func (c *Check) queryCPUPerHour(ctx context.Context) (base.MetricData, error) {
-	querySet, err := c.getCPUPerHour(ctx)
+func (c *Check) queryHourlyCPUUsage(ctx context.Context) (base.MetricData, error) {
+	querySet, err := c.getHourlyCPUUsage(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -47,11 +47,11 @@ func (c *Check) queryCPUPerHour(ctx context.Context) (base.MetricData, error) {
 		Avg:       querySet[0].AVG,
 	}
 	metric := base.MetricData{
-		Type: base.CPU_PER_DAY,
+		Type: base.DAILY_CPU_USAGE,
 		Data: []base.CheckResult{data},
 	}
 
-	err = c.deleteCPUPerHour(ctx)
+	err = c.deleteHourlyCPUUsage(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -59,17 +59,17 @@ func (c *Check) queryCPUPerHour(ctx context.Context) (base.MetricData, error) {
 	return metric, nil
 }
 
-func (c *Check) getCPUPerHour(ctx context.Context) ([]base.CPUQuerySet, error) {
+func (c *Check) getHourlyCPUUsage(ctx context.Context) ([]base.CPUQuerySet, error) {
 	client := c.GetClient()
 	now := time.Now()
 	from := now.Add(-24 * time.Hour)
 
 	var querySet []base.CPUQuerySet
-	err := client.CPUPerHour.Query().
-		Where(cpuperhour.TimestampGTE(from), cpuperhour.TimestampLTE(now)).
+	err := client.HourlyCPUUsage.Query().
+		Where(hourlycpuusage.TimestampGTE(from), hourlycpuusage.TimestampLTE(now)).
 		Aggregate(
-			ent.Max(cpuperhour.FieldPeak),
-			ent.Mean(cpuperhour.FieldAvg),
+			ent.Max(hourlycpuusage.FieldPeak),
+			ent.Mean(hourlycpuusage.FieldAvg),
 		).Scan(ctx, &querySet)
 	if err != nil {
 		return querySet, err
@@ -78,7 +78,7 @@ func (c *Check) getCPUPerHour(ctx context.Context) ([]base.CPUQuerySet, error) {
 	return querySet, nil
 }
 
-func (c *Check) deleteCPUPerHour(ctx context.Context) error {
+func (c *Check) deleteHourlyCPUUsage(ctx context.Context) error {
 	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return err
@@ -87,8 +87,8 @@ func (c *Check) deleteCPUPerHour(ctx context.Context) error {
 
 	from := time.Now().Add(-24 * time.Hour)
 
-	_, err = tx.CPUPerHour.Delete().
-		Where(cpuperhour.TimestampLTE(from)).Exec(ctx)
+	_, err = tx.HourlyCPUUsage.Delete().
+		Where(hourlycpuusage.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

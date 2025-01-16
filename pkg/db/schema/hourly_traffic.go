@@ -8,13 +8,13 @@ import (
 	"entgo.io/ent/schema/index"
 )
 
-// TrafficPerHour holds the schema definition for the TrafficPerHour entity.
-type TrafficPerHour struct {
+// HourlyTraffic holds the schema definition for the HourlyTraffic entity.
+type HourlyTraffic struct {
 	ent.Schema
 }
 
-// Fields of the TrafficPerHour.
-func (TrafficPerHour) Fields() []ent.Field {
+// Fields of the HourlyTraffic.
+func (HourlyTraffic) Fields() []ent.Field {
 	return []ent.Field{
 		field.Time("timestamp").Default(time.Now()),
 		field.String("name"),
@@ -29,7 +29,7 @@ func (TrafficPerHour) Fields() []ent.Field {
 	}
 }
 
-func (TrafficPerHour) Indexes() []ent.Index {
+func (HourlyTraffic) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("timestamp"),
 	}

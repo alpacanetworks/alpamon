@@ -6,7 +6,7 @@ import (
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/memoryperhour"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlymemoryusage"
 )
 
 type Check struct {
@@ -20,7 +20,7 @@ func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 }
 
 func (c *Check) Execute(ctx context.Context) error {
-	metric, err := c.queryMemoryPerHour(ctx)
+	metric, err := c.queryHourlyMemoryUsage(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,8 +35,8 @@ func (c *Check) Execute(ctx context.Context) error {
 	return nil
 }
 
-func (c *Check) queryMemoryPerHour(ctx context.Context) (base.MetricData, error) {
-	querySet, err := c.getMemoryPerHour(ctx)
+func (c *Check) queryHourlyMemoryUsage(ctx context.Context) (base.MetricData, error) {
+	querySet, err := c.getHourlyMemoryUsage(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -47,11 +47,11 @@ func (c *Check) queryMemoryPerHour(ctx context.Context) (base.MetricData, error)
 		Avg:       querySet[0].AVG,
 	}
 	metric := base.MetricData{
-		Type: base.MEM_PER_DAY,
+		Type: base.DAILY_MEM_USAGE,
 		Data: []base.CheckResult{data},
 	}
 
-	err = c.deleteMemoryPerHour(ctx)
+	err = c.deleteHourlyMemoryUsage(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -59,17 +59,17 @@ func (c *Check) queryMemoryPerHour(ctx context.Context) (base.MetricData, error)
 	return metric, nil
 }
 
-func (c *Check) getMemoryPerHour(ctx context.Context) ([]base.MemoryQuerySet, error) {
+func (c *Check) getHourlyMemoryUsage(ctx context.Context) ([]base.MemoryQuerySet, error) {
 	client := c.GetClient()
 	now := time.Now()
 	from := now.Add(-24 * time.Hour)
 
 	var querySet []base.MemoryQuerySet
-	err := client.MemoryPerHour.Query().
-		Where(memoryperhour.TimestampGTE(from), memoryperhour.TimestampLTE(now)).
+	err := client.HourlyMemoryUsage.Query().
+		Where(hourlymemoryusage.TimestampGTE(from), hourlymemoryusage.TimestampLTE(now)).
 		Aggregate(
-			ent.Max(memoryperhour.FieldPeak),
-			ent.Mean(memoryperhour.FieldAvg),
+			ent.Max(hourlymemoryusage.FieldPeak),
+			ent.Mean(hourlymemoryusage.FieldAvg),
 		).Scan(ctx, &querySet)
 	if err != nil {
 		return querySet, err
@@ -78,7 +78,7 @@ func (c *Check) getMemoryPerHour(ctx context.Context) ([]base.MemoryQuerySet, er
 	return querySet, nil
 }
 
-func (c *Check) deleteMemoryPerHour(ctx context.Context) error {
+func (c *Check) deleteHourlyMemoryUsage(ctx context.Context) error {
 	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return err
@@ -87,8 +87,8 @@ func (c *Check) deleteMemoryPerHour(ctx context.Context) error {
 
 	from := time.Now().Add(-24 * time.Hour)
 
-	_, err = tx.MemoryPerHour.Delete().
-		Where(memoryperhour.TimestampLTE(from)).Exec(ctx)
+	_, err = tx.HourlyMemoryUsage.Delete().
+		Where(hourlymemoryusage.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/trafficperhour"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlytraffic"
 )
 
 type Check struct {
@@ -20,7 +20,7 @@ func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 }
 
 func (c *Check) Execute(ctx context.Context) error {
-	metric, err := c.queryTrafficPerHour(ctx)
+	metric, err := c.queryHourlyTraffic(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,8 +35,8 @@ func (c *Check) Execute(ctx context.Context) error {
 	return nil
 }
 
-func (c *Check) queryTrafficPerHour(ctx context.Context) (base.MetricData, error) {
-	querySet, err := c.getTrafficPerHour(ctx)
+func (c *Check) queryHourlyTraffic(ctx context.Context) (base.MetricData, error) {
+	querySet, err := c.getHourlyTraffic(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -57,11 +57,11 @@ func (c *Check) queryTrafficPerHour(ctx context.Context) (base.MetricData, error
 		})
 	}
 	metric := base.MetricData{
-		Type: base.NET_PER_DAY,
+		Type: base.DAILY_NET,
 		Data: data,
 	}
 
-	err = c.deleteTrafficPerHour(ctx)
+	err = c.deleteHourlyTraffic(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -69,24 +69,24 @@ func (c *Check) queryTrafficPerHour(ctx context.Context) (base.MetricData, error
 	return metric, nil
 }
 
-func (c *Check) getTrafficPerHour(ctx context.Context) ([]base.TrafficQuerySet, error) {
+func (c *Check) getHourlyTraffic(ctx context.Context) ([]base.TrafficQuerySet, error) {
 	client := c.GetClient()
 	now := time.Now()
 	from := now.Add(-24 * time.Hour)
 
 	var querySet []base.TrafficQuerySet
-	err := client.TrafficPerHour.Query().
-		Where(trafficperhour.TimestampGTE(from), trafficperhour.TimestampLTE(now)).
-		GroupBy(trafficperhour.FieldName).
+	err := client.HourlyTraffic.Query().
+		Where(hourlytraffic.TimestampGTE(from), hourlytraffic.TimestampLTE(now)).
+		GroupBy(hourlytraffic.FieldName).
 		Aggregate(
-			ent.As(ent.Max(trafficperhour.FieldPeakInputPps), "peak_input_pps"),
-			ent.As(ent.Max(trafficperhour.FieldPeakInputBps), "peak_input_bps"),
-			ent.As(ent.Max(trafficperhour.FieldPeakOutputPps), "peak_output_pps"),
-			ent.As(ent.Max(trafficperhour.FieldPeakOutputBps), "peak_output_bps"),
-			ent.As(ent.Mean(trafficperhour.FieldAvgInputPps), "avg_input_pps"),
-			ent.As(ent.Mean(trafficperhour.FieldAvgInputBps), "avg_input_bps"),
-			ent.As(ent.Mean(trafficperhour.FieldAvgOutputPps), "avg_output_pps"),
-			ent.As(ent.Mean(trafficperhour.FieldAvgOutputBps), "avg_output_bps"),
+			ent.As(ent.Max(hourlytraffic.FieldPeakInputPps), "peak_input_pps"),
+			ent.As(ent.Max(hourlytraffic.FieldPeakInputBps), "peak_input_bps"),
+			ent.As(ent.Max(hourlytraffic.FieldPeakOutputPps), "peak_output_pps"),
+			ent.As(ent.Max(hourlytraffic.FieldPeakOutputBps), "peak_output_bps"),
+			ent.As(ent.Mean(hourlytraffic.FieldAvgInputPps), "avg_input_pps"),
+			ent.As(ent.Mean(hourlytraffic.FieldAvgInputBps), "avg_input_bps"),
+			ent.As(ent.Mean(hourlytraffic.FieldAvgOutputPps), "avg_output_pps"),
+			ent.As(ent.Mean(hourlytraffic.FieldAvgOutputBps), "avg_output_bps"),
 		).Scan(ctx, &querySet)
 	if err != nil {
 		return querySet, err
@@ -95,7 +95,7 @@ func (c *Check) getTrafficPerHour(ctx context.Context) ([]base.TrafficQuerySet, 
 	return querySet, nil
 }
 
-func (c *Check) deleteTrafficPerHour(ctx context.Context) error {
+func (c *Check) deleteHourlyTraffic(ctx context.Context) error {
 	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return err
@@ -104,8 +104,8 @@ func (c *Check) deleteTrafficPerHour(ctx context.Context) error {
 
 	from := time.Now().Add(-24 * time.Hour)
 
-	_, err = tx.TrafficPerHour.Delete().
-		Where(trafficperhour.TimestampLTE(from)).Exec(ctx)
+	_, err = tx.HourlyTraffic.Delete().
+		Where(hourlytraffic.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

@@ -7,41 +7,41 @@ import (
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/cpu"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/cpuperhour"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/diskio"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/diskioperhour"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/diskusage"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/diskusageperhour"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlycpuusage"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlydiskio"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlydiskusage"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlymemoryusage"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlytraffic"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/memory"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/memoryperhour"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/traffic"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/trafficperhour"
 )
 
 var (
 	tables = []base.CheckType{
 		base.CPU,
-		base.CPU_PER_HOUR,
+		base.HOURLY_CPU_USAGE,
 		base.MEM,
-		base.MEM_PER_HOUR,
+		base.HOURLY_MEM_USAGE,
 		base.DISK_USAGE,
-		base.DISK_USAGE_PER_HOUR,
+		base.HOURLY_DISK_USAGE,
 		base.DISK_IO,
-		base.DISK_IO_PER_HOUR,
+		base.HOURLY_DISK_IO,
 		base.NET,
-		base.NET_PER_HOUR,
+		base.HOURLY_NET,
 	}
 	deleteQueryMap = map[base.CheckType]deleteQuery{
-		base.CPU:                 deleteAllCPU,
-		base.CPU_PER_HOUR:        deleteAllCPUPerHour,
-		base.MEM:                 deleteAllMemory,
-		base.MEM_PER_HOUR:        deleteAllMemoryPerHour,
-		base.DISK_USAGE:          deleteAllDiskUsage,
-		base.DISK_USAGE_PER_HOUR: deleteAllDiskUsagePerHour,
-		base.DISK_IO:             deleteAllDiskIO,
-		base.DISK_IO_PER_HOUR:    deleteAllDiskIOPerHour,
-		base.NET:                 deleteAllTraffic,
-		base.NET_PER_HOUR:        deleteAllTrafficPerHour,
+		base.CPU:               deleteAllCPU,
+		base.HOURLY_CPU_USAGE:  deleteAllHourlyCPUUsage,
+		base.MEM:               deleteAllMemory,
+		base.HOURLY_MEM_USAGE:  deleteAllHourlyMemoryUsage,
+		base.DISK_USAGE:        deleteAllDiskUsage,
+		base.HOURLY_DISK_USAGE: deleteAllHourlyDiskUsage,
+		base.DISK_IO:           deleteAllDiskIO,
+		base.HOURLY_DISK_IO:    deleteAllHourlyDiskIO,
+		base.NET:               deleteAllTraffic,
+		base.HOURLY_NET:        deleteAllHourlyTraffic,
 	}
 )
 
@@ -101,15 +101,15 @@ func deleteAllCPU(ctx context.Context, client *ent.Client, now time.Time) error 
 	return nil
 }
 
-func deleteAllCPUPerHour(ctx context.Context, client *ent.Client, now time.Time) error {
+func deleteAllHourlyCPUUsage(ctx context.Context, client *ent.Client, now time.Time) error {
 	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	_, err = tx.CPUPerHour.Delete().
-		Where(cpuperhour.TimestampLTE(now.Add(-24 * time.Hour))).Exec(ctx)
+	_, err = tx.HourlyCPUUsage.Delete().
+		Where(hourlycpuusage.TimestampLTE(now.Add(-24 * time.Hour))).Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -137,15 +137,15 @@ func deleteAllMemory(ctx context.Context, client *ent.Client, now time.Time) err
 	return nil
 }
 
-func deleteAllMemoryPerHour(ctx context.Context, client *ent.Client, now time.Time) error {
+func deleteAllHourlyMemoryUsage(ctx context.Context, client *ent.Client, now time.Time) error {
 	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	_, err = tx.MemoryPerHour.Delete().
-		Where(memoryperhour.TimestampLTE(now.Add(-24 * time.Hour))).Exec(ctx)
+	_, err = tx.HourlyMemoryUsage.Delete().
+		Where(hourlymemoryusage.TimestampLTE(now.Add(-24 * time.Hour))).Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -173,15 +173,15 @@ func deleteAllDiskUsage(ctx context.Context, client *ent.Client, now time.Time) 
 	return nil
 }
 
-func deleteAllDiskUsagePerHour(ctx context.Context, client *ent.Client, now time.Time) error {
+func deleteAllHourlyDiskUsage(ctx context.Context, client *ent.Client, now time.Time) error {
 	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	_, err = tx.DiskUsagePerHour.Delete().
-		Where(diskusageperhour.TimestampLTE(now.Add(-24 * time.Hour))).Exec(ctx)
+	_, err = tx.HourlyDiskUsage.Delete().
+		Where(hourlydiskusage.TimestampLTE(now.Add(-24 * time.Hour))).Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -209,15 +209,15 @@ func deleteAllDiskIO(ctx context.Context, client *ent.Client, now time.Time) err
 	return nil
 }
 
-func deleteAllDiskIOPerHour(ctx context.Context, client *ent.Client, now time.Time) error {
+func deleteAllHourlyDiskIO(ctx context.Context, client *ent.Client, now time.Time) error {
 	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	_, err = tx.DiskIOPerHour.Delete().
-		Where(diskioperhour.TimestampLTE(now.Add(-24 * time.Hour))).Exec(ctx)
+	_, err = tx.HourlyDiskIO.Delete().
+		Where(hourlydiskio.TimestampLTE(now.Add(-24 * time.Hour))).Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -245,15 +245,15 @@ func deleteAllTraffic(ctx context.Context, client *ent.Client, now time.Time) er
 	return nil
 }
 
-func deleteAllTrafficPerHour(ctx context.Context, client *ent.Client, now time.Time) error {
+func deleteAllHourlyTraffic(ctx context.Context, client *ent.Client, now time.Time) error {
 	tx, err := client.Tx(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	_, err = tx.TrafficPerHour.Delete().
-		Where(trafficperhour.TimestampLTE(now.Add(-24 * time.Hour))).Exec(ctx)
+	_, err = tx.HourlyTraffic.Delete().
+		Where(hourlytraffic.TimestampLTE(now.Add(-24 * time.Hour))).Exec(ctx)
 	if err != nil {
 		return err
 	}

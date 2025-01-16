@@ -15,8 +15,8 @@ import (
 func setUp() *Check {
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
-		Type:     base.DISK_IO_PER_HOUR,
-		Name:     string(base.DISK_IO_PER_HOUR) + "_" + uuid.NewString(),
+		Type:     base.HOURLY_DISK_IO,
+		Name:     string(base.HOURLY_DISK_IO) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
 		Client:   db.InitDB(),
@@ -43,7 +43,7 @@ func TestGetDiskIO(t *testing.T) {
 	assert.NotEmpty(t, querySet, "Disk io queryset should not be empty")
 }
 
-func TestSaveDiskIOPerHour(t *testing.T) {
+func TestSaveHourlyDiskIO(t *testing.T) {
 	check := setUp()
 	ctx := context.Background()
 	data := []base.CheckResult{
@@ -65,8 +65,8 @@ func TestSaveDiskIOPerHour(t *testing.T) {
 		},
 	}
 
-	err := check.saveDiskIOPerHour(data, ctx)
-	assert.NoError(t, err, "Failed to save disk io per hour.")
+	err := check.saveHourlyDiskIO(data, ctx)
+	assert.NoError(t, err, "Failed to save hourly disk io.")
 }
 
 func TestDeleteDiskIO(t *testing.T) {

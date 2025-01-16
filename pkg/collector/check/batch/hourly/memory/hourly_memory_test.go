@@ -15,8 +15,8 @@ import (
 func setUp() *Check {
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
-		Type:     base.MEM_PER_HOUR,
-		Name:     string(base.MEM_PER_HOUR) + "_" + uuid.NewString(),
+		Type:     base.HOURLY_MEM_USAGE,
+		Name:     string(base.HOURLY_MEM_USAGE) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
 		Client:   db.InitDB(),
@@ -50,7 +50,7 @@ func TestSaveMemoryPerHour(t *testing.T) {
 		Avg:       50.0,
 	}
 
-	err := check.saveMemoryPerHour(data, ctx)
+	err := check.saveHourlyMemoryUsage(data, ctx)
 	assert.NoError(t, err, "Failed to save memory usage per hour.")
 }
 

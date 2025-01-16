@@ -8,13 +8,13 @@ import (
 	"entgo.io/ent/schema/index"
 )
 
-// DiskIOPerHour holds the schema definition for the DiskIOPerHour entity.
-type DiskIOPerHour struct {
+// HourlyDiskIO holds the schema definition for the HourlyDiskIO entity.
+type HourlyDiskIO struct {
 	ent.Schema
 }
 
-// Fields of the DiskIOPerHour.
-func (DiskIOPerHour) Fields() []ent.Field {
+// Fields of the HourlyDiskIO.
+func (HourlyDiskIO) Fields() []ent.Field {
 	return []ent.Field{
 		field.Time("timestamp").Default(time.Now()),
 		field.String("device"),
@@ -25,7 +25,7 @@ func (DiskIOPerHour) Fields() []ent.Field {
 	}
 }
 
-func (DiskIOPerHour) Indexes() []ent.Index {
+func (HourlyDiskIO) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("timestamp"),
 	}

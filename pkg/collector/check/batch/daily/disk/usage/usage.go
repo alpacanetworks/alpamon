@@ -6,7 +6,7 @@ import (
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/diskusageperhour"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlydiskusage"
 )
 
 type Check struct {
@@ -20,7 +20,7 @@ func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 }
 
 func (c *Check) Execute(ctx context.Context) error {
-	metric, err := c.queryDiskUsagePerHour(ctx)
+	metric, err := c.queryHourlyDiskUsage(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,8 +35,8 @@ func (c *Check) Execute(ctx context.Context) error {
 	return nil
 }
 
-func (c *Check) queryDiskUsagePerHour(ctx context.Context) (base.MetricData, error) {
-	querySet, err := c.getDiskUsagePerHour(ctx)
+func (c *Check) queryHourlyDiskUsage(ctx context.Context) (base.MetricData, error) {
+	querySet, err := c.getHourlyDiskUsage(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -51,11 +51,11 @@ func (c *Check) queryDiskUsagePerHour(ctx context.Context) (base.MetricData, err
 		})
 	}
 	metric := base.MetricData{
-		Type: base.DISK_USAGE_PER_DAY,
+		Type: base.DAILY_DISK_USAGE,
 		Data: data,
 	}
 
-	err = c.deleteDiskUsagePerHour(ctx)
+	err = c.deleteHourlyDiskUsage(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -63,18 +63,18 @@ func (c *Check) queryDiskUsagePerHour(ctx context.Context) (base.MetricData, err
 	return metric, nil
 }
 
-func (c *Check) getDiskUsagePerHour(ctx context.Context) ([]base.DiskUsageQuerySet, error) {
+func (c *Check) getHourlyDiskUsage(ctx context.Context) ([]base.DiskUsageQuerySet, error) {
 	client := c.GetClient()
 	now := time.Now()
 	from := now.Add(-24 * time.Hour)
 
 	var querySet []base.DiskUsageQuerySet
-	err := client.DiskUsagePerHour.Query().
-		Where(diskusageperhour.TimestampGTE(from), diskusageperhour.TimestampLTE(now)).
-		GroupBy(diskusageperhour.FieldDevice).
+	err := client.HourlyDiskUsage.Query().
+		Where(hourlydiskusage.TimestampGTE(from), hourlydiskusage.TimestampLTE(now)).
+		GroupBy(hourlydiskusage.FieldDevice).
 		Aggregate(
-			ent.Max(diskusageperhour.FieldPeak),
-			ent.Mean(diskusageperhour.FieldAvg),
+			ent.Max(hourlydiskusage.FieldPeak),
+			ent.Mean(hourlydiskusage.FieldAvg),
 		).Scan(ctx, &querySet)
 	if err != nil {
 		return querySet, err
@@ -83,7 +83,7 @@ func (c *Check) getDiskUsagePerHour(ctx context.Context) ([]base.DiskUsageQueryS
 	return querySet, nil
 }
 
-func (c *Check) deleteDiskUsagePerHour(ctx context.Context) error {
+func (c *Check) deleteHourlyDiskUsage(ctx context.Context) error {
 	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return err
@@ -92,8 +92,8 @@ func (c *Check) deleteDiskUsagePerHour(ctx context.Context) error {
 
 	from := time.Now().Add(-24 * time.Hour)
 
-	_, err = tx.DiskUsagePerHour.Delete().
-		Where(diskusageperhour.TimestampLTE(from)).Exec(ctx)
+	_, err = tx.HourlyDiskUsage.Delete().
+		Where(hourlydiskusage.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

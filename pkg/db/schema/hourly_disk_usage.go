@@ -8,13 +8,13 @@ import (
 	"entgo.io/ent/schema/index"
 )
 
-// DiskUsagePerHour holds the schema definition for the DiskUsagePerHour entity.
-type DiskUsagePerHour struct {
+// HourlyDiskUsage holds the schema definition for the HourlyDiskUsage entity.
+type HourlyDiskUsage struct {
 	ent.Schema
 }
 
-// Fields of the DiskUsagePerHour.
-func (DiskUsagePerHour) Fields() []ent.Field {
+// Fields of the HourlyDiskUsage.
+func (HourlyDiskUsage) Fields() []ent.Field {
 	return []ent.Field{
 		field.Time("timestamp").Default(time.Now()),
 		field.String("device"),
@@ -23,7 +23,7 @@ func (DiskUsagePerHour) Fields() []ent.Field {
 	}
 }
 
-func (DiskUsagePerHour) Indexes() []ent.Index {
+func (HourlyDiskUsage) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("timestamp"),
 	}

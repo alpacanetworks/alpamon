@@ -15,8 +15,8 @@ import (
 func setUp() *Check {
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
-		Type:     base.CPU_PER_HOUR,
-		Name:     string(base.CPU_PER_HOUR) + "_" + uuid.NewString(),
+		Type:     base.HOURLY_CPU_USAGE,
+		Name:     string(base.HOURLY_CPU_USAGE) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
 		Client:   db.InitDB(),
@@ -41,7 +41,7 @@ func TestGetCPU(t *testing.T) {
 	assert.NotEmpty(t, querySet, "CPU queryset should not be empty")
 }
 
-func TestSaveCPUPerHour(t *testing.T) {
+func TestSaveHourlyCPUUsage(t *testing.T) {
 	check := setUp()
 	ctx := context.Background()
 	data := base.CheckResult{
@@ -50,8 +50,8 @@ func TestSaveCPUPerHour(t *testing.T) {
 		Avg:       50.0,
 	}
 
-	err := check.saveCPUPerHour(data, ctx)
-	assert.NoError(t, err, "Failed to save cpu usage per hour.")
+	err := check.saveHourlyCPUUsage(data, ctx)
+	assert.NoError(t, err, "Failed to save hourly cpu usage.")
 }
 
 func TestDeleteCPU(t *testing.T) {

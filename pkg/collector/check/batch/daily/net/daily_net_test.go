@@ -15,8 +15,8 @@ import (
 func setUp() *Check {
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
-		Type:     base.NET_PER_DAY,
-		Name:     string(base.NET_PER_DAY) + "_" + uuid.NewString(),
+		Type:     base.DAILY_NET,
+		Name:     string(base.DAILY_NET) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
 		Client:   db.InitDB(),
@@ -27,11 +27,11 @@ func setUp() *Check {
 	return check
 }
 
-func TestGetTrafficPerHour(t *testing.T) {
+func TestGetHourlyTraffic(t *testing.T) {
 	check := setUp()
 	ctx := context.Background()
 
-	err := check.GetClient().TrafficPerHour.Create().
+	err := check.GetClient().HourlyTraffic.Create().
 		SetTimestamp(time.Now()).
 		SetName(uuid.NewString()).
 		SetPeakInputPps(rand.Float64()).
@@ -42,18 +42,18 @@ func TestGetTrafficPerHour(t *testing.T) {
 		SetAvgInputBps(rand.Float64()).
 		SetAvgOutputPps(rand.Float64()).
 		SetAvgOutputBps(rand.Float64()).Exec(ctx)
-	assert.NoError(t, err, "Failed to create traffic per hour.")
+	assert.NoError(t, err, "Failed to create hourly traffic.")
 
-	querySet, err := check.getTrafficPerHour(ctx)
-	assert.NoError(t, err, "Failed to get traffic per hour.")
-	assert.NotEmpty(t, querySet, "TrafficPerHour queryset should not be empty")
+	querySet, err := check.getHourlyTraffic(ctx)
+	assert.NoError(t, err, "Failed to get hourly traffic.")
+	assert.NotEmpty(t, querySet, "HourlyTraffic queryset should not be empty")
 }
 
-func TestDeleteTrafficPerHour(t *testing.T) {
+func TestDeleteHourlyTraffic(t *testing.T) {
 	check := setUp()
 	ctx := context.Background()
 
-	err := check.GetClient().TrafficPerHour.Create().
+	err := check.GetClient().HourlyTraffic.Create().
 		SetTimestamp(time.Now().Add(-25 * time.Hour)).
 		SetName(uuid.NewString()).
 		SetPeakInputPps(rand.Float64()).
@@ -64,8 +64,8 @@ func TestDeleteTrafficPerHour(t *testing.T) {
 		SetAvgInputBps(rand.Float64()).
 		SetAvgOutputPps(rand.Float64()).
 		SetAvgOutputBps(rand.Float64()).Exec(ctx)
-	assert.NoError(t, err, "Failed to create traffic per hour.")
+	assert.NoError(t, err, "Failed to create hourly traffic.")
 
-	err = check.deleteTrafficPerHour(ctx)
-	assert.NoError(t, err, "Failed to delete traffic per hour.")
+	err = check.deleteHourlyTraffic(ctx)
+	assert.NoError(t, err, "Failed to delete hourly traffic.")
 }

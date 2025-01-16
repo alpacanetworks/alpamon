@@ -15,8 +15,8 @@ import (
 func setUp() *Check {
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
-		Type:     base.NET_PER_HOUR,
-		Name:     string(base.NET_PER_HOUR) + "_" + uuid.NewString(),
+		Type:     base.HOURLY_NET,
+		Name:     string(base.HOURLY_NET) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
 		Client:   db.InitDB(),
@@ -45,7 +45,7 @@ func TestGetTraffic(t *testing.T) {
 	assert.NotEmpty(t, querySet, "Traffic queryset should not be empty")
 }
 
-func TestSaveTrafficPerHour(t *testing.T) {
+func TestSaveHourlyTraffic(t *testing.T) {
 	check := setUp()
 	ctx := context.Background()
 	data := []base.CheckResult{
@@ -75,8 +75,8 @@ func TestSaveTrafficPerHour(t *testing.T) {
 		},
 	}
 
-	err := check.saveTrafficPerHour(data, ctx)
-	assert.NoError(t, err, "Failed to save traffic per hour.")
+	err := check.saveHourlyTraffic(data, ctx)
+	assert.NoError(t, err, "Failed to save houlry traffic.")
 }
 
 func TestDeleteTraffic(t *testing.T) {

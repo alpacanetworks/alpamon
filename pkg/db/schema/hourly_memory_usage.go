@@ -8,13 +8,13 @@ import (
 	"entgo.io/ent/schema/index"
 )
 
-// MemoryPerHour holds the schema definition for the MemoryPerHour entity.
-type MemoryPerHour struct {
+// HourlyMemoryUsage holds the schema definition for the HourlyMemoryUsage entity.
+type HourlyMemoryUsage struct {
 	ent.Schema
 }
 
-// Fields of the MemoryPerHour.
-func (MemoryPerHour) Fields() []ent.Field {
+// Fields of the HourlyMemoryUsage.
+func (HourlyMemoryUsage) Fields() []ent.Field {
 	return []ent.Field{
 		field.Time("timestamp").Default(time.Now()),
 		field.Float("peak"),
@@ -22,7 +22,7 @@ func (MemoryPerHour) Fields() []ent.Field {
 	}
 }
 
-func (MemoryPerHour) Indexes() []ent.Index {
+func (HourlyMemoryUsage) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("timestamp"),
 	}

@@ -57,11 +57,11 @@ func (c *Check) queryTraffic(ctx context.Context) (base.MetricData, error) {
 		})
 	}
 	metric := base.MetricData{
-		Type: base.NET_PER_HOUR,
+		Type: base.HOURLY_NET,
 		Data: data,
 	}
 
-	err = c.saveTrafficPerHour(data, ctx)
+	err = c.saveHourlyTraffic(data, ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -100,14 +100,14 @@ func (c *Check) getTraffic(ctx context.Context) ([]base.TrafficQuerySet, error) 
 	return queryset, nil
 }
 
-func (c *Check) saveTrafficPerHour(data []base.CheckResult, ctx context.Context) error {
+func (c *Check) saveHourlyTraffic(data []base.CheckResult, ctx context.Context) error {
 	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	err = tx.TrafficPerHour.MapCreateBulk(data, func(q *ent.TrafficPerHourCreate, i int) {
+	err = tx.HourlyTraffic.MapCreateBulk(data, func(q *ent.HourlyTrafficCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
 			SetName(data[i].Name).
 			SetPeakInputPps(data[i].PeakInputPps).

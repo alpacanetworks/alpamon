@@ -6,7 +6,7 @@ import (
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/diskioperhour"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlydiskio"
 )
 
 type Check struct {
@@ -20,7 +20,7 @@ func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 }
 
 func (c *Check) Execute(ctx context.Context) error {
-	metric, err := c.queryDiskIOPerHour(ctx)
+	metric, err := c.queryHourlyDiskIO(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,8 +35,8 @@ func (c *Check) Execute(ctx context.Context) error {
 	return nil
 }
 
-func (c *Check) queryDiskIOPerHour(ctx context.Context) (base.MetricData, error) {
-	querySet, err := c.getDiskIOPerHour(ctx)
+func (c *Check) queryHourlyDiskIO(ctx context.Context) (base.MetricData, error) {
+	querySet, err := c.getHourlyDiskIO(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -53,11 +53,11 @@ func (c *Check) queryDiskIOPerHour(ctx context.Context) (base.MetricData, error)
 		})
 	}
 	metric := base.MetricData{
-		Type: base.DISK_IO_PER_DAY,
+		Type: base.DAILY_DISK_IO,
 		Data: data,
 	}
 
-	err = c.deleteDiskIOPerHour(ctx)
+	err = c.deleteHourlyDiskIO(ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -65,20 +65,20 @@ func (c *Check) queryDiskIOPerHour(ctx context.Context) (base.MetricData, error)
 	return metric, nil
 }
 
-func (c *Check) getDiskIOPerHour(ctx context.Context) ([]base.DiskIOQuerySet, error) {
+func (c *Check) getHourlyDiskIO(ctx context.Context) ([]base.DiskIOQuerySet, error) {
 	client := c.GetClient()
 	now := time.Now()
 	from := now.Add(-24 * time.Hour)
 
 	var querySet []base.DiskIOQuerySet
-	err := client.DiskIOPerHour.Query().
-		Where(diskioperhour.TimestampGTE(from), diskioperhour.TimestampLTE(now)).
-		GroupBy(diskioperhour.FieldDevice).
+	err := client.HourlyDiskIO.Query().
+		Where(hourlydiskio.TimestampGTE(from), hourlydiskio.TimestampLTE(now)).
+		GroupBy(hourlydiskio.FieldDevice).
 		Aggregate(
-			ent.As(ent.Max(diskioperhour.FieldPeakReadBps), "peak_read_bps"),
-			ent.As(ent.Max(diskioperhour.FieldPeakWriteBps), "peak_write_bps"),
-			ent.As(ent.Mean(diskioperhour.FieldAvgReadBps), "avg_read_bps"),
-			ent.As(ent.Mean(diskioperhour.FieldAvgWriteBps), "avg_write_bps"),
+			ent.As(ent.Max(hourlydiskio.FieldPeakReadBps), "peak_read_bps"),
+			ent.As(ent.Max(hourlydiskio.FieldPeakWriteBps), "peak_write_bps"),
+			ent.As(ent.Mean(hourlydiskio.FieldAvgReadBps), "avg_read_bps"),
+			ent.As(ent.Mean(hourlydiskio.FieldAvgWriteBps), "avg_write_bps"),
 		).Scan(ctx, &querySet)
 	if err != nil {
 		return querySet, err
@@ -87,7 +87,7 @@ func (c *Check) getDiskIOPerHour(ctx context.Context) ([]base.DiskIOQuerySet, er
 	return querySet, nil
 }
 
-func (c *Check) deleteDiskIOPerHour(ctx context.Context) error {
+func (c *Check) deleteHourlyDiskIO(ctx context.Context) error {
 	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return err
@@ -96,8 +96,8 @@ func (c *Check) deleteDiskIOPerHour(ctx context.Context) error {
 
 	from := time.Now().Add(-24 * time.Hour)
 
-	_, err = tx.DiskIOPerHour.Delete().
-		Where(diskioperhour.TimestampLTE(from)).Exec(ctx)
+	_, err = tx.HourlyDiskIO.Delete().
+		Where(hourlydiskio.TimestampLTE(from)).Exec(ctx)
 	if err != nil {
 		return err
 	}

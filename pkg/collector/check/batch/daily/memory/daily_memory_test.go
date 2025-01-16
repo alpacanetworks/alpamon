@@ -14,8 +14,8 @@ import (
 func setUp() *Check {
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
-		Type:     base.MEM_PER_DAY,
-		Name:     string(base.MEM_PER_DAY) + "_" + uuid.NewString(),
+		Type:     base.DAILY_MEM_USAGE,
+		Name:     string(base.DAILY_MEM_USAGE) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
 		Client:   db.InitDB(),
@@ -26,31 +26,31 @@ func setUp() *Check {
 	return check
 }
 
-func TestGetMemoryPerHour(t *testing.T) {
+func TestGetHourlyMemoryUsage(t *testing.T) {
 	check := setUp()
 	ctx := context.Background()
 
-	err := check.GetClient().MemoryPerHour.Create().
+	err := check.GetClient().HourlyMemoryUsage.Create().
 		SetTimestamp(time.Now()).
 		SetPeak(50.0).
 		SetAvg(50.0).Exec(ctx)
-	assert.NoError(t, err, "Failed to create memory usage per hour.")
+	assert.NoError(t, err, "Failed to create hourly memory usage.")
 
-	querySet, err := check.getMemoryPerHour(ctx)
-	assert.NoError(t, err, "Failed to get memory usage per hour.")
-	assert.NotEmpty(t, querySet, "MemoryPerHour queryset should not be empty")
+	querySet, err := check.getHourlyMemoryUsage(ctx)
+	assert.NoError(t, err, "Failed to get hourly memory usage.")
+	assert.NotEmpty(t, querySet, "HouryMemoryUsage queryset should not be empty")
 }
 
-func TestDeleteMemoryPerHour(t *testing.T) {
+func TestDeleteHourlyMemoryUsage(t *testing.T) {
 	check := setUp()
 	ctx := context.Background()
 
-	err := check.GetClient().MemoryPerHour.Create().
+	err := check.GetClient().HourlyMemoryUsage.Create().
 		SetTimestamp(time.Now().Add(-25 * time.Hour)).
 		SetPeak(50.0).
 		SetAvg(50.0).Exec(ctx)
-	assert.NoError(t, err, "Failed to create memory usage per hour.")
+	assert.NoError(t, err, "Failed to create hourly memory usage.")
 
-	err = check.deleteMemoryPerHour(ctx)
-	assert.NoError(t, err, "Failed to delete memory usage per hour.")
+	err = check.deleteHourlyMemoryUsage(ctx)
+	assert.NoError(t, err, "Failed to delete hourly memory usage.")
 }

@@ -7,21 +7,21 @@ import (
 )
 
 const (
-	CPU                 string = "/api/metrics/realtime/cpu/"
-	CPU_PER_HOUR        string = "/api/metrics/hourly/cpu/"
-	CPU_PER_DAY         string = "/api/metrics/daily/cpu/"
-	MEM                 string = "/api/metrics/realtime/memory/"
-	MEM_PER_HOUR        string = "/api/metrics/hourly/memory/"
-	MEM_PER_DAY         string = "/api/metrics/daily/memory/"
-	DISK_USAGE          string = "/api/metrics/realtime/disk-usage/"
-	DISK_USAGE_PER_HOUR string = "/api/metrics/hourly/disk-usage/"
-	DISK_USAGE_PER_DAY  string = "/api/metrics/daily/disk-usage/"
-	DISK_IO             string = "/api/metrics/realtime/disk-io/"
-	DISK_IO_PER_HOUR    string = "/api/metrics/hourly/disk-io/"
-	DISK_IO_PER_DAY     string = "/api/metrics/daily/disk-io/"
-	NET                 string = "/api/metrics/realtime/traffic/"
-	NET_PER_HOUR        string = "/api/metrics/hourly/traffic/"
-	NET_PER_DAY         string = "/api/metrics/daily/traffic/"
+	CPU               string = "/api/metrics/realtime/cpu/"
+	HOURLY_CPU_USAGE  string = "/api/metrics/hourly/cpu/"
+	DAILY_CPU_USAGE   string = "/api/metrics/daily/cpu/"
+	MEM               string = "/api/metrics/realtime/memory/"
+	HOURLY_MEM_USAGE  string = "/api/metrics/hourly/memory/"
+	DAILY_MEM_USAGE   string = "/api/metrics/daily/memory/"
+	DISK_USAGE        string = "/api/metrics/realtime/disk-usage/"
+	HOURLY_DISK_USAGE string = "/api/metrics/hourly/disk-usage/"
+	DAILY_DISK_USAGE  string = "/api/metrics/daily/disk-usage/"
+	DISK_IO           string = "/api/metrics/realtime/disk-io/"
+	HOURLY_DISK_IO    string = "/api/metrics/hourly/disk-io/"
+	DAILY_DISK_IO     string = "/api/metrics/daily/disk-io/"
+	NET               string = "/api/metrics/realtime/traffic/"
+	HOURLY_NET        string = "/api/metrics/hourly/traffic/"
+	DAILY_NET         string = "/api/metrics/daily/traffic/"
 )
 
 type URLResolver struct {
@@ -31,21 +31,21 @@ type URLResolver struct {
 func NewURLResolver() *URLResolver {
 	return &URLResolver{
 		checkTypeToURL: map[base.CheckType]string{
-			base.CPU:                 CPU,
-			base.CPU_PER_HOUR:        CPU_PER_HOUR,
-			base.CPU_PER_DAY:         CPU_PER_DAY,
-			base.MEM:                 MEM,
-			base.MEM_PER_HOUR:        MEM_PER_HOUR,
-			base.MEM_PER_DAY:         MEM_PER_DAY,
-			base.DISK_USAGE:          DISK_USAGE,
-			base.DISK_USAGE_PER_HOUR: DISK_USAGE_PER_HOUR,
-			base.DISK_USAGE_PER_DAY:  DISK_USAGE_PER_DAY,
-			base.DISK_IO:             DISK_IO,
-			base.DISK_IO_PER_HOUR:    DISK_IO_PER_HOUR,
-			base.DISK_IO_PER_DAY:     DISK_IO_PER_DAY,
-			base.NET:                 NET,
-			base.NET_PER_HOUR:        NET_PER_HOUR,
-			base.NET_PER_DAY:         NET_PER_DAY,
+			base.CPU:               CPU,
+			base.HOURLY_CPU_USAGE:  HOURLY_CPU_USAGE,
+			base.DAILY_CPU_USAGE:   DAILY_CPU_USAGE,
+			base.MEM:               MEM,
+			base.HOURLY_MEM_USAGE:  HOURLY_MEM_USAGE,
+			base.DAILY_MEM_USAGE:   DAILY_MEM_USAGE,
+			base.DISK_USAGE:        DISK_USAGE,
+			base.HOURLY_DISK_USAGE: HOURLY_DISK_USAGE,
+			base.DAILY_DISK_USAGE:  DAILY_DISK_USAGE,
+			base.DISK_IO:           DISK_IO,
+			base.HOURLY_DISK_IO:    HOURLY_DISK_IO,
+			base.DAILY_DISK_IO:     DAILY_DISK_IO,
+			base.NET:               NET,
+			base.HOURLY_NET:        HOURLY_NET,
+			base.DAILY_NET:         DAILY_NET,
 		},
 	}
 }

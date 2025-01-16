@@ -53,11 +53,11 @@ func (c *Check) queryDiskIO(ctx context.Context) (base.MetricData, error) {
 		})
 	}
 	metric := base.MetricData{
-		Type: base.DISK_IO_PER_HOUR,
+		Type: base.HOURLY_DISK_IO,
 		Data: data,
 	}
 
-	err = c.saveDiskIOPerHour(data, ctx)
+	err = c.saveHourlyDiskIO(data, ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -92,14 +92,14 @@ func (c *Check) getDiskIO(ctx context.Context) ([]base.DiskIOQuerySet, error) {
 	return querySet, nil
 }
 
-func (c *Check) saveDiskIOPerHour(data []base.CheckResult, ctx context.Context) error {
+func (c *Check) saveHourlyDiskIO(data []base.CheckResult, ctx context.Context) error {
 	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return nil
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	err = tx.DiskIOPerHour.MapCreateBulk(data, func(q *ent.DiskIOPerHourCreate, i int) {
+	err = tx.HourlyDiskIO.MapCreateBulk(data, func(q *ent.HourlyDiskIOCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
 			SetDevice(data[i].Device).
 			SetPeakReadBps(data[i].PeakReadBps).

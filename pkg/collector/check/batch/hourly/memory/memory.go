@@ -47,11 +47,11 @@ func (c *Check) queryMemoryUsage(ctx context.Context) (base.MetricData, error) {
 		Avg:       querySet[0].AVG,
 	}
 	metric := base.MetricData{
-		Type: base.MEM_PER_HOUR,
+		Type: base.HOURLY_MEM_USAGE,
 		Data: []base.CheckResult{data},
 	}
 
-	err = c.saveMemoryPerHour(data, ctx)
+	err = c.saveHourlyMemoryUsage(data, ctx)
 	if err != nil {
 		return base.MetricData{}, err
 	}
@@ -83,14 +83,14 @@ func (c *Check) getMemory(ctx context.Context) ([]base.MemoryQuerySet, error) {
 	return querySet, nil
 }
 
-func (c *Check) saveMemoryPerHour(data base.CheckResult, ctx context.Context) error {
+func (c *Check) saveHourlyMemoryUsage(data base.CheckResult, ctx context.Context) error {
 	tx, err := c.GetClient().Tx(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	err = tx.MemoryPerHour.Create().
+	err = tx.HourlyMemoryUsage.Create().
 		SetTimestamp(data.Timestamp).
 		SetPeak(data.Peak).
 		SetAvg(data.Avg).Exec(ctx)

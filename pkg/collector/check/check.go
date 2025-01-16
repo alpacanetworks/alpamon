@@ -6,16 +6,16 @@ import (
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	cleanup "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/cleanup"
-	cpudaily "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/cpu"
-	diskiodaily "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/disk/io"
-	diskusagedaily "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/disk/usage"
-	memorydaily "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/memory"
-	netdaily "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/net"
-	cpuhourly "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/hourly/cpu"
-	diskiohourly "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/hourly/disk/io"
-	diskusagehourly "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/hourly/disk/usage"
-	memoryhourly "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/hourly/memory"
-	nethourly "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/hourly/net"
+	dailycpu "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/cpu"
+	dailydiskio "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/disk/io"
+	dailydiskusage "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/disk/usage"
+	dailymemory "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/memory"
+	dailynet "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/daily/net"
+	hourlycpu "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/hourly/cpu"
+	hourlydiskio "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/hourly/disk/io"
+	hourlydiskusage "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/hourly/disk/usage"
+	hourlymemory "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/hourly/memory"
+	hourlynet "github.com/alpacanetworks/alpamon-go/pkg/collector/check/batch/hourly/net"
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/realtime/cpu"
 	diskio "github.com/alpacanetworks/alpamon-go/pkg/collector/check/realtime/disk/io"
 	diskusage "github.com/alpacanetworks/alpamon-go/pkg/collector/check/realtime/disk/usage"
@@ -24,24 +24,24 @@ import (
 )
 
 var checkFactories = map[base.CheckType]newCheck{
-	base.CPU:                 cpu.NewCheck,
-	base.CPU_PER_HOUR:        cpuhourly.NewCheck,
-	base.CPU_PER_DAY:         cpudaily.NewCheck,
-	base.MEM:                 memory.NewCheck,
-	base.MEM_PER_HOUR:        memoryhourly.NewCheck,
-	base.MEM_PER_DAY:         memorydaily.NewCheck,
-	base.DISK_USAGE:          diskusage.NewCheck,
-	base.DISK_USAGE_PER_HOUR: diskusagehourly.NewCheck,
-	base.DISK_USAGE_PER_DAY:  diskusagedaily.NewCheck,
-	base.DISK_IO:             diskio.NewCheck,
-	base.DISK_IO_COLLECTOR:   diskio.NewCheck,
-	base.DISK_IO_PER_HOUR:    diskiohourly.NewCheck,
-	base.DISK_IO_PER_DAY:     diskiodaily.NewCheck,
-	base.NET:                 net.NewCheck,
-	base.NET_COLLECTOR:       net.NewCheck,
-	base.NET_PER_HOUR:        nethourly.NewCheck,
-	base.NET_PER_DAY:         netdaily.NewCheck,
-	base.CLEANUP:             cleanup.NewCheck,
+	base.CPU:               cpu.NewCheck,
+	base.HOURLY_CPU_USAGE:  hourlycpu.NewCheck,
+	base.DAILY_CPU_USAGE:   dailycpu.NewCheck,
+	base.MEM:               memory.NewCheck,
+	base.HOURLY_MEM_USAGE:  hourlymemory.NewCheck,
+	base.DAILY_MEM_USAGE:   dailymemory.NewCheck,
+	base.DISK_USAGE:        diskusage.NewCheck,
+	base.HOURLY_DISK_USAGE: hourlydiskusage.NewCheck,
+	base.DAILY_DISK_USAGE:  dailydiskusage.NewCheck,
+	base.DISK_IO:           diskio.NewCheck,
+	base.DISK_IO_COLLECTOR: diskio.NewCheck,
+	base.HOURLY_DISK_IO:    hourlydiskio.NewCheck,
+	base.DAILY_DISK_IO:     dailydiskio.NewCheck,
+	base.NET:               net.NewCheck,
+	base.NET_COLLECTOR:     net.NewCheck,
+	base.HOURLY_NET:        hourlynet.NewCheck,
+	base.DAILY_NET:         dailynet.NewCheck,
+	base.CLEANUP:           cleanup.NewCheck,
 }
 
 type Check interface {
