@@ -1,4 +1,4 @@
-# alpamon-go
+# Alpamon
 New Go-based Secure Server Agent for Alpacon
 
 **Alpamon** is a server agent for **Alpacon**. Each server should have Alpamon installed to be controlled via Alpacon.
@@ -34,7 +34,7 @@ sudo yum install alpamon
 #### Clone the source code
 To get started on macOS, clone the source code from the repository:
 ```bash
-git clone https://github.com/alpacanetworks/alpamon-go.git
+git clone https://github.com/alpacanetworks/alpamon.git
 ```
 
 #### Generate Ent Schema Code with Entgo
@@ -87,6 +87,12 @@ debug = true
     - `ca_cert`: Path for the CA certificate
 - `logging`: Logging settings
     - `debug`: Whether to print debug logs or not
+ 
+For testing with the `Alpacon-Server`, you can use the following values:
+- `url` = `http://localhost:8000`
+- `id` = `7a50ea6c-2138-4d3f-9633-e50694c847c4`
+- `key` = `alpaca`
+
 
 ## Run
 
@@ -94,7 +100,7 @@ debug = true
 
 To run Alpamon in a local development environment, navigate to the cmd/alpamon directory and run the application using Go:
 ```sh
-cd /path/to/alpamon-go/cmd/alpamon
+cd /path/to/alpamon/cmd/alpamon
 
 go run main.go
 ```
