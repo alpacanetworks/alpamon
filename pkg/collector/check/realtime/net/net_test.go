@@ -19,7 +19,7 @@ func setUp(checkType base.CheckType) base.CheckStrategy {
 		Name:     string(checkType) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
-		Client:   db.InitDB(),
+		Client:   db.InitTestDB(),
 	}
 
 	check := NewCheck(args)

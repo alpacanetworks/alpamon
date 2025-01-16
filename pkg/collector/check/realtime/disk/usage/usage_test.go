@@ -18,7 +18,7 @@ func setUp() *Check {
 		Name:     string(base.DISK_USAGE) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
-		Client:   db.InitDB(),
+		Client:   db.InitTestDB(),
 	}
 
 	check := NewCheck(args).(*Check)
