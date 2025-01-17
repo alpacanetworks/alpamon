@@ -2,55 +2,67 @@ package cpu
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func setUp() *Check {
+type DailyCPUUsageCheckSuite struct {
+	suite.Suite
+	client *ent.Client
+	check  *Check
+	ctx    context.Context
+}
+
+func (suite *DailyCPUUsageCheckSuite) SetupSuite() {
+	suite.client = db.InitTestDB()
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
 		Type:     base.DAILY_CPU_USAGE,
 		Name:     string(base.DAILY_CPU_USAGE) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
-		Client:   db.InitTestDB(),
+		Client:   suite.client,
 	}
-
-	check := NewCheck(args).(*Check)
-
-	return check
+	suite.check = NewCheck(args).(*Check)
+	suite.ctx = context.Background()
 }
 
-func TestGetHourlyCPUUsage(t *testing.T) {
-	check := setUp()
-	ctx := context.Background()
+func (suite *DailyCPUUsageCheckSuite) TearDownSuite() {
+	err := os.Remove("alpamon.db")
+	suite.Require().NoError(err, "failed to delete test db file")
+}
 
-	err := check.GetClient().HourlyCPUUsage.Create().
+func (suite *DailyCPUUsageCheckSuite) TestGetHourlyCPUUsage() {
+	err := suite.check.GetClient().HourlyCPUUsage.Create().
 		SetTimestamp(time.Now()).
 		SetPeak(50.0).
-		SetAvg(50.0).Exec(ctx)
-	assert.NoError(t, err, "Failed to create hourly cpu usage.")
+		SetAvg(50.0).Exec(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to create hourly cpu usage.")
 
-	querySet, err := check.getHourlyCPUUsage(ctx)
-	assert.NoError(t, err, "Failed to get hourly cpu usage.")
-	assert.NotEmpty(t, querySet, "HourlyCPUUsage queryset should not be empty")
+	querySet, err := suite.check.getHourlyCPUUsage(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to get hourly cpu usage.")
+	assert.NotEmpty(suite.T(), querySet, "HourlyCPUUsage queryset should not be empty")
 }
 
-func TestDeleteHourlyCPUUsage(t *testing.T) {
-	check := setUp()
-	ctx := context.Background()
-
-	err := check.GetClient().HourlyCPUUsage.Create().
+func (suite *DailyCPUUsageCheckSuite) TestDeleteHourlyCPUUsage() {
+	err := suite.check.GetClient().HourlyCPUUsage.Create().
 		SetTimestamp(time.Now().Add(-25 * time.Hour)).
 		SetPeak(50.0).
-		SetAvg(50.0).Exec(ctx)
-	assert.NoError(t, err, "Failed to create hourly cpu usage.")
+		SetAvg(50.0).Exec(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to create hourly cpu usage.")
 
-	err = check.deleteHourlyCPUUsage(ctx)
-	assert.NoError(t, err, "Failed to delete hourly cpu usage.")
+	err = suite.check.deleteHourlyCPUUsage(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to delete hourly cpu usage.")
+}
+
+func TestDailyCPUUsageCheckSuite(t *testing.T) {
+	suite.Run(t, new(DailyCPUUsageCheckSuite))
 }

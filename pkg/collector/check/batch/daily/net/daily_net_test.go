@@ -3,35 +3,46 @@ package net
 import (
 	"context"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func setUp() *Check {
+type DailyNetCheckSuite struct {
+	suite.Suite
+	client *ent.Client
+	check  *Check
+	ctx    context.Context
+}
+
+func (suite *DailyNetCheckSuite) SetupSuite() {
+	suite.client = db.InitTestDB()
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
 		Type:     base.DAILY_NET,
 		Name:     string(base.DAILY_NET) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
-		Client:   db.InitTestDB(),
+		Client:   suite.client,
 	}
-
-	check := NewCheck(args).(*Check)
-
-	return check
+	suite.check = NewCheck(args).(*Check)
+	suite.ctx = context.Background()
 }
 
-func TestGetHourlyTraffic(t *testing.T) {
-	check := setUp()
-	ctx := context.Background()
+func (suite *DailyNetCheckSuite) TearDownSuite() {
+	err := os.Remove("alpamon.db")
+	suite.Require().NoError(err, "failed to delete test db file")
+}
 
-	err := check.GetClient().HourlyTraffic.Create().
+func (suite *DailyNetCheckSuite) TestGetHourlyTraffic() {
+	err := suite.check.GetClient().HourlyTraffic.Create().
 		SetTimestamp(time.Now()).
 		SetName(uuid.NewString()).
 		SetPeakInputPps(rand.Float64()).
@@ -41,19 +52,16 @@ func TestGetHourlyTraffic(t *testing.T) {
 		SetAvgInputPps(rand.Float64()).
 		SetAvgInputBps(rand.Float64()).
 		SetAvgOutputPps(rand.Float64()).
-		SetAvgOutputBps(rand.Float64()).Exec(ctx)
-	assert.NoError(t, err, "Failed to create hourly traffic.")
+		SetAvgOutputBps(rand.Float64()).Exec(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to create hourly traffic.")
 
-	querySet, err := check.getHourlyTraffic(ctx)
-	assert.NoError(t, err, "Failed to get hourly traffic.")
-	assert.NotEmpty(t, querySet, "HourlyTraffic queryset should not be empty")
+	querySet, err := suite.check.getHourlyTraffic(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to get hourly traffic.")
+	assert.NotEmpty(suite.T(), querySet, "HourlyTraffic queryset should not be empty")
 }
 
-func TestDeleteHourlyTraffic(t *testing.T) {
-	check := setUp()
-	ctx := context.Background()
-
-	err := check.GetClient().HourlyTraffic.Create().
+func (suite *DailyNetCheckSuite) TestDeleteHourlyTraffic() {
+	err := suite.check.GetClient().HourlyTraffic.Create().
 		SetTimestamp(time.Now().Add(-25 * time.Hour)).
 		SetName(uuid.NewString()).
 		SetPeakInputPps(rand.Float64()).
@@ -63,9 +71,13 @@ func TestDeleteHourlyTraffic(t *testing.T) {
 		SetAvgInputPps(rand.Float64()).
 		SetAvgInputBps(rand.Float64()).
 		SetAvgOutputPps(rand.Float64()).
-		SetAvgOutputBps(rand.Float64()).Exec(ctx)
-	assert.NoError(t, err, "Failed to create hourly traffic.")
+		SetAvgOutputBps(rand.Float64()).Exec(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to create hourly traffic.")
 
-	err = check.deleteHourlyTraffic(ctx)
-	assert.NoError(t, err, "Failed to delete hourly traffic.")
+	err = suite.check.deleteHourlyTraffic(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to delete hourly traffic.")
+}
+
+func TestDailyNetCheckSuite(t *testing.T) {
+	suite.Run(t, new(DailyNetCheckSuite))
 }

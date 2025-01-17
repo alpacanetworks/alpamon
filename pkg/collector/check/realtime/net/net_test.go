@@ -3,6 +3,7 @@ package net
 import (
 	"context"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -16,73 +17,74 @@ import (
 
 type NetCheckSuite struct {
 	suite.Suite
-	client *ent.Client
+	client       *ent.Client
+	collectCheck *CollectCheck
+	sendCheck    *SendCheck
+	ctx          context.Context
 }
 
 func (suite *NetCheckSuite) SetupSuite() {
 	suite.client = db.InitTestDB()
-}
-
-func setUp(checkType base.CheckType, client *ent.Client) base.CheckStrategy {
 	buffer := base.NewCheckBuffer(10)
-	args := &base.CheckArgs{
-		Type:     checkType,
-		Name:     string(checkType) + "_" + uuid.NewString(),
+	collect_args := &base.CheckArgs{
+		Type:     base.NET_COLLECTOR,
+		Name:     string(base.NET_COLLECTOR) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
-		Client:   client,
+		Client:   suite.client,
 	}
+	send_args := &base.CheckArgs{
+		Type:     base.NET,
+		Name:     string(base.NET) + "_" + uuid.NewString(),
+		Interval: time.Duration(1 * time.Second),
+		Buffer:   buffer,
+		Client:   suite.client,
+	}
+	suite.collectCheck = NewCheck(collect_args).(*CollectCheck)
+	suite.sendCheck = NewCheck(send_args).(*SendCheck)
+	suite.ctx = context.Background()
+}
 
-	check := NewCheck(args)
-
-	return check
+func (suite *NetCheckSuite) TearDownSuite() {
+	err := os.Remove("alpamon.db")
+	suite.Require().NoError(err, "failed to delete test db file")
 }
 
 func (suite *NetCheckSuite) TestCollectIOCounters() {
-	check := setUp(base.NET_COLLECTOR, suite.client).(*CollectCheck)
-
-	ioCounters, err := check.collectIOCounters()
+	ioCounters, err := suite.collectCheck.collectIOCounters()
 	assert.NoError(suite.T(), err, "Failed to get network IO.")
 	assert.NotEmpty(suite.T(), ioCounters, "Network IO should not be empty")
 }
 
 func (suite *NetCheckSuite) TestCollectInterfaces() {
-	check := setUp(base.NET_COLLECTOR, suite.client).(*CollectCheck)
-
-	interfaces, err := check.collectInterfaces()
+	interfaces, err := suite.collectCheck.collectInterfaces()
 	assert.NoError(suite.T(), err, "Failed to get interfaces.")
 	assert.NotEmpty(suite.T(), interfaces, "Interfaces should not be empty")
 }
 
 func (suite *NetCheckSuite) TestSaveTraffic() {
-	check := setUp(base.NET_COLLECTOR, suite.client).(*CollectCheck)
-	ctx := context.Background()
-
-	ioCounters, interfaces, err := check.collectTraffic()
+	ioCounters, interfaces, err := suite.collectCheck.collectTraffic()
 	assert.NoError(suite.T(), err, "Failed to get traffic.")
 	assert.NotEmpty(suite.T(), ioCounters, "Network IO should not be empty")
 	assert.NotEmpty(suite.T(), interfaces, "Interfaces should not be empty")
 
-	data := check.parseTraffic(ioCounters, interfaces)
+	data := suite.collectCheck.parseTraffic(ioCounters, interfaces)
 
-	err = check.saveTraffic(data, ctx)
+	err = suite.collectCheck.saveTraffic(data, suite.ctx)
 	assert.NoError(suite.T(), err, "Failed to save traffic.")
 }
 
 func (suite *NetCheckSuite) TestGetTraffic() {
-	check := setUp(base.NET, suite.client).(*SendCheck)
-	ctx := context.Background()
-
-	err := check.GetClient().Traffic.Create().
+	err := suite.sendCheck.GetClient().Traffic.Create().
 		SetTimestamp(time.Now()).
 		SetName(uuid.NewString()).
 		SetInputPps(rand.Float64()).
 		SetInputBps(rand.Float64()).
 		SetOutputPps(rand.Float64()).
-		SetOutputBps(rand.Float64()).Exec(ctx)
+		SetOutputBps(rand.Float64()).Exec(suite.ctx)
 	assert.NoError(suite.T(), err, "Failed to create traffic.")
 
-	querySet, err := check.getTraffic(ctx)
+	querySet, err := suite.sendCheck.getTraffic(suite.ctx)
 	assert.NoError(suite.T(), err, "Failed to get traffic queryset.")
 	assert.NotEmpty(suite.T(), querySet, "Traffic queryset should not be empty")
 }

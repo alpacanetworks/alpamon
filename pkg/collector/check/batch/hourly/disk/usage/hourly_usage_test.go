@@ -3,52 +3,61 @@ package usage
 import (
 	"context"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func setUp() *Check {
+type HourlyDiskUsageCheckSuite struct {
+	suite.Suite
+	client *ent.Client
+	check  *Check
+	ctx    context.Context
+}
+
+func (suite *HourlyDiskUsageCheckSuite) SetupSuite() {
+	suite.client = db.InitTestDB()
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
 		Type:     base.HOURLY_DISK_USAGE,
 		Name:     string(base.HOURLY_DISK_USAGE) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
-		Client:   db.InitTestDB(),
+		Client:   suite.client,
 	}
-
-	check := NewCheck(args).(*Check)
-
-	return check
+	suite.check = NewCheck(args).(*Check)
+	suite.ctx = context.Background()
 }
 
-func TestGetDiskUsage(t *testing.T) {
-	check := setUp()
-	ctx := context.Background()
+func (suite *HourlyDiskUsageCheckSuite) TearDownSuite() {
+	err := os.Remove("alpamon.db")
+	suite.Require().NoError(err, "failed to delete test db file")
+}
 
-	err := check.GetClient().DiskUsage.Create().
+func (suite *HourlyDiskUsageCheckSuite) TestGetDiskUsage() {
+	err := suite.check.GetClient().DiskUsage.Create().
 		SetTimestamp(time.Now()).
 		SetDevice(uuid.NewString()).
 		SetMountPoint(uuid.NewString()).
 		SetUsage(rand.Float64()).
 		SetTotal(int64(rand.Int())).
 		SetFree(int64(rand.Int())).
-		SetUsed(int64(rand.Int())).Exec(ctx)
-	assert.NoError(t, err, "Failed to create disk usage.")
+		SetUsed(int64(rand.Int())).Exec(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to create disk usage.")
 
-	querySet, err := check.getDiskUsage(ctx)
-	assert.NoError(t, err, "Failed to get disk usage.")
-	assert.NotEmpty(t, querySet, "Disk usage queryset should not be empty")
+	querySet, err := suite.check.getDiskUsage(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to get disk usage.")
+	assert.NotEmpty(suite.T(), querySet, "Disk usage queryset should not be empty")
 }
 
-func TestSaveHourlyDiskUsage(t *testing.T) {
-	check := setUp()
-	ctx := context.Background()
+func (suite *HourlyDiskUsageCheckSuite) TestSaveHourlyDiskUsage() {
 	data := []base.CheckResult{
 		{
 			Timestamp: time.Now(),
@@ -64,24 +73,25 @@ func TestSaveHourlyDiskUsage(t *testing.T) {
 		},
 	}
 
-	err := check.saveHourlyDiskUsage(data, ctx)
-	assert.NoError(t, err, "Failed to save hourly disk usage.")
+	err := suite.check.saveHourlyDiskUsage(data, suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to save hourly disk usage.")
 }
 
-func TestDeleteDiskUsage(t *testing.T) {
-	check := setUp()
-	ctx := context.Background()
-
-	err := check.GetClient().DiskUsage.Create().
+func (suite *HourlyDiskUsageCheckSuite) TestDeleteDiskUsage() {
+	err := suite.check.GetClient().DiskUsage.Create().
 		SetTimestamp(time.Now().Add(-2 * time.Hour)).
 		SetDevice(uuid.NewString()).
 		SetMountPoint(uuid.NewString()).
 		SetUsage(rand.Float64()).
 		SetTotal(int64(rand.Int())).
 		SetFree(int64(rand.Int())).
-		SetUsed(int64(rand.Int())).Exec(ctx)
-	assert.NoError(t, err, "Failed to create disk usage.")
+		SetUsed(int64(rand.Int())).Exec(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to create disk usage.")
 
-	err = check.deleteDiskUsage(ctx)
-	assert.NoError(t, err, "Failed to delete disk usage.")
+	err = suite.check.deleteDiskUsage(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to delete disk usage.")
+}
+
+func TestHourlyDiskUsageCheckSuite(t *testing.T) {
+	suite.Run(t, new(HourlyDiskUsageCheckSuite))
 }
