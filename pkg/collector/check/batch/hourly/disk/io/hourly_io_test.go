@@ -3,49 +3,58 @@ package io
 import (
 	"context"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func setUp() *Check {
+type HourlyDiskIOCheckSuite struct {
+	suite.Suite
+	client *ent.Client
+	check  *Check
+	ctx    context.Context
+}
+
+func (suite *HourlyDiskIOCheckSuite) SetupSuite() {
+	suite.client = db.InitTestDB()
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
 		Type:     base.HOURLY_DISK_IO,
 		Name:     string(base.HOURLY_DISK_IO) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
-		Client:   db.InitTestDB(),
+		Client:   suite.client,
 	}
-
-	check := NewCheck(args).(*Check)
-
-	return check
+	suite.check = NewCheck(args).(*Check)
+	suite.ctx = context.Background()
 }
 
-func TestGetDiskIO(t *testing.T) {
-	check := setUp()
-	ctx := context.Background()
+func (suite *HourlyDiskIOCheckSuite) TearDownSuite() {
+	err := os.Remove("alpamon.db")
+	suite.Require().NoError(err, "failed to delete test db file")
+}
 
-	err := check.GetClient().DiskIO.Create().
+func (suite *HourlyDiskIOCheckSuite) TestGetDiskIO() {
+	err := suite.check.GetClient().DiskIO.Create().
 		SetTimestamp(time.Now()).
 		SetDevice(uuid.NewString()).
 		SetReadBps(rand.Float64()).
-		SetWriteBps(rand.Float64()).Exec(ctx)
-	assert.NoError(t, err, "Failed to create disk io.")
+		SetWriteBps(rand.Float64()).Exec(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to create disk io.")
 
-	querySet, err := check.getDiskIO(ctx)
-	assert.NoError(t, err, "Failed to get disk io.")
-	assert.NotEmpty(t, querySet, "Disk io queryset should not be empty")
+	querySet, err := suite.check.getDiskIO(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to get disk io.")
+	assert.NotEmpty(suite.T(), querySet, "Disk io queryset should not be empty")
 }
 
-func TestSaveHourlyDiskIO(t *testing.T) {
-	check := setUp()
-	ctx := context.Background()
+func (suite *HourlyDiskIOCheckSuite) TestSaveHourlyDiskIO() {
 	data := []base.CheckResult{
 		{
 			Timestamp:    time.Now(),
@@ -65,21 +74,22 @@ func TestSaveHourlyDiskIO(t *testing.T) {
 		},
 	}
 
-	err := check.saveHourlyDiskIO(data, ctx)
-	assert.NoError(t, err, "Failed to save hourly disk io.")
+	err := suite.check.saveHourlyDiskIO(data, suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to save hourly disk io.")
 }
 
-func TestDeleteDiskIO(t *testing.T) {
-	check := setUp()
-	ctx := context.Background()
-
-	err := check.GetClient().DiskIO.Create().
+func (suite *HourlyDiskIOCheckSuite) TestDeleteDiskIO() {
+	err := suite.check.GetClient().DiskIO.Create().
 		SetTimestamp(time.Now().Add(-2 * time.Hour)).
 		SetDevice(uuid.NewString()).
 		SetReadBps(rand.Float64()).
-		SetWriteBps(rand.Float64()).Exec(ctx)
-	assert.NoError(t, err, "Failed to create disk io.")
+		SetWriteBps(rand.Float64()).Exec(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to create disk io.")
 
-	err = check.deleteDiskIO(ctx)
-	assert.NoError(t, err, "Failed to delete disk io.")
+	err = suite.check.deleteDiskIO(suite.ctx)
+	assert.NoError(suite.T(), err, "Failed to delete disk io.")
+}
+
+func TestHourlyDiskIOCheckSuite(t *testing.T) {
+	suite.Run(t, new(HourlyDiskIOCheckSuite))
 }

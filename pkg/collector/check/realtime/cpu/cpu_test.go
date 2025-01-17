@@ -2,49 +2,63 @@ package cpu
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db"
+	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func setUp() *Check {
+type CPUCheckSuite struct {
+	suite.Suite
+	client *ent.Client
+	check  *Check
+	ctx    context.Context
+}
+
+func (suite *CPUCheckSuite) SetupSuite() {
+	suite.client = db.InitTestDB()
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
 		Type:     base.CPU,
 		Name:     string(base.CPU) + "_" + uuid.NewString(),
 		Interval: time.Duration(1 * time.Second),
 		Buffer:   buffer,
-		Client:   db.InitTestDB(),
+		Client:   suite.client,
 	}
-
-	check := NewCheck(args).(*Check)
-
-	return check
+	suite.check = NewCheck(args).(*Check)
+	suite.ctx = context.Background()
 }
 
-func TestCollectCPUUsage(t *testing.T) {
-	check := setUp()
-
-	usage, err := check.collectCPUUsage()
-
-	assert.NoError(t, err, "Failed to get cpu usage.")
-	assert.GreaterOrEqual(t, usage, 0.0, "CPU usage should be non-negative.")
-	assert.LessOrEqual(t, usage, 100.0, "CPU usage should not exceed 100%.")
+func (suite *CPUCheckSuite) TearDownSuite() {
+	err := os.Remove("alpamon.db")
+	suite.Require().NoError(err, "failed to delete test db file")
 }
 
-func TestSaveCPUUsage(t *testing.T) {
-	check := setUp()
-	ctx := context.Background()
+func (suite *CPUCheckSuite) TestCollectCPUUsage() {
+	usage, err := suite.check.collectCPUUsage()
+
+	assert.NoError(suite.T(), err, "Failed to get cpu usage.")
+	assert.GreaterOrEqual(suite.T(), usage, 0.0, "CPU usage should be non-negative.")
+	assert.LessOrEqual(suite.T(), usage, 100.0, "CPU usage should not exceed 100%.")
+}
+
+func (suite *CPUCheckSuite) TestSaveCPUUsage() {
 	data := base.CheckResult{
 		Timestamp: time.Now(),
 		Usage:     50.0,
 	}
 
-	err := check.saveCPUUsage(data, ctx)
+	err := suite.check.saveCPUUsage(data, suite.ctx)
 
-	assert.NoError(t, err, "Failed to save cpu usage.")
+	assert.NoError(suite.T(), err, "Failed to save cpu usage.")
+}
+
+func TestCPUCheckSuite(t *testing.T) {
+	suite.Run(t, new(CPUCheckSuite))
 }
