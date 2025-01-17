@@ -57,8 +57,8 @@ func (suite *DiskIOCheckSuite) TestCollectDiskIO() {
 	assert.NotEmpty(suite.T(), ioCounters, "Disk IO should not be empty")
 	for name, ioCounter := range ioCounters {
 		assert.NotEmpty(suite.T(), name, "Device name should not be empty")
-		assert.True(suite.T(), ioCounter.ReadBytes > 0, "Read bytes should be non-negative.")
-		assert.True(suite.T(), ioCounter.WriteBytes > 0, "Write bytes should be non-negative.")
+		assert.GreaterOrEqual(suite.T(), ioCounter.ReadBytes, 0, "Read bytes should be non-negative.")
+		assert.GreaterOrEqual(suite.T(), ioCounter.WriteBytes, 0, "Write bytes should be non-negative.")
 	}
 }
 
