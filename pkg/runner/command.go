@@ -566,11 +566,13 @@ func (cr *CommandRunner) runFileDownload(fileName string) (exitCode int, result 
 	} else {
 		for _, file := range cr.data.Files {
 			cmdData := CommandData{
-				Username:  file.Username,
-				Groupname: file.Groupname,
-				Type:      file.Type,
-				Content:   file.Content,
-				Path:      file.Path,
+				Username:       file.Username,
+				Groupname:      file.Groupname,
+				Type:           file.Type,
+				Content:        file.Content,
+				Path:           file.Path,
+				AllowOverwrite: file.AllowOverwrite,
+				AllowUnzip:     file.AllowUnzip,
 			}
 			code, message = fileDownload(cmdData, sysProcAttr)
 			if code != 0 {
@@ -756,8 +758,12 @@ func fileDownload(data CommandData, sysProcAttr *syscall.SysProcAttr) (exitCode 
 		return 1, err.Error()
 	}
 
+	if !data.AllowOverwrite && isFileExist(data.Path) {
+		return 1, fmt.Sprintf("%s already exists.", data.Path)
+	}
+
 	isZip := isZipFile(content, filepath.Ext(data.Path))
-	if isZip {
+	if isZip && data.AllowUnzip {
 		escapePath := utils.Quote(data.Path)
 		escapeDirPath := utils.Quote(filepath.Dir(data.Path))
 		command := fmt.Sprintf("tee %s > /dev/null && unzip -n %s -d %s; rm %s",
@@ -790,4 +796,9 @@ func isZipFile(content []byte, ext string) bool {
 	_, err := zip.NewReader(bytes.NewReader(content), int64(len(content)))
 
 	return err == nil
+}
+
+func isFileExist(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
 }

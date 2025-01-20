@@ -19,32 +19,36 @@ type Command struct {
 }
 
 type File struct {
-	Username  string `json:"username"`
-	Groupname string `json:"groupname"`
-	Type      string `json:"type"`
-	Content   string `json:"content"`
-	Path      string `json:"path"`
+	Username       string `json:"username"`
+	Groupname      string `json:"groupname"`
+	Type           string `json:"type"`
+	Content        string `json:"content"`
+	Path           string `json:"path"`
+	AllowOverwrite bool   `json:"allow_overwrite"`
+	AllowUnzip     bool   `json:"allow_unzip"`
 }
 
 type CommandData struct {
-	SessionID     string   `json:"session_id"`
-	URL           string   `json:"url"`
-	Rows          uint16   `json:"rows"`
-	Cols          uint16   `json:"cols"`
-	Username      string   `json:"username"`
-	Groupname     string   `json:"groupname"`
-	HomeDirectory string   `json:"home_directory"`
-	UID           uint64   `json:"uid"`
-	GID           uint64   `json:"gid"`
-	Comment       string   `json:"comment"`
-	Shell         string   `json:"shell"`
-	Groups        []uint64 `json:"groups"`
-	Type          string   `json:"type"`
-	Content       string   `json:"content"`
-	Path          string   `json:"path"`
-	Paths         []string `json:"paths"`
-	Files         []File   `json:"files,omitempty"`
-	Keys          []string `json:"keys"`
+	SessionID      string   `json:"session_id"`
+	URL            string   `json:"url"`
+	Rows           uint16   `json:"rows"`
+	Cols           uint16   `json:"cols"`
+	Username       string   `json:"username"`
+	Groupname      string   `json:"groupname"`
+	HomeDirectory  string   `json:"home_directory"`
+	UID            uint64   `json:"uid"`
+	GID            uint64   `json:"gid"`
+	Comment        string   `json:"comment"`
+	Shell          string   `json:"shell"`
+	Groups         []uint64 `json:"groups"`
+	Type           string   `json:"type"`
+	Content        string   `json:"content"`
+	Path           string   `json:"path"`
+	Paths          []string `json:"paths"`
+	Files          []File   `json:"files,omitempty"`
+	AllowOverwrite bool     `json:"allow_overwrite,omitempty"`
+	AllowUnzip     bool     `json:"allow_unzip,omitempty"`
+	Keys           []string `json:"keys"`
 }
 
 type CommandRunner struct {
