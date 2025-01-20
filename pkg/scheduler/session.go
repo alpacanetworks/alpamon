@@ -2,22 +2,25 @@ package scheduler
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/config"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/alpacanetworks/alpamon-go/pkg/config"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/rs/zerolog/log"
 )
 
 const (
 	checkSessionURL = "/api/servers/servers/-/"
+	maxRetryTimeout = 3 * 24 * time.Hour
 )
 
 func InitSession() *Session {
@@ -51,31 +54,39 @@ func InitSession() *Session {
 
 func (session *Session) CheckSession() bool {
 	timeout := config.MinConnectInterval
+	ctx, cancel := context.WithTimeout(context.Background(), maxRetryTimeout)
+	defer cancel()
 
 	for {
-		resp, _, err := session.Get(checkSessionURL, 5)
-		if err != nil {
-			log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds", config.GlobalSettings.ServerURL, int(timeout.Seconds()))
-			time.Sleep(timeout)
-			timeout *= 2
-			if timeout > config.MaxConnectInterval {
-				timeout = config.MaxConnectInterval
+		select {
+		case <-ctx.Done():
+			log.Error().Msg("Maximum retry duration reached. Shutting down.")
+			os.Exit(1)
+		default:
+			resp, _, err := session.Get(checkSessionURL, 5)
+			if err != nil {
+				log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds", config.GlobalSettings.ServerURL, int(timeout.Seconds()))
+				time.Sleep(timeout)
+				timeout *= 2
+				if timeout > config.MaxConnectInterval {
+					timeout = config.MaxConnectInterval
+				}
+				continue
 			}
-			continue
-		}
 
-		var response map[string]interface{}
-		err = json.Unmarshal(resp, &response)
-		if err != nil {
-			log.Debug().Err(err).Msg("Failed to unmarshal JSON")
-			continue
-		}
+			var response map[string]interface{}
+			err = json.Unmarshal(resp, &response)
+			if err != nil {
+				log.Debug().Err(err).Msg("Failed to unmarshal JSON")
+				continue
+			}
 
-		if commissioned, ok := response["commissioned"].(bool); ok {
-			return commissioned
-		} else {
-			log.Error().Msg("Unable to find 'commissioned' field in the response")
-			continue
+			if commissioned, ok := response["commissioned"].(bool); ok {
+				return commissioned
+			} else {
+				log.Error().Msg("Unable to find 'commissioned' field in the response")
+				continue
+			}
 		}
 	}
 }
@@ -169,4 +180,13 @@ func (session *Session) MultipartRequest(url string, body bytes.Buffer, contentT
 	}
 
 	return responseBody, resp.StatusCode, nil
+}
+
+func (session *Session) Post(url string, rawBody interface{}, timeout time.Duration) ([]byte, int, error) {
+	req, err := session.newRequest(http.MethodPost, url, rawBody)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return session.do(req, timeout)
 }
