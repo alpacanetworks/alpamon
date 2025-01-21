@@ -581,9 +581,6 @@ func (cr *CommandRunner) runFileDownload(fileName string) (exitCode int, result 
 			}
 			code, message = fileDownload(cmdData, sysProcAttr)
 			statFileTransfer(code, UPLOAD, message, cmdData)
-			if code != 0 {
-				break
-			}
 		}
 	}
 
