@@ -122,7 +122,10 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 	case "download":
 		return cr.runFileDownload(args[1])
 	case "upload":
-		return cr.runFileUpload(args[1])
+		code, message := cr.runFileUpload(args[1])
+		statFileTransfer(code, DOWNLOAD, message, cr.data)
+
+		return code, message
 	case "openpty":
 		data := openPtyData{
 			SessionID:     cr.data.SessionID,
@@ -563,6 +566,7 @@ func (cr *CommandRunner) runFileDownload(fileName string) (exitCode int, result 
 
 	if len(cr.data.Files) == 0 {
 		code, message = fileDownload(cr.data, sysProcAttr)
+		statFileTransfer(code, UPLOAD, message, cr.data)
 	} else {
 		for _, file := range cr.data.Files {
 			cmdData := CommandData{
@@ -573,8 +577,10 @@ func (cr *CommandRunner) runFileDownload(fileName string) (exitCode int, result 
 				Path:           file.Path,
 				AllowOverwrite: file.AllowOverwrite,
 				AllowUnzip:     file.AllowUnzip,
+				URL:            file.URL,
 			}
 			code, message = fileDownload(cmdData, sysProcAttr)
+			statFileTransfer(code, UPLOAD, message, cmdData)
 			if code != 0 {
 				break
 			}
@@ -801,4 +807,16 @@ func isZipFile(content []byte, ext string) bool {
 func isFileExist(path string) bool {
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)
+}
+
+func statFileTransfer(code int, transferType transferType, message string, data CommandData) {
+	url := fmt.Sprint(data.URL + "stat/")
+	isSuccess := code == 0
+
+	payload := &commandStat{
+		Success: isSuccess,
+		Message: message,
+		Type:    transferType,
+	}
+	scheduler.Rqueue.Post(url, payload, 10, time.Time{})
 }

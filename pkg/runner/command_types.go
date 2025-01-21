@@ -26,6 +26,7 @@ type File struct {
 	Path           string `json:"path"`
 	AllowOverwrite bool   `json:"allow_overwrite"`
 	AllowUnzip     bool   `json:"allow_unzip"`
+	URL            string `json:"url"`
 }
 
 type CommandData struct {
@@ -107,6 +108,19 @@ type commandFin struct {
 	Result      string  `json:"result"`
 	ElapsedTime float64 `json:"elapsed_time"`
 }
+
+type commandStat struct {
+	Success bool         `json:"success"`
+	Message string       `json:"message"`
+	Type    transferType `json:"type"`
+}
+
+type transferType string
+
+const (
+	DOWNLOAD transferType = "download"
+	UPLOAD   transferType = "upload"
+)
 
 var nonZipExt = map[string]bool{
 	".jar":   true,
