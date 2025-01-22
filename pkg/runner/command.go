@@ -537,6 +537,13 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 		return 1, err.Error()
 	}
 
+	if recursive {
+		err = writer.WriteField("name", filepath.Base(name))
+		if err != nil {
+			return 1, err.Error()
+		}
+	}
+
 	_ = writer.Close()
 
 	contentType := writer.FormDataContentType()
