@@ -134,7 +134,7 @@ func (fc *FtpClient) close() {
 func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (CommandResult, error) {
 	switch command {
 	case List:
-		return fc.list(data.Path, data.Depth)
+		return fc.list(data.Path, data.Depth, data.ShowHidden)
 	case Mkd:
 		return fc.mkd(data.Path)
 	case Cwd:
@@ -168,13 +168,13 @@ func (fc *FtpClient) parsePath(path string) string {
 	return parsedPath
 }
 
-func (fc *FtpClient) list(rootDir string, depth int) (CommandResult, error) {
+func (fc *FtpClient) list(rootDir string, depth int, showHidden bool) (CommandResult, error) {
 	path := fc.parsePath(rootDir)
-	cmdResult, err := fc.listRecursive(path, depth, 0)
+	cmdResult, err := fc.listRecursive(path, depth, 0, showHidden)
 	return cmdResult, err
 }
 
-func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResult, error) {
+func (fc *FtpClient) listRecursive(path string, depth, current int, showHidden bool) (CommandResult, error) {
 	if depth > 3 {
 		return CommandResult{
 			Message: ErrTooLargeDepth,
@@ -185,7 +185,6 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 		Name:     filepath.Base(path),
 		Type:     "folder",
 		Path:     path,
-		Size:     int64(0),
 		ModTime:  nil,
 		Children: []CommandResult{},
 	}
@@ -203,6 +202,10 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 	}
 
 	for _, entry := range entries {
+		if !showHidden && strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+
 		fullPath := filepath.Join(path, entry.Name())
 		info, err := os.Lstat(fullPath)
 		if err != nil {
@@ -226,14 +229,13 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 			Name:    entry.Name(),
 			Path:    fullPath,
 			Code:    returnCodes[List].Success,
-			Size:    info.Size(),
 			ModTime: &modTime,
 		}
 
 		if entry.IsDir() {
 			child.Type = "folder"
 			if current < depth-1 {
-				childResult, err := fc.listRecursive(fullPath, depth, current+1)
+				childResult, err := fc.listRecursive(fullPath, depth, current+1, showHidden)
 				if err != nil {
 					result.Children = append(result.Children, childResult)
 					continue
@@ -243,10 +245,10 @@ func (fc *FtpClient) listRecursive(path string, depth, current int) (CommandResu
 		} else {
 			child.Type = "file"
 			child.Code = returnCodes[List].Success
+			child.Size = info.Size()
 		}
 
 		result.Children = append(result.Children, child)
-		result.Size += child.Size
 	}
 
 	dirInfo, err := os.Stat(path)

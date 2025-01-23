@@ -19,32 +19,37 @@ type Command struct {
 }
 
 type File struct {
-	Username  string `json:"username"`
-	Groupname string `json:"groupname"`
-	Type      string `json:"type"`
-	Content   string `json:"content"`
-	Path      string `json:"path"`
+	Username       string `json:"username"`
+	Groupname      string `json:"groupname"`
+	Type           string `json:"type"`
+	Content        string `json:"content"`
+	Path           string `json:"path"`
+	AllowOverwrite bool   `json:"allow_overwrite"`
+	AllowUnzip     bool   `json:"allow_unzip"`
+	URL            string `json:"url"`
 }
 
 type CommandData struct {
-	SessionID     string   `json:"session_id"`
-	URL           string   `json:"url"`
-	Rows          uint16   `json:"rows"`
-	Cols          uint16   `json:"cols"`
-	Username      string   `json:"username"`
-	Groupname     string   `json:"groupname"`
-	HomeDirectory string   `json:"home_directory"`
-	UID           uint64   `json:"uid"`
-	GID           uint64   `json:"gid"`
-	Comment       string   `json:"comment"`
-	Shell         string   `json:"shell"`
-	Groups        []uint64 `json:"groups"`
-	Type          string   `json:"type"`
-	Content       string   `json:"content"`
-	Path          string   `json:"path"`
-	Paths         []string `json:"paths"`
-	Files         []File   `json:"files,omitempty"`
-	Keys          []string `json:"keys"`
+	SessionID      string   `json:"session_id"`
+	URL            string   `json:"url"`
+	Rows           uint16   `json:"rows"`
+	Cols           uint16   `json:"cols"`
+	Username       string   `json:"username"`
+	Groupname      string   `json:"groupname"`
+	HomeDirectory  string   `json:"home_directory"`
+	UID            uint64   `json:"uid"`
+	GID            uint64   `json:"gid"`
+	Comment        string   `json:"comment"`
+	Shell          string   `json:"shell"`
+	Groups         []uint64 `json:"groups"`
+	Type           string   `json:"type"`
+	Content        string   `json:"content"`
+	Path           string   `json:"path"`
+	Paths          []string `json:"paths"`
+	Files          []File   `json:"files,omitempty"`
+	AllowOverwrite bool     `json:"allow_overwrite,omitempty"`
+	AllowUnzip     bool     `json:"allow_unzip,omitempty"`
+	Keys           []string `json:"keys"`
 }
 
 type CommandRunner struct {
@@ -102,4 +107,34 @@ type commandFin struct {
 	Success     bool    `json:"success"`
 	Result      string  `json:"result"`
 	ElapsedTime float64 `json:"elapsed_time"`
+}
+
+type commandStat struct {
+	Success bool         `json:"success"`
+	Message string       `json:"message"`
+	Type    transferType `json:"type"`
+}
+
+type transferType string
+
+const (
+	DOWNLOAD transferType = "download"
+	UPLOAD   transferType = "upload"
+)
+
+var nonZipExt = map[string]bool{
+	".jar":   true,
+	".war":   true,
+	".ear":   true,
+	".apk":   true,
+	".xpi":   true,
+	".vsix":  true,
+	".crx":   true,
+	".egg":   true,
+	".whl":   true,
+	".appx":  true,
+	".msix":  true,
+	".ipk":   true,
+	".nupkg": true,
+	".kmz":   true,
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ import (
 
 var (
 	PlatformLike string
+	pattern      = regexp.MustCompile(`[^\w@%+=:,./-]`)
 )
 
 func InitPlatform() {
@@ -153,4 +155,16 @@ func CalculateDiskIOBps(current disk.IOCountersStat, last disk.IOCountersStat, i
 	writeBps = writeBytesDiff / seconds
 
 	return readBps, writeBps
+}
+
+func Quote(s string) string {
+	if len(s) == 0 {
+		return "''"
+	}
+
+	if pattern.MatchString(s) {
+		return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
+	}
+
+	return s
 }
