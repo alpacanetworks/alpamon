@@ -4,7 +4,7 @@ CONF_FILE_PATH="/etc/alpamon/alpamon.conf"
 TMP_FILE_PATH="/usr/lib/tmpfiles.d/alpamon.conf"
 SVC_FILE_PATH="/lib/systemd/system/alpamon.service"
 LOG_FILE_PATH="/var/log/alpamon/alpamon.log"
-DB_FILE_PATH="/var/lib/alpamon/alpamon.db
+DB_FILE_PATH="/var/lib/alpamon/alpamon.db"
 
 if [ "$1" = 'purge' ]; then
     rm -f "$CONF_FILE_PATH" || true
