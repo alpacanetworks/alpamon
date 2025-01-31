@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -91,6 +92,12 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 	var cmd string
 	switch args[0] {
 	case "upgrade":
+		latestVersion := utils.GetLatestVersion()
+
+		if version.Version == latestVersion {
+			return 0, fmt.Sprintf("Alpamon is already up-to-date (version: %s)", version.Version)
+		}
+
 		if utils.PlatformLike == "debian" {
 			cmd = "apt-get update -y && " +
 				"apt-get install --only-upgrade alpamon"
@@ -99,8 +106,13 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		} else {
 			return 1, fmt.Sprintf("Platform '%s' not supported.", utils.PlatformLike)
 		}
-		log.Debug().Msgf("Upgrading Alpamon using command: '%s'...", cmd)
-		return cr.handleShellCmd(cmd, "root", "root", nil)
+		log.Debug().Msgf("Upgrading alpamon from %s to %s using command: '%s'...", version.Version, latestVersion, cmd)
+
+		time.AfterFunc(1*time.Second, func() {
+			cr.handleShellCmd(cmd, "root", "root", nil)
+		})
+
+		return 0, fmt.Sprintf("Alpamon will upgrade from %s to %s in 1 second.", version.Version, latestVersion)
 	case "commit":
 		cr.commit()
 		return 0, "Committed system information."
@@ -177,6 +189,7 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		time.AfterFunc(1*time.Second, func() {
 			cr.wsClient.restart()
 		})
+
 		return 0, "Alpamon will restart in 1 second."
 	case "quit":
 		time.AfterFunc(1*time.Second, func() {
@@ -184,11 +197,19 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		})
 		return 0, "Alpamon will quit in 1 second."
 	case "reboot":
-		log.Info().Msg("Reboot requested.")
-		return cr.handleShellCmd("reboot", "root", "root", nil)
+		log.Info().Msg("Reboot request received.")
+		time.AfterFunc(1*time.Second, func() {
+			cr.handleShellCmd("reboot", "root", "root", nil)
+		})
+
+		return 0, "Server will reboot in 1 second"
 	case "shutdown":
-		log.Info().Msg("Shutdown requested.")
-		return cr.handleShellCmd("shutdown", "root", "root", nil)
+		log.Info().Msg("Shutdown request received.")
+		time.AfterFunc(1*time.Second, func() {
+			cr.handleShellCmd("shutdown", "root", "root", nil)
+		})
+
+		return 0, "Server will shutdown in 1 second"
 	case "update":
 		log.Info().Msg("Upgrade system requested.")
 		if utils.PlatformLike == "debian" {
@@ -201,7 +222,6 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 			return 1, fmt.Sprintf("Platform '%s' not supported.", utils.PlatformLike)
 		}
 
-		log.Debug().Msgf("Running '%s'...", cmd)
 		return cr.handleShellCmd(cmd, "root", "root", nil)
 	case "help":
 		helpMessage := `

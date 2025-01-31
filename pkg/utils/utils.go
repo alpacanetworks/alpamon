@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-github/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/host"
@@ -187,4 +189,16 @@ func GetSystemUser(username string) (*user.User, error) {
 		return nil, fmt.Errorf("failed to lookup specified user: %w", err)
 	}
 	return usr, nil
+}
+
+func GetLatestVersion() string {
+	client := github.NewClient(nil)
+	ctx := context.Background()
+
+	release, _, err := client.Repositories.GetLatestRelease(ctx, "alpacanetworks", "alpamon")
+	if err != nil {
+		return ""
+	}
+
+	return release.GetTagName()
 }
