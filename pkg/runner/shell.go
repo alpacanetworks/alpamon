@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/rs/zerolog/log"
 	"os"
 	"os/exec"
@@ -97,7 +98,6 @@ func runCmd(args []string, username, groupname string, env map[string]string, ti
 		} else {
 			cmd = exec.CommandContext(ctx, args[0], args[1:]...)
 		}
-
 	} else {
 		if containsShellOperator(args) {
 			cmd = exec.CommandContext(ctx, "bash", "-c", strings.Join(args, " "))
@@ -117,6 +117,12 @@ func runCmd(args []string, username, groupname string, env map[string]string, ti
 	for key, value := range env {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 	}
+
+	usr, err := utils.GetSystemUser(username)
+	if err != nil {
+		return 1, err.Error()
+	}
+	cmd.Dir = usr.HomeDir
 
 	output, err := cmd.Output()
 	if err != nil {

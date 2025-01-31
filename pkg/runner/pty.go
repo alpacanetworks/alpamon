@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/creack/pty"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
@@ -12,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"os/user"
 	"strconv"
 	"strings"
 )
@@ -214,40 +214,35 @@ func (pc *PtyClient) close() {
 
 // getPtyUserAndEnv retrieves user information and sets environment variables.
 func (pc *PtyClient) getPtyUserAndEnv() (uid, gid int, groupIds []string, env map[string]string, err error) {
-	var usr *user.User
 	env = getDefaultEnv()
+
+	usr, err := utils.GetSystemUser(pc.username)
+	if err != nil {
+		return 0, 0, nil, nil, err
+	}
 
 	currentUID := os.Geteuid()
 	if currentUID != 0 || pc.username == "" {
-		usr, err = user.Current()
-		if err != nil {
-			return 0, 0, nil, env, fmt.Errorf("failed to get current user: %w", err)
-		}
-		// If Alpamon is not running as root or username is not specified, use the current user
 		env["USER"] = usr.Username
 		env["HOME"] = usr.HomeDir
-	} else { // If Alpamon is running as root, get the user by the provided username
-		usr, err = user.Lookup(pc.username)
-		if err != nil {
-			return 0, 0, nil, env, fmt.Errorf("failed to lookup specified user: %w", err)
-		}
+	} else {
 		env["USER"] = pc.username
 		env["HOME"] = pc.homeDirectory
 	}
 
 	uid, err = strconv.Atoi(usr.Uid)
 	if err != nil {
-		return 0, 0, nil, env, fmt.Errorf("failed to convert UID: %w", err)
+		return 0, 0, nil, nil, fmt.Errorf("failed to convert UID: %w", err)
 	}
 
 	gid, err = strconv.Atoi(usr.Gid)
 	if err != nil {
-		return 0, 0, nil, env, fmt.Errorf("failed to convert GID: %w", err)
+		return 0, 0, nil, nil, fmt.Errorf("failed to convert GID: %w", err)
 	}
 
 	groupIds, err = usr.GroupIds()
 	if err != nil {
-		return 0, 0, nil, env, fmt.Errorf("failed to get group IDs: %w", err)
+		return 0, 0, nil, nil, fmt.Errorf("failed to get group IDs: %w", err)
 	}
 
 	return uid, gid, groupIds, env, nil

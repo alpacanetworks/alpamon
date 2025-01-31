@@ -64,14 +64,14 @@ func (cr *CommandRunner) Run() {
 	}
 
 	if result != "" && cr.command.ID != "" {
-		url := fmt.Sprintf(eventCommandFinURL, cr.command.ID)
+		finURL := fmt.Sprintf(eventCommandFinURL, cr.command.ID)
 
 		payload := &commandFin{
 			Success:     exitCode == 0,
 			Result:      result,
 			ElapsedTime: time.Since(start).Seconds(),
 		}
-		scheduler.Rqueue.Post(url, payload, 10, time.Time{})
+		scheduler.Rqueue.Post(finURL, payload, 10, time.Time{})
 	}
 }
 
@@ -814,7 +814,7 @@ func isFileExist(path string) bool {
 }
 
 func statFileTransfer(code int, transferType transferType, message string, data CommandData) {
-	url := fmt.Sprint(data.URL + "stat/")
+	statURL := fmt.Sprint(data.URL + "stat/")
 	isSuccess := code == 0
 
 	payload := &commandStat{
@@ -822,5 +822,5 @@ func statFileTransfer(code int, transferType transferType, message string, data 
 		Message: message,
 		Type:    transferType,
 	}
-	scheduler.Rqueue.Post(url, payload, 10, time.Time{})
+	scheduler.Rqueue.Post(statURL, payload, 10, time.Time{})
 }

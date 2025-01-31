@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/user"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -167,4 +168,23 @@ func Quote(s string) string {
 	}
 
 	return s
+}
+
+func GetSystemUser(username string) (*user.User, error) {
+	currentUID := os.Getuid()
+
+	// If Alpamon is not running as root or username is not specified, use the current user
+	if currentUID != 0 || username == "" {
+		usr, err := user.Current()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current user: %w", err)
+		}
+		return usr, nil
+	}
+
+	usr, err := user.Lookup(username)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup specified user: %w", err)
+	}
+	return usr, nil
 }
