@@ -41,10 +41,10 @@ install_atlas_cli() {
   fi
 }
 
-install_alpamon() {
-  "$ALPAMON_BIN" install
+setup_alpamon() {
+  "$ALPAMON_BIN" setup
   if [ $? -ne 0 ]; then
-    echo "Error: Alpamon install command failed."
+    echo "Error: Alpamon setup command failed."
     exit 1
   fi
 }

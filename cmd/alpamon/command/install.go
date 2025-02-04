@@ -3,6 +3,7 @@ package command
 import (
 	"embed"
 	"fmt"
+	cli "github.com/alpacanetworks/alpacon-cli/utils"
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/spf13/cobra"
 	"os"
@@ -34,11 +35,24 @@ type ConfigData struct {
 //go:embed configs/*
 var configFiles embed.FS
 
-var installCmd = &cobra.Command{
-	Use:   "install",
-	Short: "Install Alpamon agent as a service",
+var setupCmd = &cobra.Command{
+	Use:   "setup",
+	Short: "Setup and configure the Alpamon	",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("Running Alpamon install command...")
+		fmt.Println("Starting Alpamon setup...")
+
+		configExists := fileExists(configTarget)
+		isOverwrite := true
+
+		if configExists {
+			fmt.Println("A configuration file already exists at:", configTarget)
+			isOverwrite = cli.PromptForBool("Do you want to overwrite it with a new configuration?: ")
+		}
+
+		if !isOverwrite {
+			fmt.Println("Keeping the existing configuration file. Skipping configuration update.")
+			return nil
+		}
 
 		err := copyEmbeddedFile(tmpFilePath, tmpFileTarget)
 		if err != nil {
@@ -60,16 +74,12 @@ var installCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Println("Alpamon has been successfully installed.")
+		fmt.Println("Configuration file successfully updated.")
 		return nil
 	},
 }
 
 func writeConfig() error {
-	if isConfigValid(configTarget) {
-		return nil
-	}
-
 	tmplData, err := configFiles.ReadFile(configTemplatePath)
 	if err != nil {
 		return fmt.Errorf("failed to read template file (%s): %v", configTemplatePath, err)
@@ -119,10 +129,6 @@ func writeConfig() error {
 }
 
 func writeService() error {
-	if isConfigValid(serviceTarget) {
-		return nil
-	}
-
 	err := copyEmbeddedFile(serviceTemplatePath, serviceTarget)
 	if err != nil {
 		return fmt.Errorf("failed to write target file: %v", err)
@@ -151,7 +157,7 @@ func copyEmbeddedFile(srcPath, dstPath string) error {
 	return nil
 }
 
-func isConfigValid(path string) bool {
+func fileExists(path string) bool {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return false
