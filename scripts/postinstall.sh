@@ -7,7 +7,11 @@ main() {
   check_systemd_status
   check_alpamon_binary
   install_atlas_cli
-  install_alpamon
+
+  if is_new_installation "$@"; then
+    setup_alpamon
+  fi
+
   start_systemd_service
 }
 
@@ -60,5 +64,13 @@ start_systemd_service() {
   echo "Alpamon has been installed as a systemd service and will be launched automatically on system boot."
 }
 
+is_new_installation() {
+  if [ -z "$2" ]; then
+    return 0  # first install
+  else
+    return 1  # upgrade
+  fi
+}
+
 set -ue
-main
+main "$@"
