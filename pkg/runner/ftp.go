@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"io"
 	"net/http"
 	"os"
@@ -25,7 +26,8 @@ type FtpClient struct {
 
 func NewFtpClient(data FtpConfigData) *FtpClient {
 	headers := http.Header{
-		"Origin": {data.ServerURL},
+		"Origin":     {data.ServerURL},
+		"User-Agent": {utils.GetUserAgent()},
 	}
 
 	return &FtpClient{

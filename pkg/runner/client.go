@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/cenkalti/backoff"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
@@ -36,6 +37,7 @@ func NewWebsocketClient(session *scheduler.Session) *WebsocketClient {
 	headers := http.Header{
 		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, config.GlobalSettings.ID, config.GlobalSettings.Key)},
 		"Origin":        {config.GlobalSettings.ServerURL},
+		"User-Agent":    {utils.GetUserAgent()},
 	}
 
 	return &WebsocketClient{

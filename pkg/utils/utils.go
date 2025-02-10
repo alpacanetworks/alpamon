@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	"net/url"
 	"os"
 	"os/user"
@@ -201,4 +202,8 @@ func GetLatestVersion() string {
 	}
 
 	return release.GetTagName()
+}
+
+func GetUserAgent() string {
+	return fmt.Sprintf("%s/%s", "alpamon", version.Version)
 }

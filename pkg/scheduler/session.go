@@ -114,6 +114,7 @@ func (session *Session) newRequest(method, url string, rawBody interface{}) (*ht
 func (session *Session) do(req *http.Request, timeout time.Duration) ([]byte, int, error) {
 	session.Client.Timeout = timeout * time.Second
 	req.Header.Set("Authorization", session.authorization)
+	req.Header.Set("User-Agent", utils.GetUserAgent())
 
 	if req.Method == http.MethodPost || req.Method == http.MethodPut || req.Method == http.MethodPatch {
 		req.Header.Set("Content-Type", "application/json")
@@ -165,6 +166,7 @@ func (session *Session) MultipartRequest(url string, body bytes.Buffer, contentT
 
 	session.Client.Timeout = timeout * time.Second
 	req.Header.Set("Authorization", session.authorization)
+	req.Header.Set("User-Agent", utils.GetUserAgent())
 	req.Header.Set("Content-Type", contentType)
 
 	resp, err := session.Client.Do(req)
