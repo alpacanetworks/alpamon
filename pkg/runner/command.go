@@ -806,7 +806,6 @@ func makeRequestBody(output []byte, filePath string, useBlob, isRecursive bool) 
 	}
 
 	writer := multipart.NewWriter(&requestBody)
-	defer func() { _ = writer.Close() }()
 
 	fileWriter, err := writer.CreateFormFile("content", filePath)
 	if err != nil {
@@ -824,6 +823,8 @@ func makeRequestBody(output []byte, filePath string, useBlob, isRecursive bool) 
 			return bytes.Buffer{}, "", err
 		}
 	}
+
+	_ = writer.Close()
 
 	return requestBody, writer.FormDataContentType(), nil
 }
