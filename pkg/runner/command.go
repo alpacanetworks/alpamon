@@ -544,7 +544,7 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 		return 1, err.Error()
 	}
 
-	requestBody, contentType, err := makeMultiPartBody(output, filepath.Base(name), cr.data.UseBlob, recursive)
+	requestBody, contentType, err := makeRequestBody(output, filepath.Base(name), cr.data.UseBlob, recursive)
 	if err != nil {
 		log.Error().Err(err).Msgf("Failed to make request body")
 		return 1, err.Error()
@@ -572,8 +572,6 @@ func (cr *CommandRunner) fileUpload(body bytes.Buffer, contentType string) ([]by
 		if err != nil {
 			return nil, 0, err
 		}
-
-		req.Header.Set("Content-Type", contentType)
 
 		client := &http.Client{}
 		resp, err := client.Do(req)
@@ -799,25 +797,20 @@ func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysP
 	return archiveName, nil
 }
 
-func makeMultiPartBody(output []byte, filePath string, useBlob, isRecursive bool) (bytes.Buffer, string, error) {
+func makeRequestBody(output []byte, filePath string, useBlob, isRecursive bool) (bytes.Buffer, string, error) {
 	var requestBody bytes.Buffer
-	writer := multipart.NewWriter(&requestBody)
 
-	fieldName := "file"
-	if !useBlob {
-		fieldName = "content"
+	if useBlob {
+		requestBody = *bytes.NewBuffer(output)
+		return requestBody, "", nil
 	}
 
-	fileWriter, err := writer.CreateFormFile(fieldName, filePath)
+	writer := multipart.NewWriter(&requestBody)
+	defer func() { _ = writer.Close() }()
+
+	fileWriter, err := writer.CreateFormFile("content", filePath)
 	if err != nil {
 		return bytes.Buffer{}, "", err
-	}
-
-	if !useBlob && isRecursive {
-		err = writer.WriteField("name", filePath)
-		if err != nil {
-			return bytes.Buffer{}, "", err
-		}
 	}
 
 	_, err = fileWriter.Write(output)
@@ -825,11 +818,14 @@ func makeMultiPartBody(output []byte, filePath string, useBlob, isRecursive bool
 		return bytes.Buffer{}, "", err
 	}
 
-	_ = writer.Close()
+	if isRecursive {
+		err = writer.WriteField("name", filePath)
+		if err != nil {
+			return bytes.Buffer{}, "", err
+		}
+	}
 
-	contentType := writer.FormDataContentType()
-
-	return requestBody, contentType, nil
+	return requestBody, writer.FormDataContentType(), nil
 }
 
 func fileDownload(data CommandData, sysProcAttr *syscall.SysProcAttr) (exitCode int, result string) {
