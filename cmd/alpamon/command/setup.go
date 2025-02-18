@@ -6,9 +6,11 @@ import (
 	cli "github.com/alpacanetworks/alpacon-cli/utils"
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"text/template"
 )
 
@@ -44,14 +46,20 @@ var setupCmd = &cobra.Command{
 		configExists := fileExists(configTarget)
 		isOverwrite := true
 
-		if configExists {
-			fmt.Println("A configuration file already exists at:", configTarget)
-			isOverwrite = cli.PromptForBool("Do you want to overwrite it with a new configuration?: ")
+		if term.IsTerminal(syscall.Stdin) {
+			if configExists {
+				fmt.Println("A configuration file already exists at:", configTarget)
+				isOverwrite = cli.PromptForBool("Do you want to overwrite it with a new configuration?: ")
+			}
+
+			if !isOverwrite {
+				fmt.Println("Keeping the existing configuration file. Skipping configuration update.")
+				return nil
+			}
 		}
 
-		if !isOverwrite {
-			fmt.Println("Keeping the existing configuration file. Skipping configuration update.")
-			return nil
+		if !configExists || isOverwrite {
+			fmt.Println("Applying a new configuration automatically.")
 		}
 
 		err := copyEmbeddedFile(tmpFilePath, tmpFileTarget)

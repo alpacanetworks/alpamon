@@ -72,5 +72,6 @@ is_new_installation() {
   fi
 }
 
-set -ue
+# Exit on error
+set -e
 main "$@"
