@@ -17,14 +17,14 @@ Download the latest `Alpamon-Go` directly from our releases page or install it u
 
 #### Debian and Ubuntu
 ```bash
-curl -s https://packagecloud.io/install/repositories/alpacanetworks/alpamon/script.deb.sh?any=true | sudo bash
+curl -s https://packagecloud.io/install/repositories/alpacax/alpamon/script.deb.sh?any=true | sudo bash
 
 sudo apt-get install alpamon
 ```
 
 #### CentOS and RHEL
 ```bash
-curl -s https://packagecloud.io/install/repositories/alpacanetworks/alpamon/script.rpm.sh?any=true | sudo bash
+curl -s https://packagecloud.io/install/repositories/alpacax/alpamon/script.rpm.sh?any=true | sudo bash
 
 sudo yum install alpamon
 ```

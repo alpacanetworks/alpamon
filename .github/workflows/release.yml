@@ -67,7 +67,7 @@ jobs:
         uses: danielmundi/upload-packagecloud@v1
         with:
           package-name: alpamon_${{ github.ref_name }}_linux_amd64.deb
-          packagecloud-username: alpacanetworks
+          packagecloud-username: alpacax
           packagecloud-repo: alpamon
           packagecloud-distrib: any/any
           packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
@@ -76,8 +76,7 @@ jobs:
         uses: danielmundi/upload-packagecloud@v1
         with:
           package-name: alpamon_${{ github.ref_name }}_linux_amd64.rpm
-          packagecloud-username: alpacanetworks
+          packagecloud-username: alpacax
           packagecloud-repo: alpamon
           packagecloud-distrib: rpm_any/rpm_any
           packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
-
