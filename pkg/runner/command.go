@@ -569,7 +569,7 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 
 func (cr *CommandRunner) fileUpload(body bytes.Buffer, contentType string) ([]byte, int, error) {
 	if cr.data.UseBlob {
-		return cr.wsClient.apiSession.Put(cr.data.Content, body, fileUploadTimeout)
+		return utils.Put(cr.data.Content, body, 0)
 	}
 
 	return cr.wsClient.apiSession.MultipartRequest(cr.data.Content, body, contentType, fileUploadTimeout)
