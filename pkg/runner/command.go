@@ -28,6 +28,10 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
+const (
+	fileUploadTimeout = 60 * 10 * time.Second
+)
+
 func NewCommandRunner(wsClient *WebsocketClient, command Command, data CommandData) *CommandRunner {
 	var name string
 	if command.ID != "" {
@@ -564,36 +568,11 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 }
 
 func (cr *CommandRunner) fileUpload(body bytes.Buffer, contentType string) ([]byte, int, error) {
-	var responseBody []byte
-	var statusCode int
-	var err error
 	if cr.data.UseBlob {
-		req, err := http.NewRequest(http.MethodPut, cr.data.Content, &body)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		defer func() { _ = resp.Body.Close() }()
-
-		statusCode = resp.StatusCode
-		responseBody, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, resp.StatusCode, err
-		}
-	} else {
-		responseBody, statusCode, err = cr.wsClient.apiSession.MultipartRequest(cr.data.Content, body, contentType, 600)
-		if err != nil {
-			return responseBody, statusCode, err
-		}
+		return cr.wsClient.apiSession.Put(cr.data.Content, body, fileUploadTimeout)
 	}
 
-	return responseBody, statusCode, nil
+	return cr.wsClient.apiSession.MultipartRequest(cr.data.Content, body, contentType, fileUploadTimeout)
 }
 
 func (cr *CommandRunner) runFileDownload(fileName string) (exitCode int, result string) {
