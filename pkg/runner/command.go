@@ -548,7 +548,7 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 		return 1, err.Error()
 	}
 
-	requestBody, contentType, err := makeRequestBody(output, filepath.Base(name), cr.data.UseBlob, recursive)
+	requestBody, contentType, err := createMultipartBody(output, filepath.Base(name), cr.data.UseBlob, recursive)
 	if err != nil {
 		log.Error().Err(err).Msgf("Failed to make request body")
 		return 1, err.Error()
@@ -776,14 +776,12 @@ func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysP
 	return archiveName, nil
 }
 
-func makeRequestBody(output []byte, filePath string, useBlob, isRecursive bool) (bytes.Buffer, string, error) {
-	var requestBody bytes.Buffer
-
+func createMultipartBody(output []byte, filePath string, useBlob, isRecursive bool) (bytes.Buffer, string, error) {
 	if useBlob {
-		requestBody = *bytes.NewBuffer(output)
-		return requestBody, "", nil
+		return *bytes.NewBuffer(output), "", nil
 	}
 
+	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
 
 	fileWriter, err := writer.CreateFormFile("content", filePath)
