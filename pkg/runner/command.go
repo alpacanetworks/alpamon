@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -23,9 +22,14 @@ import (
 	"github.com/alpacanetworks/alpamon-go/pkg/config"
 	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/go-playground/validator.v9"
+)
+
+const (
+	fileUploadTimeout = 60 * 10 * time.Second
 )
 
 func NewCommandRunner(wsClient *WebsocketClient, command Command, data CommandData) *CommandRunner {
@@ -544,32 +548,15 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 		return 1, err.Error()
 	}
 
-	var requestBody bytes.Buffer
-	writer := multipart.NewWriter(&requestBody)
-
-	fileWriter, err := writer.CreateFormFile("content", filepath.Base(name))
+	requestBody, contentType, err := createMultipartBody(output, filepath.Base(name), cr.data.UseBlob, recursive)
 	if err != nil {
+		log.Error().Err(err).Msgf("Failed to make request body")
 		return 1, err.Error()
 	}
 
-	_, err = fileWriter.Write(output)
+	_, statusCode, err := cr.fileUpload(requestBody, contentType)
 	if err != nil {
-		return 1, err.Error()
-	}
-
-	if recursive {
-		err = writer.WriteField("name", filepath.Base(name))
-		if err != nil {
-			return 1, err.Error()
-		}
-	}
-
-	_ = writer.Close()
-
-	contentType := writer.FormDataContentType()
-
-	_, statusCode, err := cr.wsClient.apiSession.MultipartRequest(cr.data.Content, requestBody, contentType, 600)
-	if err != nil {
+		log.Error().Err(err).Msgf("Failed to upload file: %s", fileName)
 		return 1, err.Error()
 	}
 
@@ -578,6 +565,14 @@ func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result st
 	}
 
 	return 1, "You do not have permission to read on the directory. or directory does not exist"
+}
+
+func (cr *CommandRunner) fileUpload(body bytes.Buffer, contentType string) ([]byte, int, error) {
+	if cr.data.UseBlob {
+		return utils.Put(cr.data.Content, body, 0)
+	}
+
+	return cr.wsClient.apiSession.MultipartRequest(cr.data.Content, body, contentType, fileUploadTimeout)
 }
 
 func (cr *CommandRunner) runFileDownload(fileName string) (exitCode int, result string) {
@@ -779,6 +774,36 @@ func makeArchive(paths []string, bulk, recursive bool, sysProcAttr *syscall.SysP
 	}
 
 	return archiveName, nil
+}
+
+func createMultipartBody(output []byte, filePath string, useBlob, isRecursive bool) (bytes.Buffer, string, error) {
+	if useBlob {
+		return *bytes.NewBuffer(output), "", nil
+	}
+
+	var requestBody bytes.Buffer
+	writer := multipart.NewWriter(&requestBody)
+
+	fileWriter, err := writer.CreateFormFile("content", filePath)
+	if err != nil {
+		return bytes.Buffer{}, "", err
+	}
+
+	_, err = fileWriter.Write(output)
+	if err != nil {
+		return bytes.Buffer{}, "", err
+	}
+
+	if isRecursive {
+		err = writer.WriteField("name", filePath)
+		if err != nil {
+			return bytes.Buffer{}, "", err
+		}
+	}
+
+	_ = writer.Close()
+
+	return requestBody, writer.FormDataContentType(), nil
 }
 
 func fileDownload(data CommandData, sysProcAttr *syscall.SysProcAttr) (exitCode int, result string) {

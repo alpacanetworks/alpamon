@@ -158,6 +158,24 @@ func (session *Session) Get(url string, timeout time.Duration) ([]byte, int, err
 	return session.do(req, timeout)
 }
 
+func (session *Session) Post(url string, rawBody interface{}, timeout time.Duration) ([]byte, int, error) {
+	req, err := session.newRequest(http.MethodPost, url, rawBody)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return session.do(req, timeout)
+}
+
+func (session *Session) Put(url string, body bytes.Buffer, timeout time.Duration) ([]byte, int, error) {
+	req, err := session.newRequest(http.MethodPut, url, body)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return session.do(req, timeout)
+}
+
 func (session *Session) MultipartRequest(url string, body bytes.Buffer, contentType string, timeout time.Duration) ([]byte, int, error) {
 	req, err := http.NewRequest(http.MethodPost, url, &body)
 	if err != nil {
@@ -182,13 +200,4 @@ func (session *Session) MultipartRequest(url string, body bytes.Buffer, contentT
 	}
 
 	return responseBody, resp.StatusCode, nil
-}
-
-func (session *Session) Post(url string, rawBody interface{}, timeout time.Duration) ([]byte, int, error) {
-	req, err := session.newRequest(http.MethodPost, url, rawBody)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return session.do(req, timeout)
 }

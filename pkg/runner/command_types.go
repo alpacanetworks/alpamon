@@ -49,6 +49,7 @@ type CommandData struct {
 	Files          []File   `json:"files,omitempty"`
 	AllowOverwrite bool     `json:"allow_overwrite,omitempty"`
 	AllowUnzip     bool     `json:"allow_unzip,omitempty"`
+	UseBlob        bool     `json:"use_blob,omitempty"`
 	Keys           []string `json:"keys"`
 }
 
