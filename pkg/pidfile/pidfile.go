@@ -2,7 +2,6 @@ package pidfile
 
 import (
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -10,22 +9,12 @@ import (
 	"syscall"
 )
 
-const (
-	pidFilePathDarwin  = "/tmp/alpamon.pid"
-	pidFilePathDefault = "/var/run/alpamon.pid"
-)
-
 // WritePID writes the current PID to a file, ensuring that the file
 // doesn't exist or doesn't contain a PID for a running process.
 //
 // Based on a function from the Datadog Agent.
 // Reference : https://github.com/DataDog/datadog-agent
-func WritePID() (string, error) {
-	pidFilePath, err := setupPIDFilePath()
-	if err != nil {
-		return "", err
-	}
-
+func WritePID(pidFilePath string) (string, error) {
 	// check whether the pidfile exists and contains the PID for a running proc...
 	if byteContent, err := os.ReadFile(pidFilePath); err == nil {
 		pidStr := strings.TrimSpace(string(byteContent))
@@ -53,17 +42,4 @@ func WritePID() (string, error) {
 // isProcess uses `kill -0` to check whether a process is running
 func isProcess(pid int) bool {
 	return syscall.Kill(pid, 0) == nil
-}
-
-func setupPIDFilePath() (string, error) {
-	var pidFilePath string
-
-	switch utils.PlatformLike {
-	case "darwin":
-		pidFilePath = pidFilePathDarwin
-	default:
-		pidFilePath = pidFilePathDefault
-	}
-
-	return pidFilePath, nil
 }

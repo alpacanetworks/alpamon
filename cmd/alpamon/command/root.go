@@ -35,7 +35,7 @@ func runAgent() {
 	utils.InitPlatform()
 
 	// Pid
-	pidFilePath, err := pidfile.WritePID()
+	pidFilePath, err := pidfile.WritePID(pidfile.FilePath("alpamon"))
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "Failed to create PID file", err.Error())
 		os.Exit(1)
