@@ -126,7 +126,10 @@ func runCmd(args []string, username, groupname string, env map[string]string, ti
 
 	output, err := cmd.Output()
 	if err != nil {
-		return 1, err.Error()
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return exitError.ExitCode(), err.Error()
+		}
+		return -1, err.Error()
 	}
 
 	return 0, string(output)
