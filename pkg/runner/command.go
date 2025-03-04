@@ -197,7 +197,7 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		return 0, "Alpamon will restart in 1 second."
 	case "quit":
 		time.AfterFunc(1*time.Second, func() {
-			cr.wsClient.quit()
+			cr.wsClient.Quit()
 		})
 		return 0, "Alpamon will quit in 1 second."
 	case "reboot":
