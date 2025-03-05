@@ -26,6 +26,8 @@ var RootCmd = &cobra.Command{
 	},
 }
 
+const name = "alpamon"
+
 func init() {
 	RootCmd.AddCommand(setupCmd, ftpCmd)
 }
@@ -35,7 +37,7 @@ func runAgent() {
 	utils.InitPlatform()
 
 	// Pid
-	pidFilePath, err := pidfile.WritePID()
+	pidFilePath, err := pidfile.WritePID(pidfile.FilePath(name))
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "Failed to create PID file", err.Error())
 		os.Exit(1)
@@ -45,7 +47,7 @@ func runAgent() {
 	fmt.Printf("alpamon version %s starting.\n", version.Version)
 
 	// Config & Settings
-	settings := config.LoadConfig()
+	settings := config.LoadConfig(config.Files(name))
 	config.InitSettings(settings)
 
 	// Session
@@ -87,9 +89,7 @@ func runAgent() {
 			return
 		}
 
-		args := os.Args
-
-		err = syscall.Exec(executable, args, os.Environ())
+		err = syscall.Exec(executable, os.Args, os.Environ())
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to restart the program")
 		}

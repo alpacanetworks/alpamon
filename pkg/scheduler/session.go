@@ -20,7 +20,7 @@ import (
 
 const (
 	checkSessionURL = "/api/servers/servers/-/"
-	maxRetryTimeout = 3 * 24 * time.Hour
+	MaxRetryTimeout = 3 * 24 * time.Hour
 )
 
 func InitSession() *Session {
@@ -54,7 +54,7 @@ func InitSession() *Session {
 
 func (session *Session) CheckSession() bool {
 	timeout := config.MinConnectInterval
-	ctx, cancel := context.WithTimeout(context.Background(), maxRetryTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), MaxRetryTimeout)
 	defer cancel()
 
 	for {
@@ -112,9 +112,13 @@ func (session *Session) newRequest(method, url string, rawBody interface{}) (*ht
 }
 
 func (session *Session) do(req *http.Request, timeout time.Duration) ([]byte, int, error) {
-	session.Client.Timeout = timeout * time.Second
+	ctx, cancel := context.WithTimeout(req.Context(), timeout*time.Second)
+	defer cancel()
+
+	req = req.WithContext(ctx)
+
 	req.Header.Set("Authorization", session.authorization)
-	req.Header.Set("User-Agent", utils.GetUserAgent())
+	req.Header.Set("User-Agent", utils.GetUserAgent("alpamon"))
 
 	if req.Method == http.MethodPost || req.Method == http.MethodPut || req.Method == http.MethodPatch {
 		req.Header.Set("Content-Type", "application/json")
@@ -167,8 +171,17 @@ func (session *Session) Post(url string, rawBody interface{}, timeout time.Durat
 	return session.do(req, timeout)
 }
 
-func (session *Session) Put(url string, body bytes.Buffer, timeout time.Duration) ([]byte, int, error) {
-	req, err := session.newRequest(http.MethodPut, url, body)
+func (session *Session) Put(url string, rawBody interface{}, timeout time.Duration) ([]byte, int, error) {
+	req, err := session.newRequest(http.MethodPut, url, rawBody)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return session.do(req, timeout)
+}
+
+func (session *Session) Patch(url string, rawBody interface{}, timeout time.Duration) ([]byte, int, error) {
+	req, err := session.newRequest(http.MethodPatch, url, rawBody)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -182,9 +195,13 @@ func (session *Session) MultipartRequest(url string, body bytes.Buffer, contentT
 		return nil, 0, err
 	}
 
-	session.Client.Timeout = timeout * time.Second
+	ctx, cancel := context.WithTimeout(req.Context(), timeout*time.Second)
+	defer cancel()
+
+	req = req.WithContext(ctx)
+
 	req.Header.Set("Authorization", session.authorization)
-	req.Header.Set("User-Agent", utils.GetUserAgent())
+	req.Header.Set("User-Agent", utils.GetUserAgent("alpamon"))
 	req.Header.Set("Content-Type", contentType)
 
 	resp, err := session.Client.Do(req)

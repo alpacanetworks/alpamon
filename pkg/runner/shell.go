@@ -57,7 +57,7 @@ func demote(username, groupname string) (*syscall.SysProcAttr, error) {
 	}, nil
 }
 
-func runCmd(args []string, username, groupname string, env map[string]string, timeout int) (exitCode int, result string) {
+func runCmdWithOutput(args []string, username, groupname string, env map[string]string, timeout int) (exitCode int, result string) {
 	if env != nil {
 		defaultEnv := getDefaultEnv()
 		for key, value := range defaultEnv {
@@ -126,10 +126,26 @@ func runCmd(args []string, username, groupname string, env map[string]string, ti
 
 	output, err := cmd.Output()
 	if err != nil {
-		return 1, err.Error()
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return exitError.ExitCode(), err.Error()
+		}
+		return -1, err.Error()
 	}
 
 	return 0, string(output)
+}
+
+func RunCmd(command string, args ...string) int {
+	cmd := exec.Command(command, args...)
+
+	err := cmd.Run()
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return exitError.ExitCode()
+		}
+		return -1
+	}
+	return 0
 }
 
 // && and || operators are handled separately in handleShellCmd

@@ -18,7 +18,7 @@ import (
 const (
 	minConnectInterval    = 5 * time.Second
 	maxConnectInterval    = 60 * time.Second
-	connectionReadTimeout = 35 * time.Minute
+	ConnectionReadTimeout = 35 * time.Minute
 	maxRetryTimeout       = 3 * 24 * time.Hour
 
 	eventCommandAckURL = "/api/events/commands/%s/ack/"
@@ -26,53 +26,53 @@ const (
 )
 
 type WebsocketClient struct {
-	conn             *websocket.Conn
+	Conn             *websocket.Conn
 	requestHeader    http.Header
 	apiSession       *scheduler.Session
 	RestartRequested bool
-	quitChan         chan struct{}
+	QuitChan         chan struct{}
 }
 
 func NewWebsocketClient(session *scheduler.Session) *WebsocketClient {
 	headers := http.Header{
 		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, config.GlobalSettings.ID, config.GlobalSettings.Key)},
 		"Origin":        {config.GlobalSettings.ServerURL},
-		"User-Agent":    {utils.GetUserAgent()},
+		"User-Agent":    {utils.GetUserAgent("alpamon")},
 	}
 
 	return &WebsocketClient{
 		requestHeader:    headers,
 		apiSession:       session,
 		RestartRequested: false,
-		quitChan:         make(chan struct{}),
+		QuitChan:         make(chan struct{}),
 	}
 }
 
 func (wc *WebsocketClient) RunForever() {
-	wc.connect()
-	defer wc.close()
+	wc.Connect()
+	defer wc.Close()
 
 	for {
 		select {
-		case <-wc.quitChan:
+		case <-wc.QuitChan:
 			return
 		default:
-			err := wc.conn.SetReadDeadline(time.Now().Add(connectionReadTimeout))
+			err := wc.Conn.SetReadDeadline(time.Now().Add(ConnectionReadTimeout))
 			if err != nil {
-				wc.closeAndReconnect()
+				wc.CloseAndReconnect()
 			}
-			_, message, err := wc.readMessage()
+			_, message, err := wc.ReadMessage()
 			if err != nil {
-				wc.closeAndReconnect()
+				wc.CloseAndReconnect()
 			}
 			// Sends "ping" query for Alpacon to verify WebSocket session status without error handling.
-			_ = wc.sendPingQuery()
+			_ = wc.SendPingQuery()
 			wc.commandRequestHandler(message)
 		}
 	}
 }
 
-func (wc *WebsocketClient) sendPingQuery() error {
+func (wc *WebsocketClient) SendPingQuery() error {
 	pingQuery := map[string]string{"query": "ping"}
 	err := wc.writeJSON(pingQuery)
 	if err != nil {
@@ -82,8 +82,8 @@ func (wc *WebsocketClient) sendPingQuery() error {
 	return nil
 }
 
-func (wc *WebsocketClient) readMessage() (messageType int, message []byte, err error) {
-	messageType, message, err = wc.conn.ReadMessage()
+func (wc *WebsocketClient) ReadMessage() (messageType int, message []byte, err error) {
+	messageType, message, err = wc.Conn.ReadMessage()
 	if err != nil {
 		return 0, nil, err
 	}
@@ -91,7 +91,7 @@ func (wc *WebsocketClient) readMessage() (messageType int, message []byte, err e
 	return messageType, message, nil
 }
 
-func (wc *WebsocketClient) connect() {
+func (wc *WebsocketClient) Connect() {
 	log.Info().Msgf("Connecting to websocket at %s...", config.GlobalSettings.WSPath)
 
 	ctx, cancel := context.WithTimeout(context.Background(), maxRetryTimeout)
@@ -116,7 +116,7 @@ func (wc *WebsocketClient) connect() {
 				return err
 			}
 
-			wc.conn = conn
+			wc.Conn = conn
 			log.Debug().Msg("Backhaul connection established.")
 			return nil
 		}
@@ -129,32 +129,32 @@ func (wc *WebsocketClient) connect() {
 	}
 }
 
-func (wc *WebsocketClient) closeAndReconnect() {
-	wc.close()
-	wc.connect()
+func (wc *WebsocketClient) CloseAndReconnect() {
+	wc.Close()
+	wc.Connect()
 }
 
 // Cleanly close the websocket connection by sending a close message
 // Do not close quitChan, as the purpose here is to disconnect the WebSocket,
 // not to terminate RunForever.
-func (wc *WebsocketClient) close() {
-	if wc.conn != nil {
-		err := wc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+func (wc *WebsocketClient) Close() {
+	if wc.Conn != nil {
+		err := wc.Conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		if err != nil {
 			log.Debug().Err(err).Msg("Failed to write close message to websocket.")
 		}
-		_ = wc.conn.Close()
+		_ = wc.Conn.Close()
 	}
 }
 
-func (wc *WebsocketClient) quit() {
-	wc.close()
-	close(wc.quitChan)
+func (wc *WebsocketClient) Quit() {
+	wc.Close()
+	close(wc.QuitChan)
 }
 
 func (wc *WebsocketClient) restart() {
 	wc.RestartRequested = true
-	wc.quit()
+	wc.Quit()
 }
 
 func (wc *WebsocketClient) commandRequestHandler(message []byte) {
@@ -186,21 +186,21 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 			10,
 			time.Time{},
 		)
-		runner := NewCommandRunner(wc, content.Command, data)
-		go runner.Run()
+		commandRunner := NewCommandRunner(wc, content.Command, data)
+		go commandRunner.Run()
 	case "quit":
 		log.Debug().Msgf("Quit requested for reason: %s", content.Reason)
-		wc.quit()
+		wc.Quit()
 	case "reconnect":
 		log.Debug().Msgf("Reconnect requested for reason: %s", content.Reason)
-		wc.close()
+		wc.Close()
 	default:
 		log.Warn().Msgf("Not implemented query: %s", content.Query)
 	}
 }
 
 func (wc *WebsocketClient) writeJSON(data interface{}) error {
-	err := wc.conn.WriteJSON(data)
+	err := wc.Conn.WriteJSON(data)
 	if err != nil {
 		log.Debug().Err(err).Msgf("Failed to write json data to websocket.")
 		return err

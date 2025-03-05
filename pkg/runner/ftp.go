@@ -4,15 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/alpacanetworks/alpamon-go/pkg/logger"
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"io"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/alpacanetworks/alpamon-go/pkg/logger"
-	"github.com/gorilla/websocket"
 )
 
 type FtpClient struct {
@@ -27,7 +25,7 @@ type FtpClient struct {
 func NewFtpClient(data FtpConfigData) *FtpClient {
 	headers := http.Header{
 		"Origin":     {data.ServerURL},
-		"User-Agent": {utils.GetUserAgent()},
+		"User-Agent": {utils.GetUserAgent("alpamon")},
 	}
 
 	return &FtpClient{
@@ -388,7 +386,7 @@ func (fc *FtpClient) cp(src, dst string) (CommandResult, error) {
 }
 
 func (fc *FtpClient) cpDir(src, dst string) (CommandResult, error) {
-	err := copyDir(src, dst)
+	err := utils.CopyDir(src, dst)
 	if err != nil {
 		return CommandResult{
 			Message: err.Error(),
@@ -402,7 +400,7 @@ func (fc *FtpClient) cpDir(src, dst string) (CommandResult, error) {
 }
 
 func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
-	err := copyFile(src, dst)
+	err := utils.CopyFile(src, dst)
 	if err != nil {
 		return CommandResult{
 			Message: err.Error(),
@@ -413,71 +411,4 @@ func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
 		Dst:     dst,
 		Message: fmt.Sprintf("Copy %s to %s", src, dst),
 	}, nil
-}
-
-func copyFile(src, dst string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = srcFile.Close() }()
-
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = dstFile.Close() }()
-
-	if _, err = io.Copy(dstFile, srcFile); err != nil {
-		return err
-	}
-
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	if err = os.Chmod(dst, srcInfo.Mode()); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func copyDir(src, dst string) error {
-	if strings.HasPrefix(dst, src) {
-		return fmt.Errorf("%s is inside %s, causing infinite recursion", dst, src)
-	}
-
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	err = os.MkdirAll(dst, srcInfo.Mode())
-	if err != nil {
-		return err
-	}
-
-	entries, err := os.ReadDir(src)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
-
-		if entry.IsDir() {
-			if err = copyDir(srcPath, dstPath); err != nil {
-				return err
-			}
-		} else {
-			if err = copyFile(srcPath, dstPath); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }

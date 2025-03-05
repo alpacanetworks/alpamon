@@ -2,6 +2,7 @@ package config
 
 import (
 	"crypto/tls"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,11 +14,6 @@ import (
 )
 
 var (
-	configFiles = []string{
-		"/etc/alpamon/alpamon.conf",
-		filepath.Join(os.Getenv("HOME"), ".alpamon.conf"),
-	}
-
 	GlobalSettings Settings
 )
 
@@ -31,7 +27,7 @@ func InitSettings(settings Settings) {
 	GlobalSettings = settings
 }
 
-func LoadConfig() Settings {
+func LoadConfig(configFiles []string) Settings {
 	var iniData *ini.File
 	var err error
 	var validConfigFile string
@@ -138,4 +134,11 @@ func validateConfig(config Config) (bool, Settings) {
 		}
 	}
 	return valid, settings
+}
+
+func Files(name string) []string {
+	return []string{
+		fmt.Sprintf("/etc/alpamon/%s.conf", name),
+		filepath.Join(os.Getenv("HOME"), fmt.Sprintf(".%s.conf", name)),
+	}
 }
