@@ -37,7 +37,7 @@ func NewWebsocketClient(session *scheduler.Session) *WebsocketClient {
 	headers := http.Header{
 		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, config.GlobalSettings.ID, config.GlobalSettings.Key)},
 		"Origin":        {config.GlobalSettings.ServerURL},
-		"User-Agent":    {utils.GetUserAgent()},
+		"User-Agent":    {utils.GetUserAgent("alpamon")},
 	}
 
 	return &WebsocketClient{
@@ -186,8 +186,8 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 			10,
 			time.Time{},
 		)
-		runner := NewCommandRunner(wc, content.Command, data)
-		go runner.Run()
+		commandRunner := NewCommandRunner(wc, content.Command, data)
+		go commandRunner.Run()
 	case "quit":
 		log.Debug().Msgf("Quit requested for reason: %s", content.Reason)
 		wc.Quit()

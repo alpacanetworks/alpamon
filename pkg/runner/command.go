@@ -257,7 +257,7 @@ func (cr *CommandRunner) handleShellCmd(command, user, group string, env map[str
 	for _, arg := range spl {
 		switch arg {
 		case "&&":
-			exitCode, result = runCmd(args, user, group, env, 0)
+			exitCode, result = runCmdWithOutput(args, user, group, env, 0)
 			results += result
 			// stop executing if command fails
 			if exitCode != 0 {
@@ -265,7 +265,7 @@ func (cr *CommandRunner) handleShellCmd(command, user, group string, env map[str
 			}
 			args = []string{}
 		case "||":
-			exitCode, result = runCmd(args, user, group, env, 0)
+			exitCode, result = runCmdWithOutput(args, user, group, env, 0)
 			results += result
 			// execute next only if command fails
 			if exitCode == 0 {
@@ -273,13 +273,13 @@ func (cr *CommandRunner) handleShellCmd(command, user, group string, env map[str
 			}
 			args = []string{}
 		case ";":
-			exitCode, result = runCmd(args, user, group, env, 0)
+			exitCode, result = runCmdWithOutput(args, user, group, env, 0)
 			results += result
 			args = []string{}
 		default:
 			if strings.HasSuffix(arg, ";") {
 				args = append(args, strings.TrimSuffix(arg, ";"))
-				exitCode, result = runCmd(args, user, group, env, 0)
+				exitCode, result = runCmdWithOutput(args, user, group, env, 0)
 				results += result
 				args = []string{}
 			} else {
@@ -290,7 +290,7 @@ func (cr *CommandRunner) handleShellCmd(command, user, group string, env map[str
 
 	if len(args) > 0 {
 		log.Debug().Msgf("Running '%s'", strings.Join(args, " "))
-		exitCode, result = runCmd(args, user, group, env, 0)
+		exitCode, result = runCmdWithOutput(args, user, group, env, 0)
 		results += result
 	}
 
@@ -322,7 +322,7 @@ func (cr *CommandRunner) addUser() (exitCode int, result string) {
 	}
 
 	if utils.PlatformLike == "debian" {
-		exitCode, result = runCmd(
+		exitCode, result = runCmdWithOutput(
 			[]string{
 				"/usr/sbin/adduser",
 				"--home", data.HomeDirectory,
@@ -350,7 +350,7 @@ func (cr *CommandRunner) addUser() (exitCode int, result string) {
 			}
 
 			// invoke adduser
-			exitCode, result = runCmd(
+			exitCode, result = runCmdWithOutput(
 				[]string{
 					"/usr/sbin/adduser",
 					data.Username,
@@ -363,7 +363,7 @@ func (cr *CommandRunner) addUser() (exitCode int, result string) {
 			}
 		}
 	} else if utils.PlatformLike == "rhel" {
-		exitCode, result = runCmd(
+		exitCode, result = runCmdWithOutput(
 			[]string{
 				"/usr/sbin/useradd",
 				"--home-dir", data.HomeDirectory,
@@ -399,7 +399,7 @@ func (cr *CommandRunner) addGroup() (exitCode int, result string) {
 	}
 
 	if utils.PlatformLike == "debian" {
-		exitCode, result = runCmd(
+		exitCode, result = runCmdWithOutput(
 			[]string{
 				"/usr/sbin/addgroup",
 				"--gid", strconv.FormatUint(data.GID, 10),
@@ -411,7 +411,7 @@ func (cr *CommandRunner) addGroup() (exitCode int, result string) {
 			return exitCode, result
 		}
 	} else if utils.PlatformLike == "rhel" {
-		exitCode, result = runCmd(
+		exitCode, result = runCmdWithOutput(
 			[]string{
 				"/usr/sbin/groupadd",
 				"--gid", strconv.FormatUint(data.GID, 10),
@@ -441,7 +441,7 @@ func (cr *CommandRunner) delUser() (exitCode int, result string) {
 	}
 
 	if utils.PlatformLike == "debian" {
-		exitCode, result = runCmd(
+		exitCode, result = runCmdWithOutput(
 			[]string{
 				"/usr/sbin/deluser",
 				data.Username,
@@ -452,7 +452,7 @@ func (cr *CommandRunner) delUser() (exitCode int, result string) {
 			return exitCode, result
 		}
 	} else if utils.PlatformLike == "rhel" {
-		exitCode, result = runCmd(
+		exitCode, result = runCmdWithOutput(
 			[]string{
 				"/usr/sbin/userdel",
 				data.Username,
@@ -481,7 +481,7 @@ func (cr *CommandRunner) delGroup() (exitCode int, result string) {
 	}
 
 	if utils.PlatformLike == "debian" {
-		exitCode, result = runCmd(
+		exitCode, result = runCmdWithOutput(
 			[]string{
 				"/usr/sbin/delgroup",
 				data.Groupname,
@@ -492,7 +492,7 @@ func (cr *CommandRunner) delGroup() (exitCode int, result string) {
 			return exitCode, result
 		}
 	} else if utils.PlatformLike == "rhel" {
-		exitCode, result = runCmd(
+		exitCode, result = runCmdWithOutput(
 			[]string{
 				"/usr/sbin/groupdel",
 				data.Groupname,

@@ -89,9 +89,7 @@ func runAgent() {
 			return
 		}
 
-		args := os.Args
-
-		err = syscall.Exec(executable, args, os.Environ())
+		err = syscall.Exec(executable, os.Args, os.Environ())
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to restart the program")
 		}
