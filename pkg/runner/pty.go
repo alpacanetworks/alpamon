@@ -91,8 +91,8 @@ func (pc *PtyClient) RunPtyBackground() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	pc.readFromWebsocket(ctx, cancel)
-	pc.readFromPTY(ctx, cancel)
+	go pc.readFromWebsocket(ctx, cancel)
+	go pc.readFromPTY(ctx, cancel)
 
 	terminals[pc.sessionID] = pc
 
