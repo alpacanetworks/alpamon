@@ -33,7 +33,7 @@ nfpms:
     description: Alpamon
     homepage: https://github.com/alpacanetworks/alpamon-go
     license: MIT
-    vendor: Alpaca Networks
+    vendor: AlpacaX
     formats:
       - deb
       - rpm
