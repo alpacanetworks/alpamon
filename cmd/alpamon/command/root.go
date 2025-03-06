@@ -27,7 +27,7 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(SetupCmd, ftpCmd)
+	RootCmd.AddCommand(setupCmd, ftpCmd)
 }
 
 func runAgent() {

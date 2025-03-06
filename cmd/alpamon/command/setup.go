@@ -39,7 +39,7 @@ type ConfigData struct {
 //go:embed configs/*
 var configFiles embed.FS
 
-var SetupCmd = &cobra.Command{
+var setupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Setup and configure the Alpamon	",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -173,13 +173,4 @@ func fileExists(path string) bool {
 		return false
 	}
 	return fileInfo.Size() > 0
-}
-
-func SetFile(plugin, newConfigTemplatePath, newConfigTargetPath, newTmpFilePath, newServiceTemplatePath, newServiceTargetPath string) {
-	name = plugin
-	configTemplatePath = newConfigTemplatePath
-	configTarget = newConfigTargetPath
-	tmpFileTarget = newTmpFilePath
-	serviceTemplatePath = newServiceTemplatePath
-	serviceTarget = newServiceTargetPath
 }
