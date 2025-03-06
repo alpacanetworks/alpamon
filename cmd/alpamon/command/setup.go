@@ -14,7 +14,9 @@ import (
 	"text/template"
 )
 
-const (
+var (
+	name = "alpamon"
+
 	configTemplatePath = "configs/alpamon.conf"
 	configTarget       = "/etc/alpamon/alpamon.conf"
 
@@ -37,11 +39,11 @@ type ConfigData struct {
 //go:embed configs/*
 var configFiles embed.FS
 
-var setupCmd = &cobra.Command{
+var SetupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Setup and configure the Alpamon	",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("Starting Alpamon setup...")
+		fmt.Printf("Starting %s setup...", name)
 
 		configExists := fileExists(configTarget)
 		isOverwrite := true
@@ -93,7 +95,7 @@ func writeConfig() error {
 		return fmt.Errorf("failed to read template file (%s): %v", configTemplatePath, err)
 	}
 
-	tmpl, err := template.New("alpamon.conf").Parse(string(tmplData))
+	tmpl, err := template.New(fmt.Sprintf("%s.conf", name)).Parse(string(tmplData))
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %v", err)
 	}
@@ -111,7 +113,7 @@ func writeConfig() error {
 		return fmt.Errorf("environment variables ALPACON_URL, PLUGIN_ID, PLUGIN_KEY must be set")
 	}
 
-	tmpFile, err := os.CreateTemp("", "alpamon.conf")
+	tmpFile, err := os.CreateTemp("", fmt.Sprintf("%s.conf", name))
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %v", err)
 	}
@@ -171,4 +173,13 @@ func fileExists(path string) bool {
 		return false
 	}
 	return fileInfo.Size() > 0
+}
+
+func SetFile(plugin, newConfigTemplatePath, newConfigTargetPath, newTmpFilePath, newServiceTemplatePath, newServiceTargetPath string) {
+	name = plugin
+	configTemplatePath = newConfigTemplatePath
+	configTarget = newConfigTargetPath
+	tmpFileTarget = newTmpFilePath
+	serviceTemplatePath = newServiceTemplatePath
+	serviceTarget = newServiceTargetPath
 }

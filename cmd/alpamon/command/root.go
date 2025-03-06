@@ -26,10 +26,8 @@ var RootCmd = &cobra.Command{
 	},
 }
 
-const name = "alpamon"
-
 func init() {
-	RootCmd.AddCommand(setupCmd, ftpCmd)
+	RootCmd.AddCommand(SetupCmd, ftpCmd)
 }
 
 func runAgent() {
