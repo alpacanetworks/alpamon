@@ -111,12 +111,8 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 			return 1, fmt.Sprintf("Platform '%s' not supported.", utils.PlatformLike)
 		}
 		log.Debug().Msgf("Upgrading alpamon from %s to %s using command: '%s'...", version.Version, latestVersion, cmd)
+		return cr.handleShellCmd(cmd, "root", "root", nil)
 
-		time.AfterFunc(1*time.Second, func() {
-			cr.handleShellCmd(cmd, "root", "root", nil)
-		})
-
-		return 0, fmt.Sprintf("Alpamon will upgrade from %s to %s in 1 second.", version.Version, latestVersion)
 	case "commit":
 		cr.commit()
 		return 0, "Committed system information."
@@ -289,7 +285,6 @@ func (cr *CommandRunner) handleShellCmd(command, user, group string, env map[str
 	}
 
 	if len(args) > 0 {
-		log.Debug().Msgf("Running '%s'", strings.Join(args, " "))
 		exitCode, result = runCmdWithOutput(args, user, group, env, 0)
 		results += result
 	}

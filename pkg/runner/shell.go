@@ -92,7 +92,6 @@ func runCmdWithOutput(args []string, username, groupname string, env map[string]
 
 	var cmd *exec.Cmd
 	if username == "root" {
-		log.Debug().Msg("Executing the command with root privilege.")
 		if containsShellOperator(args) {
 			cmd = exec.CommandContext(ctx, "bash", "-c", strings.Join(args, " "))
 		} else {
@@ -124,6 +123,7 @@ func runCmdWithOutput(args []string, username, groupname string, env map[string]
 	}
 	cmd.Dir = usr.HomeDir
 
+	log.Debug().Msgf("Executing command as user '%s' (group: '%s') -> '%s'", username, groupname, strings.Join(args, " "))
 	output, err := cmd.Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
