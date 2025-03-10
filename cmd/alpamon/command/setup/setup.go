@@ -27,8 +27,9 @@ var (
 	serviceTarget       string
 )
 
-func SetConfigPaths(serviceName string) {
+func SetConfigPaths(serviceName string, fs embed.FS) {
 	name = serviceName
+	configFiles = fs
 	configTemplatePath = fmt.Sprintf("configs/%s.conf", name)
 	configTarget = fmt.Sprintf("/etc/%s/%s.conf", name, name)
 	tmpFileTarget = fmt.Sprintf("/usr/lib/tmpfiles.d/%s.conf", name)
