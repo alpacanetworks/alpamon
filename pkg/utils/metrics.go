@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"regexp"
+	"time"
+
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/net"
-	"time"
 )
 
 func CalculateNetworkBps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputBps float64, outputBps float64) {
@@ -49,4 +51,24 @@ func CalculateDiskIOBps(current disk.IOCountersStat, last disk.IOCountersStat, i
 	writeBps = writeBytesDiff / seconds
 
 	return readBps, writeBps
+}
+
+func IsVirtualFileSystem(mountPoint string) bool {
+	pattern := "^/(sys|proc|run|dev/)"
+	matched, _ := regexp.MatchString(pattern, mountPoint)
+	if matched {
+		return true
+	}
+
+	virtualMountpoints := map[string]bool{
+		"/sys":  true,
+		"/proc": true,
+		"/dev":  true,
+	}
+
+	if virtualMountpoints[mountPoint] {
+		return true
+	}
+
+	return false
 }
