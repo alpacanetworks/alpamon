@@ -14,11 +14,9 @@ import (
 	"text/template"
 )
 
-//go:embed configs/*
-var configFiles embed.FS
-
 var (
 	name                string
+	configFiles         embed.FS
 	configTemplatePath  string
 	configTarget        string
 	tmpFilePath         = "configs/tmpfile.conf"

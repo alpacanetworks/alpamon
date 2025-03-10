@@ -1,6 +1,7 @@
 package command
 
 import (
+	"embed"
 	"fmt"
 	"github.com/alpacanetworks/alpamon-go/cmd/alpamon/command/ftp"
 	"github.com/alpacanetworks/alpamon-go/cmd/alpamon/command/setup"
@@ -32,8 +33,11 @@ var RootCmd = &cobra.Command{
 	},
 }
 
+//go:embed configs/*
+var configFiles embed.FS
+
 func init() {
-	setup.SetConfigPaths(name)
+	setup.SetConfigPaths(name, configFiles)
 	RootCmd.AddCommand(setup.SetupCmd, ftp.FtpCmd)
 }
 
