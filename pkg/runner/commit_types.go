@@ -52,6 +52,16 @@ var commitDefs = map[string]commitDef{
 		URL:       "/api/proc/packages/",
 		URLSuffix: "sync/",
 	},
+	"disks": {
+		MultiRow:  true,
+		URL:       "/api/proc/disks/",
+		URLSuffix: "sync",
+	},
+	"partitions": {
+		MultiRow:  true,
+		URL:       "/api/proc/partitions/",
+		URLSuffix: "sync",
+	},
 }
 
 type ServerData struct {
@@ -136,6 +146,23 @@ type Address struct {
 	Mask          string `json:"mask"`
 }
 
+type Disk struct {
+	ID           string `json:"id,omitempty"`
+	Name         string `json:"name"`
+	SerialNumber string `json:"serial_number"`
+	Label        string `json:"label"`
+}
+
+type Partition struct {
+	ID         string `json:"id,omitempty"`
+	Name       string `json:"name"`
+	DiskName   string `json:"disk_name"`
+	Mountpoint string `json:"mount_point"`
+	Fstype     string `json:"fs_type"`
+	Opts       string `json:"options"`
+	IsVirtual  bool   `json:"is_virtual"`
+}
+
 type commitData struct {
 	Version    string              `json:"version"`
 	Load       float64             `json:"load"`
@@ -147,6 +174,8 @@ type commitData struct {
 	Interfaces []Interface         `json:"interfaces"`
 	Addresses  []Address           `json:"addresses"`
 	Packages   []SystemPackageData `json:"packages"`
+	Disks      []Disk              `json:"disks"`
+	Partitions []Partition         `json:"partitions"`
 }
 
 // Defines the ComparableData interface for comparing different types.
