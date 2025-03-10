@@ -2,10 +2,43 @@ package utils
 
 import (
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/net"
+)
+
+var (
+	virtualFileSystems = map[string]bool{
+		"tmpfs":       true,
+		"devtmpfs":    true,
+		"proc":        true,
+		"sysfs":       true,
+		"cgroup":      true,
+		"cgroup2":     true,
+		"overlay":     true,
+		"autofs":      true,
+		"devfs":       true,
+		"securityfs":  true,
+		"fusectl":     true,
+		"hugetlbfs":   true,
+		"debugfs":     true,
+		"pstore":      true,
+		"tracefs":     true,
+		"devpts":      true,
+		"mqueue":      true,
+		"bpf":         true,
+		"configfs":    true,
+		"binfmt_misc": true,
+	}
+	virtualMountpoints = map[string]bool{
+		"/sys":  true,
+		"/proc": true,
+		"/dev":  true,
+	}
+	virtualMountPointPattern = "^/(sys|proc|run|dev/)"
+	loopFileSystemPrefix     = "/dev/loop"
 )
 
 func CalculateNetworkBps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputBps float64, outputBps float64) {
@@ -53,18 +86,40 @@ func CalculateDiskIOBps(current disk.IOCountersStat, last disk.IOCountersStat, i
 	return readBps, writeBps
 }
 
-func IsVirtualFileSystem(mountPoint string) bool {
-	pattern := "^/(sys|proc|run|dev/)"
-	matched, _ := regexp.MatchString(pattern, mountPoint)
+func IsVirtualFileSystem(device string, fstype string, mountPoint string) bool {
+	if strings.HasPrefix(device, loopFileSystemPrefix) {
+		return true
+	}
+
+	matched, _ := regexp.MatchString(virtualMountPointPattern, mountPoint)
 	if matched {
 		return true
 	}
 
-	virtualMountpoints := map[string]bool{
-		"/sys":  true,
-		"/proc": true,
-		"/dev":  true,
+	if virtualFileSystems[fstype] {
+		return true
 	}
 
-	return virtualMountpoints[mountPoint]
+	if virtualMountpoints[mountPoint] {
+		return true
+	}
+
+	return false
+}
+
+func ParseDiskName(device string) string {
+	device = strings.TrimPrefix(device, "/dev/")
+
+	re := regexp.MustCompile(`^disk\d+`)
+	if match := re.FindString(device); match != "" {
+		return match
+	}
+
+	for i := len(device) - 1; i >= 0; i-- {
+		if device[i] < '0' || device[i] > '9' {
+			return device[:i+1]
+		}
+	}
+
+	return device
 }
