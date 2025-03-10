@@ -1,4 +1,4 @@
-package command
+package ftp
 
 import (
 	"github.com/alpacanetworks/alpamon-go/pkg/logger"
@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var ftpCmd = &cobra.Command{
+var FtpCmd = &cobra.Command{
 	Use:   "ftp <url> <homeDirectory>",
 	Short: "Start worker for Web FTP",
 	Args:  cobra.ExactArgs(3),
