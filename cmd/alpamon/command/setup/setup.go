@@ -1,4 +1,4 @@
-package command
+package setup
 
 import (
 	"embed"
@@ -14,18 +14,27 @@ import (
 	"text/template"
 )
 
+//go:embed configs/*
+var configFiles embed.FS
+
 var (
-	name = "alpamon"
-
-	configTemplatePath = "configs/alpamon.conf"
-	configTarget       = "/etc/alpamon/alpamon.conf"
-
-	tmpFilePath   = "configs/tmpfile.conf"
-	tmpFileTarget = "/usr/lib/tmpfiles.d/alpamon.conf"
-
-	serviceTemplatePath = "configs/alpamon.service"
-	serviceTarget       = "/lib/systemd/system/alpamon.service"
+	name                string
+	configTemplatePath  string
+	configTarget        string
+	tmpFilePath         = "configs/tmpfile.conf"
+	tmpFileTarget       string
+	serviceTemplatePath string
+	serviceTarget       string
 )
+
+func SetConfigPaths(serviceName string) {
+	name = serviceName
+	configTemplatePath = fmt.Sprintf("configs/%s.conf", name)
+	configTarget = fmt.Sprintf("/etc/%s/%s.conf", name, name)
+	tmpFileTarget = fmt.Sprintf("/usr/lib/tmpfiles.d/%s.conf", name)
+	serviceTemplatePath = fmt.Sprintf("configs/%s.service", name)
+	serviceTarget = fmt.Sprintf("/lib/systemd/system/%s.service", name)
+}
 
 type ConfigData struct {
 	URL    string
@@ -36,14 +45,11 @@ type ConfigData struct {
 	Debug  string
 }
 
-//go:embed configs/*
-var configFiles embed.FS
-
-var setupCmd = &cobra.Command{
+var SetupCmd = &cobra.Command{
 	Use:   "setup",
-	Short: "Setup and configure the Alpamon	",
+	Short: fmt.Sprintf("Setup and configure the %s", name),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Printf("Starting %s setup...", name)
+		fmt.Printf("Starting %s setup...\n", name)
 
 		configExists := fileExists(configTarget)
 		isOverwrite := true
@@ -143,7 +149,6 @@ func writeService() error {
 	if err != nil {
 		return fmt.Errorf("failed to write target file: %v", err)
 	}
-
 	return nil
 }
 

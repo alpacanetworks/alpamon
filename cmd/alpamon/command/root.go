@@ -2,6 +2,8 @@ package command
 
 import (
 	"fmt"
+	"github.com/alpacanetworks/alpamon-go/cmd/alpamon/command/ftp"
+	"github.com/alpacanetworks/alpamon-go/cmd/alpamon/command/setup"
 	"os"
 	"syscall"
 
@@ -18,6 +20,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	name = "alpamon"
+)
+
 var RootCmd = &cobra.Command{
 	Use:   "alpamon",
 	Short: "Secure Server Agent for Alpacon",
@@ -27,7 +33,8 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(setupCmd, ftpCmd)
+	setup.SetConfigPaths(name)
+	RootCmd.AddCommand(setup.SetupCmd, ftp.FtpCmd)
 }
 
 func runAgent() {
