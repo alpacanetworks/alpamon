@@ -2,22 +2,36 @@ package diskusage
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/shirou/gopsutil/v4/disk"
 )
 
 var excludedFileSystems = map[string]bool{
-	"tmpfs":    true,
-	"devtmpfs": true,
-	"proc":     true,
-	"sysfs":    true,
-	"cgroup":   true,
-	"overlay":  true,
-	"autofs":   true,
-	"devfs":    true,
+	"tmpfs":       true,
+	"devtmpfs":    true,
+	"proc":        true,
+	"sysfs":       true,
+	"cgroup":      true,
+	"cgroup2":     true,
+	"overlay":     true,
+	"autofs":      true,
+	"devfs":       true,
+	"securityfs":  true,
+	"fusectl":     true,
+	"hugetlbfs":   true,
+	"debugfs":     true,
+	"pstore":      true,
+	"tracefs":     true,
+	"devpts":      true,
+	"mqueue":      true,
+	"bpf":         true,
+	"configfs":    true,
+	"binfmt_misc": true,
 }
 
 type Check struct {
@@ -93,7 +107,19 @@ func (c *Check) collectDiskPartitions() ([]disk.PartitionStat, error) {
 
 	var filteredPartitions []disk.PartitionStat
 	for _, partition := range partitions {
-		if !excludedFileSystems[partition.Fstype] {
+		if excludedFileSystems[partition.Fstype] {
+			continue
+		}
+
+		if strings.HasPrefix(partition.Device, "/dev/loop") {
+			continue
+		}
+
+		if utils.IsVirtualFileSystem(partition.Mountpoint) {
+			continue
+		}
+
+		if strings.HasPrefix(partition.Device, "/dev") {
 			filteredPartitions = append(filteredPartitions, partition)
 		}
 	}
