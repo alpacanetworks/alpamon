@@ -47,7 +47,7 @@ type ConfigData struct {
 
 var SetupCmd = &cobra.Command{
 	Use:   "setup",
-	Short: "Setup and configure the application",
+	Short: "Setup and configure the alpamon",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Starting %s setup...\n", name)
 
