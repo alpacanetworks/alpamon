@@ -6,17 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/alpacanetworks/alpamon-go/pkg/version"
-	_ "github.com/glebarez/go-sqlite"
-	rpmdb "github.com/knqyf263/go-rpmdb/pkg"
-	"github.com/rs/zerolog/log"
-	"github.com/shirou/gopsutil/v4/cpu"
-	"github.com/shirou/gopsutil/v4/host"
-	"github.com/shirou/gopsutil/v4/load"
-	"github.com/shirou/gopsutil/v4/mem"
-
 	"io"
 	"net"
 	"net/http"
@@ -26,6 +15,18 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/alpacanetworks/alpamon-go/pkg/version"
+	_ "github.com/glebarez/go-sqlite"
+	rpmdb "github.com/knqyf263/go-rpmdb/pkg"
+	"github.com/rs/zerolog/log"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/host"
+	"github.com/shirou/gopsutil/v4/load"
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 const (
@@ -252,6 +253,12 @@ func collectData() *commitData {
 	}
 	if data.Packages, err = getSystemPackages(); err != nil {
 		log.Debug().Err(err).Msg("Failed to retrieve system packages")
+	}
+	if data.Disks, err = getDisks(); err != nil {
+		log.Debug().Err(err).Msg("Failed to retrieve disks")
+	}
+	if data.Partitions, err = getPartitions(); err != nil {
+		log.Debug().Err(err).Msg("Failed to retrieve disk partitions")
 	}
 
 	return data
@@ -628,6 +635,47 @@ func getRpmPackage(path string) ([]SystemPackageData, error) {
 	}
 
 	return packages, nil
+}
+
+func getDisks() ([]Disk, error) {
+	ioCounters, err := disk.IOCounters()
+	if err != nil {
+		return []Disk{}, err
+	}
+
+	disks := []Disk{}
+	for name, ioCounter := range ioCounters {
+		disks = append(disks, Disk{
+			Name:         name,
+			SerialNumber: ioCounter.SerialNumber,
+			Label:        ioCounter.Label,
+		})
+	}
+
+	return disks, nil
+}
+
+func getPartitions() ([]Partition, error) {
+	partitions, err := disk.Partitions(true)
+	if err != nil {
+		return []Partition{}, nil
+	}
+
+	var partitionList []Partition
+	for _, partition := range partitions {
+		disk := utils.ParseDiskName(partition.Device)
+
+		partitionList = append(partitionList, Partition{
+			Name:       partition.Device,
+			DiskName:   disk,
+			Mountpoint: partition.Mountpoint,
+			Fstype:     partition.Fstype,
+			Opts:       strings.Join(partition.Opts, ","),
+			IsVirtual:  utils.IsVirtualFileSystem(partition.Device, partition.Fstype, partition.Mountpoint),
+		})
+	}
+
+	return partitionList, nil
 }
 
 func dispatchComparison(entry commitDef, currentData, remoteData any) {
