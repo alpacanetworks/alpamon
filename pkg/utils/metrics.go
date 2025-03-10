@@ -110,7 +110,7 @@ func IsVirtualFileSystem(device string, fstype string, mountPoint string) bool {
 func ParseDiskName(device string) string {
 	device = strings.TrimPrefix(device, "/dev/")
 
-	re := regexp.MustCompile(`^disk\d+`)
+	re := regexp.MustCompile(`^[a-zA-Z]+\d*`)
 	if match := re.FindString(device); match != "" {
 		return match
 	}
