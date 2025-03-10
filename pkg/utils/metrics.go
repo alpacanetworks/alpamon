@@ -66,9 +66,5 @@ func IsVirtualFileSystem(mountPoint string) bool {
 		"/dev":  true,
 	}
 
-	if virtualMountpoints[mountPoint] {
-		return true
-	}
-
-	return false
+	return virtualMountpoints[mountPoint]
 }
