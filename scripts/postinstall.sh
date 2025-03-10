@@ -65,7 +65,7 @@ start_systemd_service() {
 }
 
 is_new_installation() {
-  if [ ! -f "$ALPAMON_BIN" ]; then
+  if [ -z "$2" ]; then
     return 0  # first install
   else
     return 1  # upgrade
