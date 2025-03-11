@@ -25,16 +25,6 @@ var (
 	serviceTarget       string
 )
 
-func SetConfigPaths(serviceName string, fs embed.FS) {
-	name = serviceName
-	configFiles = fs
-	configTemplatePath = fmt.Sprintf("configs/%s.conf", name)
-	configTarget = fmt.Sprintf("/etc/%s/%s.conf", name, name)
-	tmpFileTarget = fmt.Sprintf("/usr/lib/tmpfiles.d/%s.conf", name)
-	serviceTemplatePath = fmt.Sprintf("configs/%s.service", name)
-	serviceTarget = fmt.Sprintf("/lib/systemd/system/%s.service", name)
-}
-
 type ConfigData struct {
 	URL    string
 	ID     string
@@ -42,6 +32,16 @@ type ConfigData struct {
 	Verify string
 	CACert string
 	Debug  string
+}
+
+func SetConfigPaths(serviceName string, fs embed.FS) {
+	name = serviceName
+	configFiles = fs
+	configTemplatePath = fmt.Sprintf("configs/%s.conf", name)
+	configTarget = fmt.Sprintf("/etc/alpamon/%s.conf", name)
+	tmpFileTarget = fmt.Sprintf("/usr/lib/tmpfiles.d/%s.conf", name)
+	serviceTemplatePath = fmt.Sprintf("configs/%s.service", name)
+	serviceTarget = fmt.Sprintf("/lib/systemd/system/%s.service", name)
 }
 
 var SetupCmd = &cobra.Command{
@@ -53,21 +53,16 @@ var SetupCmd = &cobra.Command{
 		configExists := fileExists(configTarget)
 		isOverwrite := true
 
-		if term.IsTerminal(syscall.Stdin) {
-			if configExists {
-				fmt.Println("A configuration file already exists at:", configTarget)
-				isOverwrite = cli.PromptForBool("Do you want to overwrite it with a new configuration?: ")
-			}
-
+		if configExists && term.IsTerminal(syscall.Stdin) {
+			fmt.Println("A configuration file already exists at:", configTarget)
+			isOverwrite = cli.PromptForBool("Do you want to overwrite it with a new configuration?: ")
 			if !isOverwrite {
 				fmt.Println("Keeping the existing configuration file. Skipping configuration update.")
 				return nil
 			}
 		}
 
-		if !configExists || isOverwrite {
-			fmt.Println("Applying a new configuration automatically.")
-		}
+		fmt.Println("Applying a new configuration automatically.")
 
 		err := copyEmbeddedFile(tmpFilePath, tmpFileTarget)
 		if err != nil {
