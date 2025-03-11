@@ -157,9 +157,14 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 			remoteData = &[]Disk{}
 		case "partitions":
 			if currentData, err = getPartitions(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve disks")
+				log.Debug().Err(err).Msg("Failed to retrieve partitions")
 			}
 			remoteData = &[]Partition{}
+		case "mounts":
+			if currentData, err = getMountPoints(); err != nil {
+				log.Debug().Err(err).Msg("Failed to retrieve mount points")
+			}
+			remoteData = &[]MountPoint{}
 		default:
 			log.Warn().Msgf("Unknown key: %s", key)
 			continue
@@ -269,6 +274,9 @@ func collectData() *commitData {
 	}
 	if data.Partitions, err = getPartitions(); err != nil {
 		log.Debug().Err(err).Msg("Failed to retrieve disk partitions")
+	}
+	if data.Mounts, err = getMountPoints(); err != nil {
+		log.Debug().Err(err).Msg("Failed to retrieve mount points")
 	}
 
 	return data
@@ -676,16 +684,32 @@ func getPartitions() ([]Partition, error) {
 		disk := utils.ParseDiskName(partition.Device)
 
 		partitionList = append(partitionList, Partition{
-			Name:       partition.Device,
-			DiskName:   disk,
-			Mountpoint: partition.Mountpoint,
-			Fstype:     partition.Fstype,
-			Opts:       strings.Join(partition.Opts, ","),
-			IsVirtual:  utils.IsVirtualFileSystem(partition.Device, partition.Fstype, partition.Mountpoint),
+			Name:      partition.Device,
+			DiskName:  disk,
+			Fstype:    partition.Fstype,
+			IsVirtual: utils.IsVirtualFileSystem(partition.Device, partition.Fstype, partition.Mountpoint),
 		})
 	}
 
 	return partitionList, nil
+}
+
+func getMountPoints() ([]MountPoint, error) {
+	partitions, err := disk.Partitions(true)
+	if err != nil {
+		return []MountPoint{}, nil
+	}
+
+	var mountPoints []MountPoint
+	for _, partition := range partitions {
+		mountPoints = append(mountPoints, MountPoint{
+			MountPoint:    partition.Mountpoint,
+			PartitionName: partition.Device,
+			Opts:          strings.Join(partition.Opts, ","),
+		})
+	}
+
+	return mountPoints, nil
 }
 
 func dispatchComparison(entry commitDef, currentData, remoteData any) {
@@ -704,5 +728,7 @@ func dispatchComparison(entry commitDef, currentData, remoteData any) {
 		compareListData(entry, currentData.([]Disk), *v)
 	case *[]Partition:
 		compareListData(entry, currentData.([]Partition), *v)
+	case *[]MountPoint:
+		compareListData(entry, currentData.([]MountPoint), *v)
 	}
 }
