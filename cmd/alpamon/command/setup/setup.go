@@ -69,15 +69,7 @@ var SetupCmd = &cobra.Command{
 			return err
 		}
 
-		command := exec.Command("systemd-tmpfiles", "--create")
-		command.SysProcAttr = &syscall.SysProcAttr{
-			Credential: &syscall.Credential{
-				Uid: 0,
-				Gid: 0,
-			},
-		}
-
-		output, err := command.CombinedOutput()
+		output, err := exec.Command("sudo", "systemd-tmpfiles", "--create").CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("%w\n%s", err, string(output))
 		}
