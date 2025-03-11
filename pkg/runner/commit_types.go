@@ -55,12 +55,12 @@ var commitDefs = map[string]commitDef{
 	"disks": {
 		MultiRow:  true,
 		URL:       "/api/proc/disks/",
-		URLSuffix: "sync",
+		URLSuffix: "sync/",
 	},
 	"partitions": {
 		MultiRow:  true,
 		URL:       "/api/proc/partitions/",
-		URLSuffix: "sync",
+		URLSuffix: "sync/",
 	},
 }
 
@@ -330,5 +330,40 @@ func (sp SystemPackageData) GetData() ComparableData {
 		Version: sp.Version,
 		Source:  sp.Source,
 		Arch:    sp.Arch,
+	}
+}
+
+func (d Disk) GetID() string {
+	return d.ID
+}
+
+func (d Disk) GetKey() interface{} {
+	return d.Name
+}
+
+func (d Disk) GetData() ComparableData {
+	return Disk{
+		Name:         d.Name,
+		SerialNumber: d.SerialNumber,
+		Label:        d.Label,
+	}
+}
+
+func (p Partition) GetID() string {
+	return p.ID
+}
+
+func (p Partition) GetKey() interface{} {
+	return p.Name
+}
+
+func (p Partition) GetData() ComparableData {
+	return Partition{
+		Name:       p.Name,
+		DiskName:   p.DiskName,
+		Mountpoint: p.Mountpoint,
+		Fstype:     p.Fstype,
+		Opts:       p.Opts,
+		IsVirtual:  p.IsVirtual,
 	}
 }
