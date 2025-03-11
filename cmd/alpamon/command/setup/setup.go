@@ -69,7 +69,7 @@ var SetupCmd = &cobra.Command{
 			return err
 		}
 
-		output, err := exec.Command("sudo", "systemd-tmpfiles", "--create").CombinedOutput()
+		output, err := exec.Command("systemd-tmpfiles", "--create").CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("%w\n%s", err, string(output))
 		}
