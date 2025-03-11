@@ -50,8 +50,8 @@ var SetupCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Starting %s setup...\n", name)
 
+		var isOverwrite bool
 		configExists := fileExists(configTarget)
-		isOverwrite := true
 
 		if configExists && term.IsTerminal(syscall.Stdin) {
 			fmt.Println("A configuration file already exists at:", configTarget)
