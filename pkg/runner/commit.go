@@ -150,6 +150,16 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 				log.Debug().Err(err).Msg("Failed to retrieve system packages")
 			}
 			remoteData = &[]SystemPackageData{}
+		case "disks":
+			if currentData, err = getDisks(); err != nil {
+				log.Debug().Err(err).Msg("Failed to retrieve disks")
+			}
+			remoteData = &[]Disk{}
+		case "partitions":
+			if currentData, err = getPartitions(); err != nil {
+				log.Debug().Err(err).Msg("Failed to retrieve disks")
+			}
+			remoteData = &[]Partition{}
 		default:
 			log.Warn().Msgf("Unknown key: %s", key)
 			continue
@@ -690,5 +700,9 @@ func dispatchComparison(entry commitDef, currentData, remoteData any) {
 		compareListData(entry, currentData.([]Address), *v)
 	case *[]SystemPackageData:
 		compareListData(entry, currentData.([]SystemPackageData), *v)
+	case *[]Disk:
+		compareListData(entry, currentData.([]Disk), *v)
+	case *[]Partition:
+		compareListData(entry, currentData.([]Partition), *v)
 	}
 }
