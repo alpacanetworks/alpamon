@@ -354,7 +354,7 @@ func (p Partition) GetID() string {
 }
 
 func (p Partition) GetKey() interface{} {
-	return p.Name
+	return p.Mountpoint
 }
 
 func (p Partition) GetData() ComparableData {
