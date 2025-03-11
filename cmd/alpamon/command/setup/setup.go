@@ -62,14 +62,22 @@ var SetupCmd = &cobra.Command{
 			}
 		}
 
-		fmt.Println("Applying a new configuration automatically.")
+		fmt.Println("Applying a new configuration automatically...")
 
 		err := copyEmbeddedFile(tmpFilePath, tmpFileTarget)
 		if err != nil {
 			return err
 		}
 
-		output, err := exec.Command("systemd-tmpfiles", "--create").CombinedOutput()
+		command := exec.Command("systemd-tmpfiles", "--create")
+		command.SysProcAttr = &syscall.SysProcAttr{
+			Credential: &syscall.Credential{
+				Uid: 0,
+				Gid: 0,
+			},
+		}
+
+		output, err := command.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("%w\n%s", err, string(output))
 		}

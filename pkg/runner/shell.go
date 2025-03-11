@@ -135,19 +135,6 @@ func runCmdWithOutput(args []string, username, groupname string, env map[string]
 	return 0, string(output)
 }
 
-func RunCmd(command string, args ...string) int {
-	cmd := exec.Command(command, args...)
-
-	err := cmd.Run()
-	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			return exitError.ExitCode()
-		}
-		return -1
-	}
-	return 0
-}
-
 // && and || operators are handled separately in handleShellCmd
 func containsShellOperator(args []string) bool {
 	for _, arg := range args {
