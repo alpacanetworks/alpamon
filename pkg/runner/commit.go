@@ -20,6 +20,7 @@ import (
 	"github.com/alpacanetworks/alpamon-go/pkg/utils"
 	"github.com/alpacanetworks/alpamon-go/pkg/version"
 	_ "github.com/glebarez/go-sqlite"
+	"github.com/google/go-cmp/cmp"
 	rpmdb "github.com/knqyf263/go-rpmdb/pkg"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -213,7 +214,7 @@ func compareListData[T ComparableData](entry commitDef, currentData, remoteData 
 
 	for _, remoteItem := range remoteData {
 		if currentItem, exists := currentMap[remoteItem.GetKey()]; exists {
-			if currentItem != remoteItem.GetData() {
+			if !cmp.Equal(currentItem, remoteItem.GetData()) {
 				scheduler.Rqueue.Patch(entry.URL+remoteItem.GetID()+"/", currentItem.GetData(), 80, time.Time{})
 			}
 			delete(currentMap, currentItem.GetKey())
