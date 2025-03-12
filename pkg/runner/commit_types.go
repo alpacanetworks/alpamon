@@ -62,11 +62,6 @@ var commitDefs = map[string]commitDef{
 		URL:       "/api/proc/partitions/",
 		URLSuffix: "sync/",
 	},
-	"mounts": {
-		MultiRow:  true,
-		URL:       "/api/proc/mounts/",
-		URLSuffix: "sync/",
-	},
 }
 
 type ServerData struct {
@@ -159,18 +154,12 @@ type Disk struct {
 }
 
 type Partition struct {
-	ID        string `json:"id,omitempty"`
-	Name      string `json:"name"`
-	DiskName  string `json:"disk_name"`
-	Fstype    string `json:"fs_type"`
-	IsVirtual bool   `json:"is_virtual"`
-}
-
-type MountPoint struct {
-	ID            string `json:"id,omitempty"`
-	MountPoint    string `json:"mount_point"`
-	PartitionName string `json:"partition_name"`
-	Opts          string `json:"options"`
+	ID         string   `json:"id,omitempty"`
+	MountPoint []string `json:"mount_point"`
+	Name       string   `json:"name"`
+	DiskName   string   `json:"disk_name"`
+	Fstype     string   `json:"fs_type"`
+	IsVirtual  bool     `json:"is_virtual"`
 }
 
 type commitData struct {
@@ -186,7 +175,6 @@ type commitData struct {
 	Packages   []SystemPackageData `json:"packages"`
 	Disks      []Disk              `json:"disks"`
 	Partitions []Partition         `json:"partitions"`
-	Mounts     []MountPoint        `json:"mounts"`
 }
 
 // Defines the ComparableData interface for comparing different types.
@@ -370,25 +358,10 @@ func (p Partition) GetKey() interface{} {
 
 func (p Partition) GetData() ComparableData {
 	return Partition{
-		Name:      p.Name,
-		DiskName:  p.DiskName,
-		Fstype:    p.Fstype,
-		IsVirtual: p.IsVirtual,
-	}
-}
-
-func (m MountPoint) GetID() string {
-	return m.ID
-}
-
-func (m MountPoint) GetKey() interface{} {
-	return m.MountPoint
-}
-
-func (m MountPoint) GetData() ComparableData {
-	return MountPoint{
-		MountPoint:    m.MountPoint,
-		Opts:          m.Opts,
-		PartitionName: m.PartitionName,
+		Name:       p.Name,
+		MountPoint: p.MountPoint,
+		DiskName:   p.DiskName,
+		Fstype:     p.Fstype,
+		IsVirtual:  p.IsVirtual,
 	}
 }
