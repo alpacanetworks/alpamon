@@ -672,7 +672,6 @@ func getPartitions() ([]Partition, error) {
 		return []Partition{}, nil
 	}
 
-	var partitionList []Partition
 	for _, partition := range partitions {
 		if value, exists := seen[partition.Device]; exists {
 			value.MountPoint = append(value.MountPoint, partition.Mountpoint)
@@ -689,10 +688,10 @@ func getPartitions() ([]Partition, error) {
 		}
 	}
 
+	var partitionList []Partition
 	for _, partition := range seen {
 		partitionList = append(partitionList, partition)
 	}
-	fmt.Println(partitionList)
 
 	return partitionList, nil
 }
