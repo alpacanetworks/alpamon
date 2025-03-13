@@ -1,17 +1,19 @@
 #!/bin/sh
 
-CONF_FILE_PATH="/etc/alpamon/alpamon.conf"
-TMP_FILE_PATH="/usr/lib/tmpfiles.d/alpamon.conf"
-SVC_FILE_PATH="/lib/systemd/system/alpamon.service"
-LOG_FILE_PATH="/var/log/alpamon/alpamon.log"
-DB_FILE_PATH="/var/lib/alpamon/alpamon.db"
+FILES_TO_REMOVE="
+  /etc/alpamon/alpamon.conf
+  /usr/lib/tmpfiles.d/alpamon.conf
+  /lib/systemd/system/alpamon.service
+  /lib/systemd/system/alpamon-restart.service
+  /lib/systemd/system/alpamon-restart.timer
+  /var/log/alpamon/alpamon.log
+  /var/lib/alpamon/alpamon.db
+"
 
 if [ "$1" = 'purge' ]; then
-    rm -f "$CONF_FILE_PATH" || true
-    rm -f "$TMP_FILE_PATH" || true
-    rm -f "$SVC_FILE_PATH" || true
-    rm -f "$LOG_FILE_PATH" || true
-    rm -f "$DB_FILE_PATH" || true
+    for file in $FILES_TO_REMOVE; do
+        rm -f "$file" || true
+    done
 
     echo "All related configuration, service, and log files have been deleted."
 fi

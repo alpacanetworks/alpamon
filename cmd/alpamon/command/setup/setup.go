@@ -15,14 +15,18 @@ import (
 )
 
 var (
-	name                string
-	configFiles         embed.FS
-	configTemplatePath  string
-	configTarget        string
-	tmpFilePath         = "configs/tmpfile.conf"
-	tmpFileTarget       string
-	serviceTemplatePath string
-	serviceTarget       string
+	name                 string
+	configFiles          embed.FS
+	configPath           string
+	configTarget         string
+	tmpFilePath          = "configs/tmpfile.conf"
+	tmpFileTarget        string
+	servicePath          string
+	restartServicePath   string
+	serviceTarget        string
+	restartServiceTarget string
+	timerPath            string
+	timerTarget          string
 )
 
 type ConfigData struct {
@@ -37,11 +41,15 @@ type ConfigData struct {
 func SetConfigPaths(serviceName string, fs embed.FS) {
 	name = serviceName
 	configFiles = fs
-	configTemplatePath = fmt.Sprintf("configs/%s.conf", name)
+	configPath = fmt.Sprintf("configs/%s.conf", name)
 	configTarget = fmt.Sprintf("/etc/alpamon/%s.conf", name)
 	tmpFileTarget = fmt.Sprintf("/usr/lib/tmpfiles.d/%s.conf", name)
-	serviceTemplatePath = fmt.Sprintf("configs/%s.service", name)
+	servicePath = fmt.Sprintf("configs/%s.service", name)
 	serviceTarget = fmt.Sprintf("/lib/systemd/system/%s.service", name)
+	restartServicePath = fmt.Sprintf("configs/%s-restart.service", name)
+	restartServiceTarget = fmt.Sprintf("/lib/systemd/system/%s-restart.service", name)
+	timerPath = fmt.Sprintf("configs/%s-restart.timer", name)
+	timerTarget = fmt.Sprintf("/lib/systemd/system/%s-restart.timer", name)
 }
 
 var SetupCmd = &cobra.Command{
@@ -79,7 +87,7 @@ var SetupCmd = &cobra.Command{
 			return err
 		}
 
-		err = writeService()
+		err = writeSystemdFiles()
 		if err != nil {
 			return err
 		}
@@ -90,9 +98,9 @@ var SetupCmd = &cobra.Command{
 }
 
 func writeConfig() error {
-	tmplData, err := configFiles.ReadFile(configTemplatePath)
+	tmplData, err := configFiles.ReadFile(configPath)
 	if err != nil {
-		return fmt.Errorf("failed to read template file (%s): %v", configTemplatePath, err)
+		return fmt.Errorf("failed to read template file (%s): %v", configPath, err)
 	}
 
 	tmpl, err := template.New(fmt.Sprintf("%s.conf", name)).Parse(string(tmplData))
@@ -138,11 +146,22 @@ func writeConfig() error {
 	return nil
 }
 
-func writeService() error {
-	err := copyEmbeddedFile(serviceTemplatePath, serviceTarget)
+func writeSystemdFiles() error {
+	err := copyEmbeddedFile(servicePath, serviceTarget)
 	if err != nil {
 		return fmt.Errorf("failed to write target file: %v", err)
 	}
+
+	err = copyEmbeddedFile(restartServicePath, restartServiceTarget)
+	if err != nil {
+		return fmt.Errorf("failed to write target file: %v", err)
+	}
+
+	err = copyEmbeddedFile(timerPath, timerTarget)
+	if err != nil {
+		return fmt.Errorf("failed to write target file: %v", err)
+	}
+
 	return nil
 }
 

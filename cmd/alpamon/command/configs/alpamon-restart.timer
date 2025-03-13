@@ -1,0 +1,10 @@
+[Unit]
+Description= Timer to restart Alpamon service 5 minutes after activation
+
+[Timer]
+OnActiveSec=5min
+Unit=alpamon-restart.service
+Persistent=false
+
+[Install]
+WantedBy=multi-user.target
