@@ -47,7 +47,7 @@ func SetConfigPaths(serviceName string, fs embed.FS) {
 	servicePath = fmt.Sprintf("configs/%s.service", name)
 	serviceTarget = fmt.Sprintf("/lib/systemd/system/%s.service", name)
 	restartServicePath = fmt.Sprintf("configs/%s-restart.service", name)
-	restartServiceTarget = fmt.Sprintf("lib/systemd/system/%s-restart.service", name)
+	restartServiceTarget = fmt.Sprintf("/lib/systemd/system/%s-restart.service", name)
 	timerPath = fmt.Sprintf("configs/%s-restart.timer", name)
 	timerTarget = fmt.Sprintf("/lib/systemd/system/%s-restart.timer", name)
 }
