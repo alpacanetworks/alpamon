@@ -45,7 +45,6 @@ func (suite *HourlyDiskUsageCheckSuite) TestGetDiskUsage() {
 	err := suite.check.GetClient().DiskUsage.Create().
 		SetTimestamp(time.Now()).
 		SetDevice(uuid.NewString()).
-		SetMountPoint(uuid.NewString()).
 		SetUsage(rand.Float64()).
 		SetTotal(int64(rand.Int())).
 		SetFree(int64(rand.Int())).
@@ -81,7 +80,6 @@ func (suite *HourlyDiskUsageCheckSuite) TestDeleteDiskUsage() {
 	err := suite.check.GetClient().DiskUsage.Create().
 		SetTimestamp(time.Now().Add(-2 * time.Hour)).
 		SetDevice(uuid.NewString()).
-		SetMountPoint(uuid.NewString()).
 		SetUsage(rand.Float64()).
 		SetTotal(int64(rand.Int())).
 		SetFree(int64(rand.Int())).

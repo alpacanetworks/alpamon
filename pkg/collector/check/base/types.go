@@ -59,6 +59,9 @@ type DiskUsageQuerySet struct {
 	Device string  `json:"device"`
 	Max    float64 `json:"max"`
 	AVG    float64 `json:"avg"`
+	Total  uint64  `json:"total"`
+	Free   uint64  `json:"free"`
+	Used   uint64  `json:"used"`
 }
 
 type TrafficQuerySet struct {
@@ -78,7 +81,6 @@ type CheckResult struct {
 	Usage         float64   `json:"usage,omitempty"`
 	Name          string    `json:"name,omitempty"`
 	Device        string    `json:"device,omitempty"`
-	MountPoint    string    `json:"mount_point,omitempty"`
 	Total         uint64    `json:"total,omitempty"`
 	Free          uint64    `json:"free,omitempty"`
 	Used          uint64    `json:"used,omitempty"`

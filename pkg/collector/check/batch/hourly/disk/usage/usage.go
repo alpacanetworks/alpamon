@@ -49,6 +49,9 @@ func (c *Check) queryDiskUsage(ctx context.Context) (base.MetricData, error) {
 			Device:    row.Device,
 			Peak:      row.Max,
 			Avg:       row.AVG,
+			Total:     row.Total,
+			Free:      row.Free,
+			Used:      row.Used,
 		})
 	}
 	metric := base.MetricData{
@@ -80,8 +83,22 @@ func (c *Check) getDiskUsage(ctx context.Context) ([]base.DiskUsageQuerySet, err
 			usageExpr := "(CAST(SUM(used) AS FLOAT) * 100.0) / NULLIF(SUM(total), 0)"
 			t := sql.Table(diskusage.Table)
 
-			subq := sql.Select(
-				"device",
+			latestSubq := sql.Select(
+				sql.As("device", "l.device"),
+				sql.As("used", "l.used"),
+				sql.As("total", "l.total"),
+				sql.As("free", "l.free"),
+			).
+				From(t).
+				Where(
+					sql.In("timestamp",
+						sql.Select(sql.Max("timestamp")).From(t).GroupBy("device"),
+					),
+				).
+				As("l")
+
+			usageSubq := sql.Select(
+				sql.As("device", "u.device"),
 				"timestamp",
 				sql.As(usageExpr, "usage"),
 			).
@@ -92,13 +109,21 @@ func (c *Check) getDiskUsage(ctx context.Context) ([]base.DiskUsageQuerySet, err
 						sql.LTE(t.C(diskusage.FieldTimestamp), now),
 					),
 				).
-				GroupBy("device", "timestamp")
+				GroupBy("device", "timestamp").
+				As("u")
 
 			*s = *sql.Select(
-				"device",
+				sql.As("u.device", "device"),
 				sql.As(sql.Max("usage"), "max"),
 				sql.As(sql.Avg("usage"), "avg"),
-			).From(subq).GroupBy("device")
+				sql.As("l.used", "used"),
+				sql.As("l.total", "total"),
+				sql.As("l.free", "free"),
+			).
+				From(usageSubq).
+				Join(latestSubq).
+				On("u.device", "l.device").
+				GroupBy("u.device")
 		}).Scan(ctx, &querySet)
 	if err != nil {
 		return querySet, err
@@ -118,7 +143,10 @@ func (c *Check) saveHourlyDiskUsage(data []base.CheckResult, ctx context.Context
 		q.SetTimestamp(data[i].Timestamp).
 			SetDevice(data[i].Device).
 			SetPeak(data[i].Peak).
-			SetAvg(data[i].Avg)
+			SetAvg(data[i].Avg).
+			SetTotal(int64(data[i].Total)).
+			SetFree(int64(data[i].Free)).
+			SetUsed(int64(data[i].Used))
 	}).Exec(ctx)
 	if err != nil {
 		return err

@@ -58,17 +58,22 @@ func (c *Check) collectAndSaveDiskUsage(ctx context.Context) (base.MetricData, e
 
 func (c *Check) parseDiskUsage(partitions []disk.PartitionStat) []base.CheckResult {
 	var data []base.CheckResult
+	seen := make(map[string]bool)
 	for _, partition := range partitions {
+		if seen[partition.Device] {
+			continue
+		}
+		seen[partition.Device] = true
+
 		usage, err := c.collectDiskUsage(partition.Mountpoint)
 		if err == nil {
 			data = append(data, base.CheckResult{
-				Timestamp:  time.Now(),
-				Device:     partition.Device,
-				MountPoint: partition.Mountpoint,
-				Usage:      usage.UsedPercent,
-				Total:      usage.Total,
-				Free:       usage.Free,
-				Used:       usage.Used,
+				Timestamp: time.Now(),
+				Device:    partition.Device,
+				Usage:     usage.UsedPercent,
+				Total:     usage.Total,
+				Free:      usage.Free,
+				Used:      usage.Used,
 			})
 		}
 	}
@@ -110,7 +115,6 @@ func (c *Check) saveDiskUsage(data []base.CheckResult, ctx context.Context) erro
 	err := client.DiskUsage.MapCreateBulk(data, func(q *ent.DiskUsageCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
 			SetDevice(data[i].Device).
-			SetMountPoint(data[i].MountPoint).
 			SetUsage(data[i].Usage).
 			SetTotal(int64(data[i].Total)).
 			SetFree(int64(data[i].Free)).

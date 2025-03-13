@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
 	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlydiskusage"
 )
 
@@ -48,6 +48,9 @@ func (c *Check) queryHourlyDiskUsage(ctx context.Context) (base.MetricData, erro
 			Device:    row.Device,
 			Peak:      row.Max,
 			Avg:       row.AVG,
+			Total:     row.Total,
+			Free:      row.Free,
+			Used:      row.Used,
 		})
 	}
 	metric := base.MetricData{
@@ -65,17 +68,57 @@ func (c *Check) queryHourlyDiskUsage(ctx context.Context) (base.MetricData, erro
 
 func (c *Check) getHourlyDiskUsage(ctx context.Context) ([]base.DiskUsageQuerySet, error) {
 	client := c.GetClient()
-	now := time.Now()
-	from := now.Add(-24 * time.Hour)
 
 	var querySet []base.DiskUsageQuerySet
 	err := client.HourlyDiskUsage.Query().
-		Where(hourlydiskusage.TimestampGTE(from), hourlydiskusage.TimestampLTE(now)).
-		GroupBy(hourlydiskusage.FieldDevice).
-		Aggregate(
-			ent.Max(hourlydiskusage.FieldPeak),
-			ent.Mean(hourlydiskusage.FieldAvg),
-		).Scan(ctx, &querySet)
+		Modify(func(s *sql.Selector) {
+			now := time.Now()
+			from := now.Add(-24 * time.Hour)
+			t := sql.Table(hourlydiskusage.Table)
+
+			latestSubq := sql.Select(
+				sql.As("device", "l.device"),
+				sql.As("used", "l.used"),
+				sql.As("total", "l.total"),
+				sql.As("free", "l.free"),
+			).
+				From(t).
+				Where(
+					sql.In("timestamp",
+						sql.Select(sql.Max("timestamp")).From(t).GroupBy("device"),
+					),
+				).
+				As("l")
+
+			usageSubq := sql.Select(
+				sql.As("device", "u.device"),
+				"timestamp",
+				sql.As("peak", "u.peak"),
+				sql.As("avg", "u.avg"),
+			).
+				From(t).
+				Where(
+					sql.And(
+						sql.GTE(t.C(hourlydiskusage.FieldTimestamp), from),
+						sql.LTE(t.C(hourlydiskusage.FieldTimestamp), now),
+					),
+				).
+				GroupBy("device", "timestamp").
+				As("u")
+
+			*s = *sql.Select(
+				sql.As("u.device", "device"),
+				sql.As(sql.Max("u.peak"), "max"),
+				sql.As(sql.Avg("u.avg"), "avg"),
+				sql.As("l.used", "used"),
+				sql.As("l.total", "total"),
+				sql.As("l.free", "free"),
+			).
+				From(usageSubq).
+				Join(latestSubq).
+				On("u.device", "l.device").
+				GroupBy("u.device")
+		}).Scan(ctx, &querySet)
 	if err != nil {
 		return querySet, err
 	}
