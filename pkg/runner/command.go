@@ -112,7 +112,6 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		}
 		log.Debug().Msgf("Upgrading alpamon from %s to %s using command: '%s'...", version.Version, latestVersion, cmd)
 		return cr.handleShellCmd(cmd, "root", "root", nil)
-
 	case "commit":
 		cr.commit()
 		return 0, "Committed system information."

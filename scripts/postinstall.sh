@@ -6,9 +6,11 @@ main() {
   check_root_permission
   check_systemd_status
   check_alpamon_binary
-  install_atlas_cli
 
-  if is_new_installation "$@"; then
+  if is_upgrade "$@"; then
+    restart_alpamon_by_timer
+  else
+    install_atlas_cli
     setup_alpamon
   fi
 
@@ -64,11 +66,21 @@ start_systemd_service() {
   echo "Alpamon has been installed as a systemd service and will be launched automatically on system boot."
 }
 
-is_new_installation() {
-  if [ -z "$2" ]; then
-    return 0  # first install
+restart_alpamon_by_timer() {
+  echo "Setting up systemd timer to restart Alpamon..."
+
+  systemctl daemon-reload || true
+  systemctl reset-failed alpamon-restart.timer || true
+  systemctl restart alpamon-restart.timer || true
+
+  echo "Systemd timer to restart Alpamon has been set. It will restart the service in 5 minutes."
+}
+
+is_upgrade() {
+  if [ -n "$2" ]; then
+    return 0  # Upgrade
   else
-    return 1  # upgrade
+    return 1  # First install
   fi
 }
 

@@ -1,0 +1,6 @@
+[Unit]
+Description= Restart Alpamon service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl restart alpamon.service
