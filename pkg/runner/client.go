@@ -152,7 +152,7 @@ func (wc *WebsocketClient) Quit() {
 	close(wc.QuitChan)
 }
 
-func (wc *WebsocketClient) restart() {
+func (wc *WebsocketClient) Restart() {
 	wc.RestartRequested = true
 	wc.Quit()
 }

@@ -186,7 +186,7 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		return 1, "Invalid session ID"
 	case "restart":
 		time.AfterFunc(1*time.Second, func() {
-			cr.wsClient.restart()
+			cr.wsClient.Restart()
 		})
 
 		return 0, "Alpamon will restart in 1 second."
