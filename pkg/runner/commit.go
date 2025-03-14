@@ -675,17 +675,17 @@ func getPartitions() ([]Partition, error) {
 
 	for _, partition := range partitions {
 		if value, exists := seen[partition.Device]; exists {
-			value.MountPoint = append(value.MountPoint, partition.Mountpoint)
+			value.MountPoints = append(value.MountPoints, partition.Mountpoint)
 			seen[partition.Device] = value
 			continue
 		}
 		disk := utils.ParseDiskName(partition.Device)
 		seen[partition.Device] = Partition{
-			Name:       partition.Device,
-			MountPoint: []string{partition.Mountpoint},
-			DiskName:   disk,
-			Fstype:     partition.Fstype,
-			IsVirtual:  utils.IsVirtualFileSystem(partition.Device, partition.Fstype, partition.Mountpoint),
+			Name:        partition.Device,
+			MountPoints: []string{partition.Mountpoint},
+			DiskName:    disk,
+			Fstype:      partition.Fstype,
+			IsVirtual:   utils.IsVirtualFileSystem(partition.Device, partition.Fstype, partition.Mountpoint),
 		}
 	}
 
