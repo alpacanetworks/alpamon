@@ -154,12 +154,12 @@ type Disk struct {
 }
 
 type Partition struct {
-	ID         string   `json:"id,omitempty"`
-	MountPoint []string `json:"mount_point"`
-	Name       string   `json:"name"`
-	DiskName   string   `json:"disk_name"`
-	Fstype     string   `json:"fs_type"`
-	IsVirtual  bool     `json:"is_virtual"`
+	ID          string   `json:"id,omitempty"`
+	MountPoints []string `json:"mount_points"`
+	Name        string   `json:"name"`
+	DiskName    string   `json:"disk_name"`
+	Fstype      string   `json:"fs_type"`
+	IsVirtual   bool     `json:"is_virtual"`
 }
 
 type commitData struct {
@@ -358,10 +358,10 @@ func (p Partition) GetKey() interface{} {
 
 func (p Partition) GetData() ComparableData {
 	return Partition{
-		Name:       p.Name,
-		MountPoint: p.MountPoint,
-		DiskName:   p.DiskName,
-		Fstype:     p.Fstype,
-		IsVirtual:  p.IsVirtual,
+		Name:        p.Name,
+		MountPoints: p.MountPoints,
+		DiskName:    p.DiskName,
+		Fstype:      p.Fstype,
+		IsVirtual:   p.IsVirtual,
 	}
 }
