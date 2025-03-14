@@ -20,6 +20,9 @@ func (HourlyDiskUsage) Fields() []ent.Field {
 		field.String("device"),
 		field.Float("peak"),
 		field.Float("avg"),
+		field.Int64("total").Default(0),
+		field.Int64("free").Default(0),
+		field.Int64("used").Default(0),
 	}
 }
 

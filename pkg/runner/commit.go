@@ -6,17 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/alpacanetworks/alpamon-go/pkg/version"
-	_ "github.com/glebarez/go-sqlite"
-	rpmdb "github.com/knqyf263/go-rpmdb/pkg"
-	"github.com/rs/zerolog/log"
-	"github.com/shirou/gopsutil/v4/cpu"
-	"github.com/shirou/gopsutil/v4/host"
-	"github.com/shirou/gopsutil/v4/load"
-	"github.com/shirou/gopsutil/v4/mem"
-
 	"io"
 	"net"
 	"net/http"
@@ -26,6 +15,19 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
+	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/alpacanetworks/alpamon-go/pkg/version"
+	_ "github.com/glebarez/go-sqlite"
+	"github.com/google/go-cmp/cmp"
+	rpmdb "github.com/knqyf263/go-rpmdb/pkg"
+	"github.com/rs/zerolog/log"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/host"
+	"github.com/shirou/gopsutil/v4/load"
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 const (
@@ -149,6 +151,16 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 				log.Debug().Err(err).Msg("Failed to retrieve system packages")
 			}
 			remoteData = &[]SystemPackageData{}
+		case "disks":
+			if currentData, err = getDisks(); err != nil {
+				log.Debug().Err(err).Msg("Failed to retrieve disks")
+			}
+			remoteData = &[]Disk{}
+		case "partitions":
+			if currentData, err = getPartitions(); err != nil {
+				log.Debug().Err(err).Msg("Failed to retrieve partitions")
+			}
+			remoteData = &[]Partition{}
 		default:
 			log.Warn().Msgf("Unknown key: %s", key)
 			continue
@@ -202,7 +214,7 @@ func compareListData[T ComparableData](entry commitDef, currentData, remoteData 
 
 	for _, remoteItem := range remoteData {
 		if currentItem, exists := currentMap[remoteItem.GetKey()]; exists {
-			if currentItem != remoteItem.GetData() {
+			if !cmp.Equal(currentItem, remoteItem.GetData()) {
 				scheduler.Rqueue.Patch(entry.URL+remoteItem.GetID()+"/", currentItem.GetData(), 80, time.Time{})
 			}
 			delete(currentMap, currentItem.GetKey())
@@ -252,6 +264,12 @@ func collectData() *commitData {
 	}
 	if data.Packages, err = getSystemPackages(); err != nil {
 		log.Debug().Err(err).Msg("Failed to retrieve system packages")
+	}
+	if data.Disks, err = getDisks(); err != nil {
+		log.Debug().Err(err).Msg("Failed to retrieve disks")
+	}
+	if data.Partitions, err = getPartitions(); err != nil {
+		log.Debug().Err(err).Msg("Failed to retrieve disk partitions")
 	}
 
 	return data
@@ -630,6 +648,55 @@ func getRpmPackage(path string) ([]SystemPackageData, error) {
 	return packages, nil
 }
 
+func getDisks() ([]Disk, error) {
+	ioCounters, err := disk.IOCounters()
+	if err != nil {
+		return []Disk{}, err
+	}
+
+	disks := []Disk{}
+	for name, ioCounter := range ioCounters {
+		disks = append(disks, Disk{
+			Name:         name,
+			SerialNumber: ioCounter.SerialNumber,
+			Label:        ioCounter.Label,
+		})
+	}
+
+	return disks, nil
+}
+
+func getPartitions() ([]Partition, error) {
+	seen := make(map[string]Partition)
+	partitions, err := disk.Partitions(true)
+	if err != nil {
+		return []Partition{}, nil
+	}
+
+	for _, partition := range partitions {
+		if value, exists := seen[partition.Device]; exists {
+			value.MountPoint = append(value.MountPoint, partition.Mountpoint)
+			seen[partition.Device] = value
+			continue
+		}
+		disk := utils.ParseDiskName(partition.Device)
+		seen[partition.Device] = Partition{
+			Name:       partition.Device,
+			MountPoint: []string{partition.Mountpoint},
+			DiskName:   disk,
+			Fstype:     partition.Fstype,
+			IsVirtual:  utils.IsVirtualFileSystem(partition.Device, partition.Fstype, partition.Mountpoint),
+		}
+	}
+
+	var partitionList []Partition
+	for _, partition := range seen {
+		partitionList = append(partitionList, partition)
+	}
+
+	return partitionList, nil
+}
+
 func dispatchComparison(entry commitDef, currentData, remoteData any) {
 	switch v := remoteData.(type) {
 	case *[]GroupData:
@@ -642,5 +709,9 @@ func dispatchComparison(entry commitDef, currentData, remoteData any) {
 		compareListData(entry, currentData.([]Address), *v)
 	case *[]SystemPackageData:
 		compareListData(entry, currentData.([]SystemPackageData), *v)
+	case *[]Disk:
+		compareListData(entry, currentData.([]Disk), *v)
+	case *[]Partition:
+		compareListData(entry, currentData.([]Partition), *v)
 	}
 }

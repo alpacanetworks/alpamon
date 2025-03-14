@@ -11,29 +11,6 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 )
 
-var excludedFileSystems = map[string]bool{
-	"tmpfs":       true,
-	"devtmpfs":    true,
-	"proc":        true,
-	"sysfs":       true,
-	"cgroup":      true,
-	"cgroup2":     true,
-	"overlay":     true,
-	"autofs":      true,
-	"devfs":       true,
-	"securityfs":  true,
-	"fusectl":     true,
-	"hugetlbfs":   true,
-	"debugfs":     true,
-	"pstore":      true,
-	"tracefs":     true,
-	"devpts":      true,
-	"mqueue":      true,
-	"bpf":         true,
-	"configfs":    true,
-	"binfmt_misc": true,
-}
-
 type Check struct {
 	base.BaseCheck
 }
@@ -81,17 +58,22 @@ func (c *Check) collectAndSaveDiskUsage(ctx context.Context) (base.MetricData, e
 
 func (c *Check) parseDiskUsage(partitions []disk.PartitionStat) []base.CheckResult {
 	var data []base.CheckResult
+	seen := make(map[string]bool)
 	for _, partition := range partitions {
+		if seen[partition.Device] {
+			continue
+		}
+		seen[partition.Device] = true
+
 		usage, err := c.collectDiskUsage(partition.Mountpoint)
 		if err == nil {
 			data = append(data, base.CheckResult{
-				Timestamp:  time.Now(),
-				Device:     partition.Device,
-				MountPoint: partition.Mountpoint,
-				Usage:      usage.UsedPercent,
-				Total:      usage.Total,
-				Free:       usage.Free,
-				Used:       usage.Used,
+				Timestamp: time.Now(),
+				Device:    partition.Device,
+				Usage:     usage.UsedPercent,
+				Total:     usage.Total,
+				Free:      usage.Free,
+				Used:      usage.Used,
 			})
 		}
 	}
@@ -107,15 +89,7 @@ func (c *Check) collectDiskPartitions() ([]disk.PartitionStat, error) {
 
 	var filteredPartitions []disk.PartitionStat
 	for _, partition := range partitions {
-		if excludedFileSystems[partition.Fstype] {
-			continue
-		}
-
-		if strings.HasPrefix(partition.Device, "/dev/loop") {
-			continue
-		}
-
-		if utils.IsVirtualFileSystem(partition.Mountpoint) {
+		if utils.IsVirtualFileSystem(partition.Device, partition.Fstype, partition.Mountpoint) {
 			continue
 		}
 
@@ -141,7 +115,6 @@ func (c *Check) saveDiskUsage(data []base.CheckResult, ctx context.Context) erro
 	err := client.DiskUsage.MapCreateBulk(data, func(q *ent.DiskUsageCreate, i int) {
 		q.SetTimestamp(data[i].Timestamp).
 			SetDevice(data[i].Device).
-			SetMountPoint(data[i].MountPoint).
 			SetUsage(data[i].Usage).
 			SetTotal(int64(data[i].Total)).
 			SetFree(int64(data[i].Free)).
