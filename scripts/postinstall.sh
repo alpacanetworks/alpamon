@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ALPAMON_BIN="/usr/local/bin/alpamon"
+TEMPLATE_FILE="/etc/alpamon/alpamon.config.tmpl"
 
 main() {
   check_root_permission
@@ -14,6 +15,7 @@ main() {
     setup_alpamon
   fi
 
+  cleanup_tmpl_files
   start_systemd_service
 }
 
@@ -75,6 +77,14 @@ restart_alpamon_by_timer() {
 
   echo "Systemd timer to restart Alpamon has been set. It will restart the service in 5 minutes."
 }
+
+cleanup_tmpl_files() {
+  if [ -f "$TEMPLATE_FILE" ]; then
+    echo "Removing template file: $TEMPLATE_FILE"
+    rm -f "$TEMPLATE_FILE" || true
+  fi
+}
+
 
 is_upgrade() {
   if [ -n "$2" ]; then
