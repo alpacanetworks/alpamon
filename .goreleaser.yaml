@@ -44,7 +44,7 @@ nfpms:
       - src: "configs/tmpfile.conf"
         dst: "/usr/lib/tmpfiles.d/{{ .ProjectName }}.conf"
 
-      - src: "configs/alpamon.conf"
+      - src: "configs/{{ .ProjectName }}.conf"
         dst: "/etc/alpamon/{{ .ProjectName }}.config.tmpl"
 
       - src: "configs/{{ .ProjectName }}.service"

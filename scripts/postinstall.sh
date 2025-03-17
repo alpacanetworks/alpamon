@@ -13,10 +13,10 @@ main() {
   else
     install_atlas_cli
     setup_alpamon
+    start_systemd_service
   fi
 
   cleanup_tmpl_files
-  start_systemd_service
 }
 
 check_root_permission() {
