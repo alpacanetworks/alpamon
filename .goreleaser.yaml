@@ -40,6 +40,22 @@ nfpms:
       - zip
     bindir: /usr/local/bin/
 
+    contents:
+      - src: "configs/tmpfile.conf"
+        dst: "/usr/lib/tmpfiles.d/{{ .ProjectName }}.conf"
+
+      - src: "configs/alpamon.conf"
+        dst: "/etc/alpamon/{{ .ProjectName }}.config.tmpl"
+
+      - src: "configs/{{ .ProjectName }}.service"
+        dst: "/lib/systemd/system/{{ .ProjectName }}.service"
+
+      - src: "configs/{{ .ProjectName }}-restart.service"
+        dst: "/lib/systemd/system/{{ .ProjectName }}-restart.service"
+
+      - src: "configs/{{ .ProjectName }}-restart.timer"
+        dst: "/lib/systemd/system/{{ .ProjectName }}-restart.timer"
+
     scripts:
       postinstall: "scripts/postinstall.sh"
       preremove: "scripts/preremove.sh"
