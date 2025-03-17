@@ -72,6 +72,7 @@ restart_alpamon_by_timer() {
   echo "Setting up systemd timer to restart Alpamon..."
 
   systemctl daemon-reload || true
+  systemctl enable alpamon-restart.timer || true
   systemctl reset-failed alpamon-restart.timer || true
   systemctl restart alpamon-restart.timer || true
 
