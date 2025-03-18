@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	fileUploadTimeout = 60 * 10 * time.Second
+	fileUploadTimeout = 60 * 10
 )
 
 func NewCommandRunner(wsClient *WebsocketClient, command Command, data CommandData) *CommandRunner {
