@@ -9,7 +9,7 @@ builds:
   - main: ./cmd/alpamon
     binary: alpamon
     ldflags:
-      - -X github.com/alpacanetworks/alpamon-go/pkg/version.Version={{.Version}}
+      - -s -w -X github.com/alpacanetworks/alpamon-go/pkg/version.Version={{.Version}}
     env:
       - CGO_ENABLED=0
     goos:
