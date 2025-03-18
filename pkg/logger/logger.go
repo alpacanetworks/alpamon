@@ -33,36 +33,38 @@ func InitLogger() *os.File {
 		os.Exit(1)
 	}
 
-	var output io.Writer
 	recordWriter := &logRecordWriter{}
 
+	var output io.Writer
 	// In development, log to console; in production, log to file
 	if version.Version == "dev" {
-		consoleWriter := zerolog.ConsoleWriter{
-			Out:          os.Stderr,
-			TimeFormat:   time.RFC3339,
-			TimeLocation: time.Local,
-			FormatLevel: func(i interface{}) string {
-				return "[" + strings.ToUpper(i.(string)) + "]"
-			},
-			FormatMessage: func(i interface{}) string {
-				return " " + i.(string)
-			},
-			FormatFieldName: func(i interface{}) string {
-				return "(" + i.(string) + ")"
-			},
-			FormatFieldValue: func(i interface{}) string {
-				return i.(string)
-			},
-		}
-		output = zerolog.MultiLevelWriter(consoleWriter, recordWriter)
+		output = zerolog.MultiLevelWriter(newPrettyWriter(os.Stderr), recordWriter)
 	} else {
-		output = zerolog.MultiLevelWriter(logFile, recordWriter)
+		output = zerolog.MultiLevelWriter(newPrettyWriter(logFile), recordWriter)
 	}
 
 	log.Logger = zerolog.New(output).With().Timestamp().Caller().Logger()
-
 	return logFile
+}
+
+func newPrettyWriter(out io.Writer) zerolog.ConsoleWriter {
+	return zerolog.ConsoleWriter{
+		Out:          out,
+		TimeFormat:   time.RFC3339,
+		TimeLocation: time.Local,
+		FormatLevel: func(i interface{}) string {
+			return "[" + strings.ToUpper(i.(string)) + "]"
+		},
+		FormatMessage: func(i interface{}) string {
+			return " " + i.(string)
+		},
+		FormatFieldName: func(i interface{}) string {
+			return "(" + i.(string) + ")"
+		},
+		FormatFieldValue: func(i interface{}) string {
+			return i.(string)
+		},
+	}
 }
 
 type logRecord struct {
