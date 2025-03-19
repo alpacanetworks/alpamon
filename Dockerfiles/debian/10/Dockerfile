@@ -20,6 +20,8 @@ FROM debian:10
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl systemd ca-certificates
 
+RUN curl -sSf https://atlasgo.sh | sh
+
 WORKDIR /usr/local/alpamon
 
 COPY --from=builder /build/alpamon ./alpamon
