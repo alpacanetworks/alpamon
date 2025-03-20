@@ -86,5 +86,6 @@ func (suite *DiskIOCheckSuite) TestGetDiskIO() {
 }
 
 func TestDiskIOCheckSuite(t *testing.T) {
+	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(DiskIOCheckSuite))
 }

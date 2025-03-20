@@ -69,5 +69,6 @@ func (suite *DiskUsageCheckSuite) TestSaveDiskUsage() {
 }
 
 func TestDiskUsageCheckSuite(t *testing.T) {
+	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(DiskUsageCheckSuite))
 }

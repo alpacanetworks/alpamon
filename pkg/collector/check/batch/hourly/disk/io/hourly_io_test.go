@@ -91,5 +91,6 @@ func (suite *HourlyDiskIOCheckSuite) TestDeleteDiskIO() {
 }
 
 func TestHourlyDiskIOCheckSuite(t *testing.T) {
+	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(HourlyDiskIOCheckSuite))
 }

@@ -103,5 +103,6 @@ func (suite *HourlyNetCheckSuite) TestDeleteTraffic() {
 }
 
 func TestHourlyNetCheckSuite(t *testing.T) {
+	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(HourlyNetCheckSuite))
 }

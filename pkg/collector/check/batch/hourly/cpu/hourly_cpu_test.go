@@ -74,5 +74,6 @@ func (suite *HourlyCPUUsageCheckSuite) TestDeleteCPU() {
 }
 
 func TestHourlyCPUUsageCheckSuite(t *testing.T) {
+	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(HourlyCPUUsageCheckSuite))
 }

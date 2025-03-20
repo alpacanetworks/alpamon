@@ -1,9 +1,13 @@
+version: 2
+
 project_name: alpamon
 
 before:
   hooks:
     - go run -mod=mod entgo.io/ent/cmd/ent@v0.14.0 generate --feature sql/modifier --target ./pkg/db/ent ./pkg/db/schema
     - go mod tidy
+    - chmod +x ./scripts/install_atlas.sh
+    - ./scripts/install_atlas.sh
 
 builds:
   - main: ./cmd/alpamon
@@ -25,6 +29,9 @@ checksum:
 archives:
   - id: alpamon
     name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    files:
+      - src: bin/atlas
+        dst: usr/local/bin/atlas
 
 nfpms:
   - package_name: alpamon
@@ -55,6 +62,9 @@ nfpms:
 
       - src: "configs/{{ .ProjectName }}-restart.timer"
         dst: "/lib/systemd/system/{{ .ProjectName }}-restart.timer"
+      
+      - src: "bin/atlas"
+        dst: "/usr/local/bin/atlas"
 
     scripts:
       postinstall: "scripts/postinstall.sh"
