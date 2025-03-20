@@ -74,5 +74,6 @@ func (suite *HourlyMemoryUsageCheckSuite) TestDeleteMemory() {
 }
 
 func TestHourlyMemoryCheckSuite(t *testing.T) {
+	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(HourlyMemoryUsageCheckSuite))
 }

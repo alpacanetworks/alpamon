@@ -64,5 +64,6 @@ func (suite *DailyCPUUsageCheckSuite) TestDeleteHourlyCPUUsage() {
 }
 
 func TestDailyCPUUsageCheckSuite(t *testing.T) {
+	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(DailyCPUUsageCheckSuite))
 }

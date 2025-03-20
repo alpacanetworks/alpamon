@@ -90,5 +90,6 @@ func (suite *NetCheckSuite) TestGetTraffic() {
 }
 
 func TestNetCheckSuite(t *testing.T) {
+	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(NetCheckSuite))
 }

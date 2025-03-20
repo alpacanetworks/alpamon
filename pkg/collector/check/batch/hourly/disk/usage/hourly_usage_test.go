@@ -91,5 +91,6 @@ func (suite *HourlyDiskUsageCheckSuite) TestDeleteDiskUsage() {
 }
 
 func TestHourlyDiskUsageCheckSuite(t *testing.T) {
+	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(HourlyDiskUsageCheckSuite))
 }

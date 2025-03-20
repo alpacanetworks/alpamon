@@ -60,5 +60,6 @@ func (suite *CPUCheckSuite) TestSaveCPUUsage() {
 }
 
 func TestCPUCheckSuite(t *testing.T) {
+	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(CPUCheckSuite))
 }

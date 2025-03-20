@@ -64,5 +64,6 @@ func (suite *DailyMemoryUsageCheckSuite) TestDeleteHourlyMemoryUsage() {
 }
 
 func TestDailyMemoryUsageCheckSuite(t *testing.T) {
+	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(DailyMemoryUsageCheckSuite))
 }
