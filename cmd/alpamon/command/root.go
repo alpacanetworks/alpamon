@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	name = "alpamon"
+	name   = "alpamon"
+	wsPath = "/ws/servers/backhaul/"
 )
 
 var RootCmd = &cobra.Command{
@@ -52,7 +53,7 @@ func runAgent() {
 	fmt.Printf("alpamon version %s starting.\n", version.Version)
 
 	// Config & Settings
-	settings := config.LoadConfig(config.Files(name))
+	settings := config.LoadConfig(config.Files(name), wsPath)
 	config.InitSettings(settings)
 
 	// Session
@@ -99,6 +100,5 @@ func runAgent() {
 			log.Error().Err(err).Msg("Failed to restart the program")
 		}
 	}
-
 	log.Debug().Msg("Bye.")
 }

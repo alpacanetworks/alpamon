@@ -18,7 +18,6 @@ var (
 )
 
 const (
-	wsPath             = "/ws/servers/backhaul/"
 	MinConnectInterval = 5 * time.Second
 	MaxConnectInterval = 300 * time.Second
 )
@@ -27,7 +26,7 @@ func InitSettings(settings Settings) {
 	GlobalSettings = settings
 }
 
-func LoadConfig(configFiles []string) Settings {
+func LoadConfig(configFiles []string, wsPath string) Settings {
 	var iniData *ini.File
 	var err error
 	var validConfigFile string
@@ -74,7 +73,7 @@ func LoadConfig(configFiles []string) Settings {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	isValid, settings := validateConfig(config)
+	isValid, settings := validateConfig(config, wsPath)
 
 	if !isValid {
 		log.Fatal().Msg("Aborting...")
@@ -83,7 +82,7 @@ func LoadConfig(configFiles []string) Settings {
 	return settings
 }
 
-func validateConfig(config Config) (bool, Settings) {
+func validateConfig(config Config, wsPath string) (bool, Settings) {
 	log.Debug().Msg("Validating configuration fields...")
 
 	settings := Settings{
