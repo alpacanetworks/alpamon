@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/version"
+	"github.com/alpacanetworks/alpamon/pkg/version"
 	"github.com/google/go-github/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v4/host"

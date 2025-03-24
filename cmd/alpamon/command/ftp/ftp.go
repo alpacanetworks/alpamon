@@ -1,8 +1,8 @@
 package ftp
 
 import (
-	"github.com/alpacanetworks/alpamon-go/pkg/logger"
-	"github.com/alpacanetworks/alpamon-go/pkg/runner"
+	"github.com/alpacanetworks/alpamon/pkg/logger"
+	"github.com/alpacanetworks/alpamon/pkg/runner"
 	"github.com/spf13/cobra"
 )
 

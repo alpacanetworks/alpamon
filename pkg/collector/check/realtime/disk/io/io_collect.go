@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/alpacanetworks/alpamon/pkg/collector/check/base"
+	"github.com/alpacanetworks/alpamon/pkg/db/ent"
+	"github.com/alpacanetworks/alpamon/pkg/utils"
 	"github.com/shirou/gopsutil/v4/disk"
 )
 

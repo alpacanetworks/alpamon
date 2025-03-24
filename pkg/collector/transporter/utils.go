@@ -3,7 +3,7 @@ package transporter
 import (
 	"fmt"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
+	"github.com/alpacanetworks/alpamon/pkg/collector/check/base"
 )
 
 const (
