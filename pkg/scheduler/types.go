@@ -10,7 +10,7 @@ import (
 type Session struct {
 	BaseURL       string
 	Client        *http.Client
-	authorization string
+	Authorization string
 }
 
 // queue //

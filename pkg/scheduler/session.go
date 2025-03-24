@@ -47,7 +47,7 @@ func InitSession() *Session {
 	}
 
 	session.Client = &client
-	session.authorization = fmt.Sprintf(`id="%s", key="%s"`, config.GlobalSettings.ID, config.GlobalSettings.Key)
+	session.Authorization = fmt.Sprintf(`id="%s", key="%s"`, config.GlobalSettings.ID, config.GlobalSettings.Key)
 
 	return session
 }
@@ -117,7 +117,7 @@ func (session *Session) do(req *http.Request, timeout time.Duration) ([]byte, in
 
 	req = req.WithContext(ctx)
 
-	req.Header.Set("Authorization", session.authorization)
+	req.Header.Set("Authorization", session.Authorization)
 	req.Header.Set("User-Agent", utils.GetUserAgent("alpamon"))
 
 	if req.Method == http.MethodPost || req.Method == http.MethodPut || req.Method == http.MethodPatch {
@@ -200,7 +200,7 @@ func (session *Session) MultipartRequest(url string, body bytes.Buffer, contentT
 
 	req = req.WithContext(ctx)
 
-	req.Header.Set("Authorization", session.authorization)
+	req.Header.Set("Authorization", session.Authorization)
 	req.Header.Set("User-Agent", utils.GetUserAgent("alpamon"))
 	req.Header.Set("Content-Type", contentType)
 
