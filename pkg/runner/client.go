@@ -74,7 +74,7 @@ func (wc *WebsocketClient) RunForever() {
 
 func (wc *WebsocketClient) SendPingQuery() error {
 	pingQuery := map[string]string{"query": "ping"}
-	err := wc.writeJSON(pingQuery)
+	err := wc.WriteJSON(pingQuery)
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 	}
 }
 
-func (wc *WebsocketClient) writeJSON(data interface{}) error {
+func (wc *WebsocketClient) WriteJSON(data interface{}) error {
 	err := wc.Conn.WriteJSON(data)
 	if err != nil {
 		log.Debug().Err(err).Msgf("Failed to write json data to websocket.")
