@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent/hourlydiskusage"
+	"github.com/alpacanetworks/alpamon/pkg/collector/check/base"
+	"github.com/alpacanetworks/alpamon/pkg/db/ent/hourlydiskusage"
 )
 
 type Check struct {

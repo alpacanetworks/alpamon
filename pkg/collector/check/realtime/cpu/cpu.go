@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
+	"github.com/alpacanetworks/alpamon/pkg/collector/check/base"
 	"github.com/shirou/gopsutil/v4/cpu"
 )
 

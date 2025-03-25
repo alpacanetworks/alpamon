@@ -11,7 +11,7 @@ To build Alpamon, ensure you have:
   - Make sure `$GOPATH` is set and `$GOPATH/bin` is added to your system’s `PATH`.
   
 ## Installation
-Download the latest `Alpamon-Go` directly from our releases page or install it using package managers on Linux.
+Download the latest `alpamon` directly from our releases page or install it using package managers on Linux.
 
 ### Linux
 

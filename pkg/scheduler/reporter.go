@@ -3,9 +3,9 @@ package scheduler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/config"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/alpacanetworks/alpamon-go/pkg/version"
+	"github.com/alpacanetworks/alpamon/pkg/config"
+	"github.com/alpacanetworks/alpamon/pkg/utils"
+	"github.com/alpacanetworks/alpamon/pkg/version"
 	"github.com/rs/zerolog/log"
 	"math"
 	"net/http"

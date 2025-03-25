@@ -1,4 +1,4 @@
-module github.com/alpacanetworks/alpamon-go
+module github.com/alpacanetworks/alpamon
 
 go 1.22.5
 
@@ -10,6 +10,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/creack/pty v1.1.23
 	github.com/glebarez/go-sqlite v1.22.0
+	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
@@ -18,6 +19,7 @@ require (
 	github.com/shirou/gopsutil/v4 v4.24.8
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
+	golang.org/x/term v0.14.0
 	gopkg.in/go-playground/validator.v9 v9.31.0
 	gopkg.in/ini.v1 v1.67.0
 )
@@ -32,7 +34,6 @@ require (
 	github.com/go-openapi/inflect v0.19.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/hashicorp/hcl/v2 v2.18.1 // indirect
@@ -58,7 +59,6 @@ require (
 	github.com/zclconf/go-cty v1.14.1 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
-	golang.org/x/term v0.14.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect

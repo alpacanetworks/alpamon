@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/collector/check/base"
-	"github.com/alpacanetworks/alpamon-go/pkg/db"
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
+	"github.com/alpacanetworks/alpamon/pkg/collector/check/base"
+	"github.com/alpacanetworks/alpamon/pkg/db"
+	"github.com/alpacanetworks/alpamon/pkg/db/ent"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

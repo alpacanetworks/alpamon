@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/db/ent"
+	"github.com/alpacanetworks/alpamon/pkg/db/ent"
 	"github.com/glebarez/go-sqlite"
 	"github.com/rs/zerolog/log"
 )

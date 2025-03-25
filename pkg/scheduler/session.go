@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/config"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/alpacanetworks/alpamon/pkg/config"
+	"github.com/alpacanetworks/alpamon/pkg/utils"
 	"github.com/rs/zerolog/log"
 )
 

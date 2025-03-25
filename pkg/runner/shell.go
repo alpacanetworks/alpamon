@@ -3,7 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/alpacanetworks/alpamon/pkg/utils"
 	"github.com/rs/zerolog/log"
 	"os"
 	"os/exec"

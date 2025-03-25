@@ -19,10 +19,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/alpacanetworks/alpamon-go/pkg/config"
-	"github.com/alpacanetworks/alpamon-go/pkg/scheduler"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
-	"github.com/alpacanetworks/alpamon-go/pkg/version"
+	"github.com/alpacanetworks/alpamon/pkg/config"
+	"github.com/alpacanetworks/alpamon/pkg/scheduler"
+	"github.com/alpacanetworks/alpamon/pkg/utils"
+	"github.com/alpacanetworks/alpamon/pkg/version"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/go-playground/validator.v9"
@@ -61,7 +61,7 @@ func (cr *CommandRunner) Run() {
 		exitCode, result = cr.handleShellCmd(cr.command.Line, cr.command.User, cr.command.Group, cr.command.Env)
 	case "osquery": // TODO DEPRECATED: This case will be removed in a future release.
 		exitCode = 1
-		result = "alpamon-go does not use osquery. Please update alpacon-server."
+		result = "alpamon does not use osquery. Please update alpacon-server."
 		log.Warn().Msg(result)
 	default:
 		exitCode = 1

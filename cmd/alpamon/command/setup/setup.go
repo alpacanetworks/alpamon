@@ -3,7 +3,7 @@ package setup
 import (
 	"fmt"
 	cli "github.com/alpacanetworks/alpacon-cli/utils"
-	"github.com/alpacanetworks/alpamon-go/pkg/utils"
+	"github.com/alpacanetworks/alpamon/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 	"os"

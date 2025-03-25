@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/alpacanetworks/alpamon-go/cmd/alpamon/command"
+	"github.com/alpacanetworks/alpamon/cmd/alpamon/command"
 )
 
 func main() {
