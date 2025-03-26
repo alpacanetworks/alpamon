@@ -25,6 +25,7 @@ const (
 	HOURLY_NET        CheckType = "hourly-net"
 	DAILY_NET         CheckType = "daily-net"
 	CLEANUP           CheckType = "cleanup"
+	ALERT             CheckType = "alert"
 )
 
 type CheckType string
@@ -35,6 +36,13 @@ type CheckArgs struct {
 	Interval time.Duration
 	Buffer   *CheckBuffer
 	Client   *ent.Client
+}
+
+type AlertData struct {
+	Timestamp   time.Time `json:"timestamp"`
+	Reporter    string    `json:"reporter"`
+	Record      string    `json:"record"`
+	Description string    `json:"description"`
 }
 
 type CPUQuerySet struct {
