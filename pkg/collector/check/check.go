@@ -22,6 +22,7 @@ import (
 	diskusage "github.com/alpacanetworks/alpamon/pkg/collector/check/realtime/disk/usage"
 	"github.com/alpacanetworks/alpamon/pkg/collector/check/realtime/memory"
 	"github.com/alpacanetworks/alpamon/pkg/collector/check/realtime/net"
+	"github.com/alpacanetworks/alpamon/pkg/collector/check/realtime/status"
 )
 
 var checkFactories = map[base.CheckType]newCheck{
@@ -44,6 +45,7 @@ var checkFactories = map[base.CheckType]newCheck{
 	base.DAILY_NET:         dailynet.NewCheck,
 	base.CLEANUP:           cleanup.NewCheck,
 	base.ALERT:             alert.NewCheck,
+	base.STATUS:            status.NewCheck,
 }
 
 type Check interface {

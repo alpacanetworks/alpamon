@@ -26,6 +26,7 @@ const (
 	DAILY_NET         CheckType = "daily-net"
 	CLEANUP           CheckType = "cleanup"
 	ALERT             CheckType = "alert"
+	STATUS            CheckType = "status"
 )
 
 type CheckType string
