@@ -23,7 +23,7 @@ func NewCheck(args *base.CheckArgs) base.CheckStrategy {
 }
 
 func (c *Check) Execute(ctx context.Context) error {
-	scheduler.Rqueue.Post(statusURL, nil, 80, time.Time{})
+	scheduler.Rqueue.Patch(statusURL, nil, 80, time.Time{})
 
 	return nil
 }
