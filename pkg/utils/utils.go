@@ -39,7 +39,7 @@ func getPlatformLike() {
 		switch platformInfo.Platform {
 		case "ubuntu", "debian":
 			PlatformLike = "debian"
-		case "centos", "rhel", "redhat", "amazon", "fedora":
+		case "centos", "rhel", "redhat", "amazon", "fedora", "rocky":
 			PlatformLike = "rhel"
 		default:
 			log.Fatal().Msgf("Platform %s not supported", platformInfo.Platform)
