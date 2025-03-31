@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+var dbFileName = "hourly_memory.db"
+
 type HourlyMemoryUsageCheckSuite struct {
 	suite.Suite
 	client *ent.Client
@@ -23,7 +25,7 @@ type HourlyMemoryUsageCheckSuite struct {
 }
 
 func (suite *HourlyMemoryUsageCheckSuite) SetupSuite() {
-	suite.client = db.InitTestDB()
+	suite.client = db.InitTestDB(dbFileName)
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
 		Type:     base.HOURLY_MEM_USAGE,
@@ -37,7 +39,7 @@ func (suite *HourlyMemoryUsageCheckSuite) SetupSuite() {
 }
 
 func (suite *HourlyMemoryUsageCheckSuite) TearDownSuite() {
-	err := os.Remove("alpamon.db")
+	err := os.Remove(dbFileName)
 	suite.Require().NoError(err, "failed to delete test db file")
 }
 
@@ -74,6 +76,5 @@ func (suite *HourlyMemoryUsageCheckSuite) TestDeleteMemory() {
 }
 
 func TestHourlyMemoryCheckSuite(t *testing.T) {
-	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(HourlyMemoryUsageCheckSuite))
 }

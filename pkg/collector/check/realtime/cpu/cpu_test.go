@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+var dbFileName = "cpu.db"
+
 type CPUCheckSuite struct {
 	suite.Suite
 	client *ent.Client
@@ -22,7 +24,7 @@ type CPUCheckSuite struct {
 }
 
 func (suite *CPUCheckSuite) SetupSuite() {
-	suite.client = db.InitTestDB()
+	suite.client = db.InitTestDB(dbFileName)
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
 		Type:     base.CPU,
@@ -36,7 +38,7 @@ func (suite *CPUCheckSuite) SetupSuite() {
 }
 
 func (suite *CPUCheckSuite) TearDownSuite() {
-	err := os.Remove("alpamon.db")
+	err := os.Remove(dbFileName)
 	suite.Require().NoError(err, "failed to delete test db file")
 }
 
@@ -60,6 +62,5 @@ func (suite *CPUCheckSuite) TestSaveCPUUsage() {
 }
 
 func TestCPUCheckSuite(t *testing.T) {
-	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(CPUCheckSuite))
 }
