@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/alpacanetworks/alpamon/pkg/logger"
-	"github.com/alpacanetworks/alpamon/pkg/utils"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/alpacanetworks/alpamon/pkg/logger"
+	"github.com/alpacanetworks/alpamon/pkg/utils"
+	"github.com/gorilla/websocket"
 )
 
 type FtpClient struct {
@@ -149,6 +150,10 @@ func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (Command
 		return fc.mv(data.Src, data.Dst)
 	case Cp:
 		return fc.cp(data.Src, data.Dst)
+	case Chmod:
+		return fc.chmod(data.Path, data.Mode)
+	case Chown:
+		return fc.chown(data.Path, data.UID, data.GID)
 	default:
 		return CommandResult{}, fmt.Errorf("unknown FTP command: %s", command)
 	}
@@ -410,5 +415,36 @@ func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
 	return CommandResult{
 		Dst:     dst,
 		Message: fmt.Sprintf("Copy %s to %s", src, dst),
+	}, nil
+}
+
+func (fc *FtpClient) chmod(path string, mode int) (CommandResult, error) {
+	path = fc.parsePath(path)
+	fileMode := os.FileMode(mode)
+
+	err := os.Chmod(path, fileMode)
+	if err != nil {
+		return CommandResult{
+			Message: err.Error(),
+		}, err
+	}
+
+	return CommandResult{
+		Message: fmt.Sprintf("Changed permissions of %s to %o", path, fileMode),
+	}, nil
+}
+
+func (fc *FtpClient) chown(path string, uid, gid int) (CommandResult, error) {
+	path = fc.parsePath(path)
+
+	err := os.Chown(path, uid, gid)
+	if err != nil {
+		return CommandResult{
+			Message: err.Error(),
+		}, err
+	}
+
+	return CommandResult{
+		Message: fmt.Sprintf("Changed owner of %s to UID: %d, GID: %d", path, uid, gid),
 	}, nil
 }

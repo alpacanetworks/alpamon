@@ -10,14 +10,16 @@ import (
 type FtpCommand string
 
 const (
-	List FtpCommand = "list"
-	Mkd  FtpCommand = "mkd"
-	Cwd  FtpCommand = "cwd"
-	Pwd  FtpCommand = "pwd"
-	Dele FtpCommand = "dele"
-	Rmd  FtpCommand = "rmd"
-	Mv   FtpCommand = "mv"
-	Cp   FtpCommand = "cp"
+	List  FtpCommand = "list"
+	Mkd   FtpCommand = "mkd"
+	Cwd   FtpCommand = "cwd"
+	Pwd   FtpCommand = "pwd"
+	Dele  FtpCommand = "dele"
+	Rmd   FtpCommand = "rmd"
+	Mv    FtpCommand = "mv"
+	Cp    FtpCommand = "cp"
+	Chmod FtpCommand = "chmod"
+	Chown FtpCommand = "chown"
 )
 
 const (
@@ -44,6 +46,9 @@ type FtpData struct {
 	ShowHidden bool   `json:"show_hidden,omitempty"`
 	Src        string `json:"src,omitempty"`
 	Dst        string `json:"dst,omitempty"`
+	Mode       int    `json:"mode,omitempty"`
+	UID        int    `json:"uid,omitempty"`
+	GID        int    `json:"gid,omitempty"`
 }
 
 type FtpContent struct {
@@ -148,6 +153,24 @@ var returnCodes = map[FtpCommand]returnCode{
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 			ErrFileExists:            552,
+		},
+	},
+	Chmod: {
+		Success: 250,
+		Error: map[string]int{
+			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
+			ErrInvalidArgument:       452,
+			ErrNoSuchFileOrDirectory: 550,
+		},
+	},
+	Chown: {
+		Success: 250,
+		Error: map[string]int{
+			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
+			ErrInvalidArgument:       452,
+			ErrNoSuchFileOrDirectory: 550,
 		},
 	},
 }
