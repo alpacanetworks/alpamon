@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"github.com/alpacanetworks/alpamon/cmd/alpamon/command/ftp"
 	"github.com/alpacanetworks/alpamon/cmd/alpamon/command/setup"
-	"os"
-	"syscall"
-
 	"github.com/alpacanetworks/alpamon/pkg/collector"
 	"github.com/alpacanetworks/alpamon/pkg/config"
 	"github.com/alpacanetworks/alpamon/pkg/db"
@@ -18,6 +15,9 @@ import (
 	"github.com/alpacanetworks/alpamon/pkg/version"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -39,6 +39,9 @@ func init() {
 }
 
 func runAgent() {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGPIPE)
+
 	// platform
 	utils.InitPlatform()
 
@@ -48,7 +51,6 @@ func runAgent() {
 		_, _ = fmt.Fprintln(os.Stderr, "Failed to create PID file", err.Error())
 		os.Exit(1)
 	}
-	defer func() { _ = os.Remove(pidFilePath) }()
 
 	fmt.Printf("alpamon version %s starting.\n", version.Version)
 
@@ -65,7 +67,6 @@ func runAgent() {
 
 	// Logger
 	logFile := logger.InitLogger()
-	defer func() { _ = logFile.Close() }()
 	log.Info().Msg("alpamon initialized and running.")
 
 	// Commit
@@ -77,28 +78,46 @@ func runAgent() {
 	// Collector
 	metricCollector := collector.InitCollector(session, client)
 	metricCollector.Start()
-	defer metricCollector.Stop()
 
 	// Websocket Client
 	wsClient := runner.NewWebsocketClient(session)
-	wsClient.RunForever()
+	go wsClient.RunForever()
 
-	if wsClient.RestartRequested {
-		if err = os.Remove(pidFilePath); err != nil {
-			log.Error().Err(err).Msg("Failed to remove PID file")
-			return
-		}
-
-		executable, err := os.Executable()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get executable path")
-			return
-		}
-
-		err = syscall.Exec(executable, os.Args, os.Environ())
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to restart the program")
-		}
+	select {
+	case <-sigChan:
+		log.Info().Msg("Received termination signal. Shutting down...")
+		break
+	case <-wsClient.ShutDownChan:
+		log.Info().Msg("Shutdown command received. Shutting down...")
+		break
+	case <-wsClient.RestartChan:
+		log.Info().Msg("Restart requested internally.")
+		metricCollector.Stop()
+		wsClient.Close()
+		log.Debug().Msg("Bye.")
+		_ = logFile.Close()
+		_ = os.Remove(pidFilePath)
+		restartAgent()
+		return
 	}
+
+	// TODO : improve
+	metricCollector.Stop()
+	wsClient.Close()
 	log.Debug().Msg("Bye.")
+	_ = logFile.Close()
+	_ = os.Remove(pidFilePath)
+}
+
+func restartAgent() {
+	executable, err := os.Executable()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get executable path")
+		return
+	}
+
+	err = syscall.Exec(executable, os.Args, os.Environ())
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to restart the program")
+	}
 }

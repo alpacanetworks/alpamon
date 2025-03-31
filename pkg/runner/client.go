@@ -26,11 +26,12 @@ const (
 )
 
 type WebsocketClient struct {
-	Conn             *websocket.Conn
-	requestHeader    http.Header
-	apiSession       *scheduler.Session
-	RestartRequested bool
-	QuitChan         chan struct{}
+	Conn          *websocket.Conn
+	requestHeader http.Header
+	apiSession    *scheduler.Session
+	QuitChan      chan struct{}
+	RestartChan   chan struct{}
+	ShutDownChan  chan struct{}
 }
 
 func NewWebsocketClient(session *scheduler.Session) *WebsocketClient {
@@ -41,16 +42,16 @@ func NewWebsocketClient(session *scheduler.Session) *WebsocketClient {
 	}
 
 	return &WebsocketClient{
-		requestHeader:    headers,
-		apiSession:       session,
-		RestartRequested: false,
-		QuitChan:         make(chan struct{}),
+		requestHeader: headers,
+		apiSession:    session,
+		QuitChan:      make(chan struct{}),
+		RestartChan:   make(chan struct{}),
+		ShutDownChan:  make(chan struct{}),
 	}
 }
 
 func (wc *WebsocketClient) RunForever() {
 	wc.Connect()
-	defer wc.Close()
 
 	for {
 		select {
@@ -67,7 +68,7 @@ func (wc *WebsocketClient) RunForever() {
 			}
 			// Sends "ping" query for Alpacon to verify WebSocket session status without error handling.
 			_ = wc.SendPingQuery()
-			wc.commandRequestHandler(message)
+			wc.CommandRequestHandler(message)
 		}
 	}
 }
@@ -147,17 +148,15 @@ func (wc *WebsocketClient) Close() {
 	}
 }
 
-func (wc *WebsocketClient) Quit() {
-	wc.Close()
-	close(wc.QuitChan)
+func (wc *WebsocketClient) ShutDown() {
+	close(wc.ShutDownChan)
 }
 
 func (wc *WebsocketClient) Restart() {
-	wc.RestartRequested = true
-	wc.Quit()
+	close(wc.RestartChan)
 }
 
-func (wc *WebsocketClient) commandRequestHandler(message []byte) {
+func (wc *WebsocketClient) CommandRequestHandler(message []byte) {
 	var content Content
 	var data CommandData
 
@@ -190,7 +189,7 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 		go commandRunner.Run()
 	case "quit":
 		log.Debug().Msgf("Quit requested for reason: %s", content.Reason)
-		wc.Quit()
+		wc.ShutDown()
 	case "reconnect":
 		log.Debug().Msgf("Reconnect requested for reason: %s", content.Reason)
 		wc.Close()
