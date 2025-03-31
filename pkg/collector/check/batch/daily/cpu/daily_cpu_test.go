@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+var dbFileName = "daily_cpu.db"
+
 type DailyCPUUsageCheckSuite struct {
 	suite.Suite
 	client *ent.Client
@@ -22,7 +24,7 @@ type DailyCPUUsageCheckSuite struct {
 }
 
 func (suite *DailyCPUUsageCheckSuite) SetupSuite() {
-	suite.client = db.InitTestDB()
+	suite.client = db.InitTestDB(dbFileName)
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
 		Type:     base.DAILY_CPU_USAGE,
@@ -36,7 +38,7 @@ func (suite *DailyCPUUsageCheckSuite) SetupSuite() {
 }
 
 func (suite *DailyCPUUsageCheckSuite) TearDownSuite() {
-	err := os.Remove("alpamon.db")
+	err := os.Remove(dbFileName)
 	suite.Require().NoError(err, "failed to delete test db file")
 }
 
@@ -64,6 +66,5 @@ func (suite *DailyCPUUsageCheckSuite) TestDeleteHourlyCPUUsage() {
 }
 
 func TestDailyCPUUsageCheckSuite(t *testing.T) {
-	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(DailyCPUUsageCheckSuite))
 }

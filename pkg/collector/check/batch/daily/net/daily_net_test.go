@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+var dbFileName = "daily_net.db"
+
 type DailyNetCheckSuite struct {
 	suite.Suite
 	client *ent.Client
@@ -23,7 +25,7 @@ type DailyNetCheckSuite struct {
 }
 
 func (suite *DailyNetCheckSuite) SetupSuite() {
-	suite.client = db.InitTestDB()
+	suite.client = db.InitTestDB(dbFileName)
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
 		Type:     base.DAILY_NET,
@@ -37,7 +39,7 @@ func (suite *DailyNetCheckSuite) SetupSuite() {
 }
 
 func (suite *DailyNetCheckSuite) TearDownSuite() {
-	err := os.Remove("alpamon.db")
+	err := os.Remove(dbFileName)
 	suite.Require().NoError(err, "failed to delete test db file")
 }
 
@@ -79,6 +81,5 @@ func (suite *DailyNetCheckSuite) TestDeleteHourlyTraffic() {
 }
 
 func TestDailyNetCheckSuite(t *testing.T) {
-	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(DailyNetCheckSuite))
 }

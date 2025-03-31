@@ -53,8 +53,8 @@ func InitDB() *ent.Client {
 	return client
 }
 
-func InitTestDB() *ent.Client {
-	fileName, _ := filepath.Abs(dbFileName)
+func InitTestDB(path string) *ent.Client {
+	fileName, _ := filepath.Abs(path)
 	dbFile, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0750)
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to open test db file: %v", err)
