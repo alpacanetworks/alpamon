@@ -181,16 +181,23 @@ func (c *Collector) failureQueueWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-retryTicker.C:
-			metric, ok := <-c.buffer.FailureQueue
-			if !ok {
-				return
-			}
-
-			err := c.retryWithBackoff(ctx, metric)
-			if err != nil {
-				log.Error().Err(err).Msgf("Failed to check metric: %s", metric.Type)
-			}
+			c.retryFailedMetrics(ctx)
 		}
+	}
+}
+
+func (c *Collector) retryFailedMetrics(ctx context.Context) {
+	select {
+	case metric, ok := <-c.buffer.FailureQueue:
+		if !ok {
+			return
+		}
+		err := c.retryWithBackoff(ctx, metric)
+		if err != nil {
+			log.Error().Err(err).Msgf("Failed to check metric: %s", metric.Type)
+		}
+	default:
+		return
 	}
 }
 
