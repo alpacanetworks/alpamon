@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"github.com/alpacanetworks/alpamon/cmd/alpamon/command/ftp"
 	"github.com/alpacanetworks/alpamon/cmd/alpamon/command/setup"
@@ -39,8 +40,18 @@ func init() {
 }
 
 func runAgent() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGPIPE)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		select {
+		case <-sigChan:
+			cancel()
+		}
+	}()
 
 	// platform
 	utils.InitPlatform()
@@ -60,7 +71,7 @@ func runAgent() {
 
 	// Session
 	session := scheduler.InitSession()
-	commissioned := session.CheckSession()
+	commissioned := session.CheckSession(ctx)
 
 	// Reporter
 	scheduler.StartReporters(session)
@@ -84,7 +95,7 @@ func runAgent() {
 	go wsClient.RunForever()
 
 	select {
-	case <-sigChan:
+	case <-ctx.Done():
 		log.Info().Msg("Received termination signal. Shutting down...")
 		break
 	case <-wsClient.ShutDownChan:
@@ -92,21 +103,12 @@ func runAgent() {
 		break
 	case <-wsClient.RestartChan:
 		log.Info().Msg("Restart requested internally.")
-		metricCollector.Stop()
-		wsClient.Close()
-		log.Debug().Msg("Bye.")
-		_ = logFile.Close()
-		_ = os.Remove(pidFilePath)
+		gracefulShutdown(metricCollector, wsClient, logFile, pidFilePath)
 		restartAgent()
 		return
 	}
 
-	// TODO : improve
-	metricCollector.Stop()
-	wsClient.Close()
-	log.Debug().Msg("Bye.")
-	_ = logFile.Close()
-	_ = os.Remove(pidFilePath)
+	gracefulShutdown(metricCollector, wsClient, logFile, pidFilePath)
 }
 
 func restartAgent() {
@@ -120,4 +122,18 @@ func restartAgent() {
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to restart the program")
 	}
+}
+
+func gracefulShutdown(collector *collector.Collector, wsClient *runner.WebsocketClient, logFile *os.File, pidPath string) {
+	if collector != nil {
+		collector.Stop()
+	}
+	if wsClient != nil {
+		wsClient.Close()
+	}
+	log.Debug().Msg("Bye.")
+	if logFile != nil {
+		_ = logFile.Close()
+	}
+	_ = os.Remove(pidPath)
 }
