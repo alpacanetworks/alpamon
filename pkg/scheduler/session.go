@@ -20,7 +20,7 @@ import (
 
 const (
 	checkSessionURL = "/api/servers/servers/-/"
-	MaxRetryTimeout = 3 * 24 * time.Second
+	MaxRetryTimeout = 3 * 24 * time.Hour
 )
 
 func InitSession() *Session {
