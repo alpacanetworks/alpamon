@@ -47,10 +47,8 @@ func runAgent() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		select {
-		case <-sigChan:
-			cancel()
-		}
+		<-sigChan
+		cancel()
 	}()
 
 	// Logger
