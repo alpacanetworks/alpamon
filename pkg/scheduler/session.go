@@ -35,7 +35,7 @@ func InitSession() *Session {
 		caCertPool := x509.NewCertPool()
 		caCert, err := os.ReadFile(config.GlobalSettings.CaCert)
 		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to read CA certificate")
+			log.Fatal().Err(err).Msg("Failed to read CA certificate.")
 		}
 		caCertPool.AppendCertsFromPEM(caCert)
 		tlsConfig.RootCAs = caCertPool
@@ -65,12 +65,12 @@ func (session *Session) CheckSession(ctx context.Context) bool {
 		case <-time.After(timeout):
 			resp, statusCode, err := session.Get(checkSessionURL, 5)
 			if err != nil || statusCode != http.StatusOK {
-				log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds", config.GlobalSettings.ServerURL, int(timeout.Seconds()))
+				log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds.", config.GlobalSettings.ServerURL, int(timeout.Seconds()))
 			} else {
 				var response map[string]interface{}
 				err = json.Unmarshal(resp, &response)
 				if err != nil {
-					log.Debug().Err(err).Msgf("Failed to unmarshal JSON, will try again in %ds", int(timeout.Seconds()))
+					log.Debug().Err(err).Msgf("Failed to unmarshal JSON, will try again in %ds.", int(timeout.Seconds()))
 				} else {
 					if commissioned, ok := response["commissioned"].(bool); ok {
 						return commissioned

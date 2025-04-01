@@ -37,7 +37,7 @@ func LoadConfig(configFiles []string, wsPath string) Settings {
 			if os.IsNotExist(statErr) {
 				continue
 			} else {
-				log.Error().Err(statErr).Msgf("Error accessing config file %s", configFile)
+				log.Error().Err(statErr).Msgf("Error accessing config file %s.", configFile)
 				continue
 			}
 		}
@@ -47,24 +47,24 @@ func LoadConfig(configFiles []string, wsPath string) Settings {
 			continue
 		}
 
-		log.Debug().Msgf("Using config file %s", configFile)
+		log.Debug().Msgf("Using config file %s.", configFile)
 		validConfigFile = configFile
 		break
 	}
 
 	if validConfigFile == "" {
-		log.Fatal().Msg("No valid config file found")
+		log.Fatal().Msg("No valid config file found.")
 	}
 
 	iniData, err = ini.Load(validConfigFile)
 	if err != nil {
-		log.Fatal().Err(err).Msgf("failed to load config file %s", validConfigFile)
+		log.Fatal().Err(err).Msgf("failed to load config file %s.", validConfigFile)
 	}
 
 	var config Config
 	err = iniData.MapTo(&config)
 	if err != nil {
-		log.Fatal().Err(err).Msgf("failed to parse config file %s", validConfigFile)
+		log.Fatal().Err(err).Msgf("failed to parse config file %s.", validConfigFile)
 	}
 
 	if config.Logging.Debug {
@@ -101,7 +101,7 @@ func validateConfig(config Config, wsPath string) (bool, Settings) {
 		settings.WSPath = strings.Replace(val, "http", "ws", 1) + settings.WSPath
 		settings.UseSSL = strings.HasPrefix(val, "https://")
 	} else {
-		log.Error().Msg("Server url is invalid")
+		log.Error().Msg("Server url is invalid.")
 		valid = false
 	}
 
@@ -109,7 +109,7 @@ func validateConfig(config Config, wsPath string) (bool, Settings) {
 		settings.ID = config.Server.ID
 		settings.Key = config.Server.Key
 	} else {
-		log.Error().Msg("Server ID, KEY is empty")
+		log.Error().Msg("Server ID, KEY is empty.")
 		valid = false
 	}
 

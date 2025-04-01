@@ -61,7 +61,7 @@ func (pc *PtyClient) RunPtyBackground() {
 	var err error
 	pc.conn, _, err = websocket.DefaultDialer.Dial(pc.url, pc.requestHeader)
 	if err != nil {
-		log.Error().Err(err).Msgf("Failed to connect to pty websocket at %s", pc.url)
+		log.Error().Err(err).Msgf("Failed to connect to pty websocket at %s.", pc.url)
 		return
 	}
 	defer pc.close()
@@ -70,7 +70,7 @@ func (pc *PtyClient) RunPtyBackground() {
 
 	uid, gid, groupIds, env, err := pc.getPtyUserAndEnv()
 	if err != nil {
-		log.Error().Err(err).Msgf("Failed to get pty user and env")
+		log.Error().Err(err).Msgf("Failed to get pty user and env.")
 		return
 	}
 
@@ -83,7 +83,7 @@ func (pc *PtyClient) RunPtyBackground() {
 
 	pc.ptmx, err = pty.StartWithSize(pc.cmd, initialSize)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to start pty")
+		log.Error().Err(err).Msg("Failed to start pty.")
 		pc.close()
 		return
 	}
@@ -112,7 +112,7 @@ func (pc *PtyClient) readFromWebsocket(ctx context.Context, cancel context.Cance
 					return
 				}
 				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					log.Debug().Err(err).Msg("Failed to read from pty websocket")
+					log.Debug().Err(err).Msg("Failed to read from pty websocket.")
 				}
 				cancel()
 				return
@@ -124,7 +124,7 @@ func (pc *PtyClient) readFromWebsocket(ctx context.Context, cancel context.Cance
 					return
 				}
 				if !errors.Is(err, os.ErrClosed) {
-					log.Debug().Err(err).Msg("Failed to write to pty")
+					log.Debug().Err(err).Msg("Failed to write to pty.")
 				}
 				cancel()
 				return
@@ -149,7 +149,7 @@ func (pc *PtyClient) readFromPTY(ctx context.Context, cancel context.CancelFunc)
 				if err == io.EOF {
 					log.Debug().Msg("pty session exited.")
 				} else {
-					log.Debug().Err(err).Msg("Failed to read from PTY")
+					log.Debug().Err(err).Msg("Failed to read from pty.")
 				}
 				cancel()
 				return
@@ -160,7 +160,7 @@ func (pc *PtyClient) readFromPTY(ctx context.Context, cancel context.CancelFunc)
 					return
 				}
 				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					log.Debug().Err(err).Msg("Failed to write to pty")
+					log.Debug().Err(err).Msg("Failed to write to pty.")
 				}
 				cancel()
 				return
@@ -175,7 +175,7 @@ func (pc *PtyClient) resize(rows, cols uint16) error {
 		Cols: cols,
 	})
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to resize terminal")
+		log.Warn().Err(err).Msg("Failed to resize terminal.")
 		return err
 	}
 	pc.rows = rows

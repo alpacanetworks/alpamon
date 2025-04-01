@@ -115,13 +115,13 @@ func runAgent() {
 func restartAgent() {
 	executable, err := os.Executable()
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to get executable path")
+		log.Error().Err(err).Msg("Failed to get executable path.")
 		return
 	}
 
 	err = syscall.Exec(executable, os.Args, os.Environ())
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to restart the program")
+		log.Error().Err(err).Msg("Failed to restart the program.")
 	}
 }
 

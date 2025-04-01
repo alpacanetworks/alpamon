@@ -169,14 +169,14 @@ func (wc *WebsocketClient) CommandRequestHandler(message []byte) {
 
 	err := json.Unmarshal(message, &content)
 	if err != nil {
-		log.Error().Err(err).Msgf("Inappropriate message: %s", string(message))
+		log.Error().Err(err).Msgf("Inappropriate message: %s.", string(message))
 		return
 	}
 
 	if content.Command.Data != "" {
 		err = json.Unmarshal([]byte(content.Command.Data), &data)
 		if err != nil {
-			log.Error().Err(err).Msgf("Inappropriate message: %s", string(message))
+			log.Error().Err(err).Msgf("Inappropriate message: %s.", string(message))
 			return
 		}
 	}
@@ -191,13 +191,13 @@ func (wc *WebsocketClient) CommandRequestHandler(message []byte) {
 		commandRunner := NewCommandRunner(wc, content.Command, data)
 		go commandRunner.Run()
 	case "quit":
-		log.Debug().Msgf("Quit requested for reason: %s", content.Reason)
+		log.Debug().Msgf("Quit requested for reason: %s.", content.Reason)
 		wc.ShutDown()
 	case "reconnect":
-		log.Debug().Msgf("Reconnect requested for reason: %s", content.Reason)
+		log.Debug().Msgf("Reconnect requested for reason: %s.", content.Reason)
 		wc.Close()
 	default:
-		log.Warn().Msgf("Not implemented query: %s", content.Query)
+		log.Warn().Msgf("Not implemented query: %s.", content.Query)
 	}
 }
 

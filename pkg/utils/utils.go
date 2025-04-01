@@ -47,7 +47,7 @@ func getPlatformLike() {
 			log.Fatal().Msgf("Platform %s not supported.", platformInfo.Platform)
 		}
 	default:
-		log.Fatal().Msgf("unsupported os: %s", runtime.GOOS)
+		log.Fatal().Msgf("Unsupported os: %s.", runtime.GOOS)
 	}
 }
 

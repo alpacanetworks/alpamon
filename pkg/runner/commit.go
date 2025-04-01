@@ -103,7 +103,7 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 		case "server":
 			loadAvg, err := getLoadAverage()
 			if err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve load average")
+				log.Debug().Err(err).Msg("Failed to retrieve load average.")
 			}
 			currentData = &ServerData{
 				Version: version.Version,
@@ -113,52 +113,52 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 			continue
 		case "info":
 			if currentData, err = getSystemData(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve system info")
+				log.Debug().Err(err).Msg("Failed to retrieve system info.")
 			}
 			remoteData = &SystemData{}
 		case "os":
 			if currentData, err = getOsData(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve os info")
+				log.Debug().Err(err).Msg("Failed to retrieve os info.")
 			}
 			remoteData = &OSData{}
 		case "time":
 			if currentData, err = getTimeData(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve time info")
+				log.Debug().Err(err).Msg("Failed to retrieve time info.")
 			}
 			remoteData = &TimeData{}
 		case "groups":
 			if currentData, err = getGroupData(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve group info")
+				log.Debug().Err(err).Msg("Failed to retrieve group info.")
 			}
 			remoteData = &[]GroupData{}
 		case "users":
 			if currentData, err = getUserData(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve user info")
+				log.Debug().Err(err).Msg("Failed to retrieve user info.")
 			}
 			remoteData = &[]UserData{}
 		case "interfaces":
 			if currentData, err = getNetworkInterfaces(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve network interfaces")
+				log.Debug().Err(err).Msg("Failed to retrieve network interfaces.")
 			}
 			remoteData = &[]Interface{}
 		case "addresses":
 			if currentData, err = getNetworkAddresses(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve network addresses")
+				log.Debug().Err(err).Msg("Failed to retrieve network addresses.")
 			}
 			remoteData = &[]Address{}
 		case "packages":
 			if currentData, err = getSystemPackages(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve system packages")
+				log.Debug().Err(err).Msg("Failed to retrieve system packages.")
 			}
 			remoteData = &[]SystemPackageData{}
 		case "disks":
 			if currentData, err = getDisks(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve disks")
+				log.Debug().Err(err).Msg("Failed to retrieve disks.")
 			}
 			remoteData = &[]Disk{}
 		case "partitions":
 			if currentData, err = getPartitions(); err != nil {
-				log.Debug().Err(err).Msg("Failed to retrieve partitions")
+				log.Debug().Err(err).Msg("Failed to retrieve partitions.")
 			}
 			remoteData = &[]Partition{}
 		default:
@@ -170,13 +170,13 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 		if statusCode == http.StatusOK {
 			err = json.Unmarshal(resp, &remoteData)
 			if err != nil {
-				log.Error().Err(err).Msg("Failed to unmarshal remote data")
+				log.Error().Err(err).Msg("Failed to unmarshal remote data.")
 				continue
 			}
 		} else if statusCode == http.StatusNotFound {
 			remoteData = nil
 		} else {
-			log.Error().Err(err).Msgf("HTTP %d: Failed to get data for %s", statusCode, key)
+			log.Error().Err(err).Msgf("HTTP %d: Failed to get data for %s.", statusCode, key)
 			continue
 		}
 
@@ -186,7 +186,7 @@ func syncSystemInfo(session *scheduler.Session, keys []string) {
 			compareData(entry, currentData.(ComparableData), remoteData.(ComparableData))
 		}
 	}
-	log.Info().Msg("Completed system information synchronization")
+	log.Info().Msg("Completed system information synchronization.")
 }
 
 func compareData(entry commitDef, currentData, remoteData ComparableData) {
@@ -239,37 +239,37 @@ func collectData() *commitData {
 	data.Version = version.Version
 
 	if data.Load, err = getLoadAverage(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve load average")
+		log.Debug().Err(err).Msg("Failed to retrieve load average.")
 	}
 	if data.Info, err = getSystemData(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve system info")
+		log.Debug().Err(err).Msg("Failed to retrieve system info.")
 	}
 	if data.OS, err = getOsData(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve os info")
+		log.Debug().Err(err).Msg("Failed to retrieve os info.")
 	}
 	if data.Time, err = getTimeData(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve time data")
+		log.Debug().Err(err).Msg("Failed to retrieve time data.")
 	}
 	if data.Users, err = getUserData(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve user data")
+		log.Debug().Err(err).Msg("Failed to retrieve user data.")
 	}
 	if data.Groups, err = getGroupData(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve group data")
+		log.Debug().Err(err).Msg("Failed to retrieve group data.")
 	}
 	if data.Interfaces, err = getNetworkInterfaces(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve network interfaces")
+		log.Debug().Err(err).Msg("Failed to retrieve network interfaces.")
 	}
 	if data.Addresses, err = getNetworkAddresses(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve network addresses")
+		log.Debug().Err(err).Msg("Failed to retrieve network addresses.")
 	}
 	if data.Packages, err = getSystemPackages(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve system packages")
+		log.Debug().Err(err).Msg("Failed to retrieve system packages.")
 	}
 	if data.Disks, err = getDisks(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve disks")
+		log.Debug().Err(err).Msg("Failed to retrieve disks.")
 	}
 	if data.Partitions, err = getPartitions(); err != nil {
-		log.Debug().Err(err).Msg("Failed to retrieve disk partitions")
+		log.Debug().Err(err).Msg("Failed to retrieve disk partitions.")
 	}
 
 	return data
@@ -377,7 +377,7 @@ func getUserData() ([]UserData, error) {
 
 	file, err := os.Open(passwdFilePath)
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to open passwd file")
+		log.Debug().Err(err).Msg("Failed to open passwd file.")
 		return users, err
 	}
 
@@ -422,7 +422,7 @@ func getGroupData() ([]GroupData, error) {
 
 	file, err := os.Open(groupFilePath)
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to open group file")
+		log.Debug().Err(err).Msg("Failed to open group file.")
 		return groups, err
 	}
 	defer func() { _ = file.Close() }()
@@ -569,7 +569,7 @@ func getSystemPackages() ([]SystemPackageData, error) {
 func getDpkgPackage() ([]SystemPackageData, error) {
 	fd, err := os.Open(dpkgDbPath)
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to open %s file", dpkgDbPath)
+		log.Debug().Err(err).Msgf("Failed to open %s file.", dpkgDbPath)
 		return []SystemPackageData{}, err
 	}
 	defer func() { _ = fd.Close() }()
@@ -621,7 +621,7 @@ func getDpkgPackage() ([]SystemPackageData, error) {
 func getRpmPackage(path string) ([]SystemPackageData, error) {
 	db, err := rpmdb.Open(path)
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to open %s file: %v", path, err)
+		log.Debug().Err(err).Msgf("Failed to open %s file: %v.", path, err)
 		return []SystemPackageData{}, err
 	}
 
@@ -629,7 +629,7 @@ func getRpmPackage(path string) ([]SystemPackageData, error) {
 
 	pkgList, err := db.ListPackages()
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to list packages: %v", err)
+		log.Debug().Err(err).Msgf("Failed to list packages: %v.", err)
 		return []SystemPackageData{}, err
 	}
 
