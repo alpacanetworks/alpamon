@@ -59,10 +59,6 @@ func (cr *CommandRunner) Run() {
 		exitCode, result = cr.handleInternalCmd()
 	case "system":
 		exitCode, result = cr.handleShellCmd(cr.command.Line, cr.command.User, cr.command.Group, cr.command.Env)
-	case "osquery": // TODO DEPRECATED: This case will be removed in a future release.
-		exitCode = 1
-		result = "alpamon does not use osquery. Please update alpacon-server."
-		log.Warn().Msg(result)
 	default:
 		exitCode = 1
 		result = "Invalid command shell argument."

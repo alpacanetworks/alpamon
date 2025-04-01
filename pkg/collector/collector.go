@@ -51,7 +51,7 @@ type collectorArgs struct {
 func InitCollector(session *session.Session, client *ent.Client) *Collector {
 	conf, err := fetchConfig(session)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to fetch collector config")
+		log.Error().Err(err).Msg("Failed to fetch collector config.")
 		os.Exit(1)
 	}
 
@@ -68,7 +68,7 @@ func InitCollector(session *session.Session, client *ent.Client) *Collector {
 
 	collector, err := NewCollector(args)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to create collector")
+		log.Error().Err(err).Msg("Failed to create collector.")
 		os.Exit(1)
 	}
 
@@ -81,7 +81,7 @@ func fetchConfig(session *session.Session) ([]collectConf, error) {
 		return nil, err
 	}
 	if statusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get collection config: %d status code", statusCode)
+		return nil, fmt.Errorf("failed to get collection config: %d status code.", statusCode)
 	}
 
 	var conf []collectConf
@@ -194,7 +194,7 @@ func (c *Collector) retryFailedMetrics(ctx context.Context) {
 		}
 		err := c.retryWithBackoff(ctx, metric)
 		if err != nil {
-			log.Error().Err(err).Msgf("Failed to check metric: %s", metric.Type)
+			log.Error().Err(err).Msgf("Failed to check metric: %s.", metric.Type)
 		}
 	default:
 		return
@@ -223,7 +223,7 @@ func (c *Collector) retryWithBackoff(ctx context.Context, metric base.MetricData
 
 func (c *Collector) handleErrors() {
 	for err := range c.errorChan {
-		log.Error().Err(err).Msgf("Collector error: %v", err)
+		log.Error().Err(err).Msgf("Collector error: %v.", err)
 	}
 }
 
