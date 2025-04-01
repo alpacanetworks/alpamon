@@ -154,7 +154,7 @@ func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (Command
 	case Chmod:
 		return fc.chmod(data.Path, data.Mode)
 	case Chown:
-		return fc.chown(data.Path, &data.UID, &data.GID)
+		return fc.chown(data.Path, data.UID, data.GID)
 	default:
 		return CommandResult{}, fmt.Errorf("unknown FTP command: %s", command)
 	}
@@ -440,20 +440,10 @@ func (fc *FtpClient) chmod(path string, mode string) (CommandResult, error) {
 	}, nil
 }
 
-func (fc *FtpClient) chown(path string, uid, gid *int) (CommandResult, error) {
+func (fc *FtpClient) chown(path string, uid, gid int) (CommandResult, error) {
 	path = fc.parsePath(path)
 
-	finalUID := -1
-	if uid != nil {
-		finalUID = *uid
-	}
-
-	finalGID := -1
-	if gid != nil {
-		finalGID = *gid
-	}
-
-	err := os.Chown(path, finalUID, finalGID)
+	err := os.Chown(path, uid, gid)
 	if err != nil {
 		return CommandResult{
 			Message: err.Error(),
