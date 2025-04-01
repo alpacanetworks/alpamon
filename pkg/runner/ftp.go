@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/alpacanetworks/alpamon/pkg/logger"
@@ -418,11 +419,16 @@ func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
 	}, nil
 }
 
-func (fc *FtpClient) chmod(path string, mode int) (CommandResult, error) {
+func (fc *FtpClient) chmod(path string, mode string) (CommandResult, error) {
 	path = fc.parsePath(path)
-	fileMode := os.FileMode(mode)
+	fileMode, err := strconv.ParseUint(mode, 8, 32)
+	if err != nil {
+		return CommandResult{
+			Message: err.Error(),
+		}, err
+	}
 
-	err := os.Chmod(path, fileMode)
+	err = os.Chmod(path, os.FileMode(fileMode))
 	if err != nil {
 		return CommandResult{
 			Message: err.Error(),

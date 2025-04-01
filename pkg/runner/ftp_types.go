@@ -46,7 +46,7 @@ type FtpData struct {
 	ShowHidden bool   `json:"show_hidden,omitempty"`
 	Src        string `json:"src,omitempty"`
 	Dst        string `json:"dst,omitempty"`
-	Mode       int    `json:"mode,omitempty"`
+	Mode       string `json:"mode,omitempty"`
 	UID        int    `json:"uid,omitempty"`
 	GID        int    `json:"gid,omitempty"`
 }
