@@ -77,8 +77,7 @@ func (session *Session) CheckSession(ctx context.Context) bool {
 					}
 				}
 			}
-			// time.Sleep(timeout)
-			if timeout == 0 {
+			if timeout == 0 { // first time
 				timeout = config.MinConnectInterval
 			}
 			timeout *= 2
