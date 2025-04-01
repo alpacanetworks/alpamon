@@ -53,6 +53,9 @@ func runAgent() {
 		}
 	}()
 
+	// Logger
+	logFile := logger.InitLogger()
+
 	// platform
 	utils.InitPlatform()
 
@@ -63,7 +66,7 @@ func runAgent() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("alpamon version %s starting.\n", version.Version)
+	log.Info().Msgf("Starting alpamon... (version: %s)", version.Version)
 
 	// Config & Settings
 	settings := config.LoadConfig(config.Files(name), wsPath)
@@ -76,8 +79,6 @@ func runAgent() {
 	// Reporter
 	scheduler.StartReporters(session)
 
-	// Logger
-	logFile := logger.InitLogger()
 	log.Info().Msg("alpamon initialized and running.")
 
 	// Commit
