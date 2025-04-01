@@ -93,7 +93,7 @@ func runAgent() {
 
 	// Websocket Client
 	wsClient := runner.NewWebsocketClient(session)
-	go wsClient.RunForever()
+	go wsClient.RunForever(ctx)
 
 	select {
 	case <-ctx.Done():
@@ -101,9 +101,11 @@ func runAgent() {
 		break
 	case <-wsClient.ShutDownChan:
 		log.Info().Msg("Shutdown command received. Shutting down...")
+		cancel()
 		break
 	case <-wsClient.RestartChan:
-		log.Info().Msg("Restart requested internally.")
+		log.Info().Msg("Restart command received. Restarting... ")
+		cancel()
 		gracefulShutdown(metricCollector, wsClient, logFile, pidFilePath)
 		restartAgent()
 		return
