@@ -52,40 +52,37 @@ func InitSession() *Session {
 	return session
 }
 
-func (session *Session) CheckSession() bool {
-	timeout := config.MinConnectInterval
-	ctx, cancel := context.WithTimeout(context.Background(), MaxRetryTimeout)
+func (session *Session) CheckSession(ctx context.Context) bool {
+	timeout := 0 * time.Second
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, MaxRetryTimeout)
 	defer cancel()
 
 	for {
 		select {
-		case <-ctx.Done():
-			log.Error().Msg("Maximum retry duration reached. Shutting down.")
+		case <-ctxWithTimeout.Done():
+			log.Error().Msg("Session check cancelled or timed out.")
 			os.Exit(1)
-		default:
-			resp, _, err := session.Get(checkSessionURL, 5)
-			if err != nil {
+		case <-time.After(timeout):
+			resp, statusCode, err := session.Get(checkSessionURL, 5)
+			if err != nil || statusCode != http.StatusOK {
 				log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds", config.GlobalSettings.ServerURL, int(timeout.Seconds()))
-				time.Sleep(timeout)
-				timeout *= 2
-				if timeout > config.MaxConnectInterval {
-					timeout = config.MaxConnectInterval
-				}
-				continue
-			}
-
-			var response map[string]interface{}
-			err = json.Unmarshal(resp, &response)
-			if err != nil {
-				log.Debug().Err(err).Msg("Failed to unmarshal JSON")
-				continue
-			}
-
-			if commissioned, ok := response["commissioned"].(bool); ok {
-				return commissioned
 			} else {
-				log.Error().Msg("Unable to find 'commissioned' field in the response")
-				continue
+				var response map[string]interface{}
+				err = json.Unmarshal(resp, &response)
+				if err != nil {
+					log.Debug().Err(err).Msgf("Failed to unmarshal JSON, will try again in %ds", int(timeout.Seconds()))
+				} else {
+					if commissioned, ok := response["commissioned"].(bool); ok {
+						return commissioned
+					}
+				}
+			}
+			if timeout == 0 { // first time
+				timeout = config.MinConnectInterval
+			}
+			timeout *= 2
+			if timeout > config.MaxConnectInterval {
+				timeout = config.MaxConnectInterval
 			}
 		}
 	}
