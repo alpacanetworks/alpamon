@@ -78,3 +78,43 @@ func CopyDir(src, dst string) error {
 
 	return nil
 }
+
+func FormatPermissions(mode os.FileMode) string {
+	permissions := []byte{'-', '-', '-', '-', '-', '-', '-', '-', '-', '-'}
+
+	if mode.IsDir() {
+		permissions[0] = 'd'
+	}
+
+	rwxBits := []os.FileMode{0400, 0200, 0100, 0040, 0020, 0010, 0004, 0002, 0001}
+	rwxChars := []byte{'r', 'w', 'x'}
+
+	for i, bit := range rwxBits {
+		if mode&bit != 0 {
+			permissions[i+1] = rwxChars[i%3]
+		}
+	}
+
+	specialBits := []struct {
+		mask     os.FileMode
+		position int
+		execPos  int
+		char     byte
+	}{
+		{os.ModeSetuid, 3, 3, 's'},
+		{os.ModeSetgid, 6, 6, 's'},
+		{os.ModeSticky, 9, 9, 't'},
+	}
+
+	for _, sp := range specialBits {
+		if mode&sp.mask != 0 {
+			if permissions[sp.execPos] == 'x' {
+				permissions[sp.position] = sp.char
+			} else {
+				permissions[sp.position] = sp.char - ('x' - 'X')
+			}
+		}
+	}
+
+	return string(permissions)
+}
