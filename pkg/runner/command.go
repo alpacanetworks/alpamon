@@ -51,7 +51,7 @@ func (cr *CommandRunner) Run() {
 	var exitCode int
 	var result string
 
-	log.Debug().Msgf("Received command: %s> %s", cr.command.Shell, cr.command.Line)
+	log.Debug().Msgf("Received command: %s > %s", cr.command.Shell, cr.command.Line)
 
 	start := time.Now()
 	switch cr.command.Shell {
