@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/alpacanetworks/alpamon/pkg/logger"
 	"github.com/alpacanetworks/alpamon/pkg/utils"
@@ -230,12 +232,60 @@ func (fc *FtpClient) listRecursive(path string, depth, current int, showHidden b
 			continue
 		}
 
+		permString := utils.FormatPermissions(info.Mode())
+		permOctal := fmt.Sprintf("%o", info.Mode().Perm())
+
+		stat, ok := info.Sys().(*syscall.Stat_t)
+		if !ok {
+			errChild := CommandResult{
+				Name:    entry.Name(),
+				Path:    fullPath,
+				Message: "Failed to get system stat information",
+			}
+			_, errChild.Code = GetFtpErrorCode(List, errChild)
+			result.Children = append(result.Children, errChild)
+
+			continue
+		}
+
+		uid := fmt.Sprintf("%d", stat.Uid)
+		gid := fmt.Sprintf("%d", stat.Gid)
+		owner, err := user.LookupId(uid)
+		if err != nil {
+			errChild := CommandResult{
+				Name:    entry.Name(),
+				Path:    fullPath,
+				Message: err.Error(),
+			}
+			_, errChild.Code = GetFtpErrorCode(List, errChild)
+			result.Children = append(result.Children, errChild)
+
+			continue
+		}
+
+		group, err := user.LookupGroupId(gid)
+		if err != nil {
+			errChild := CommandResult{
+				Name:    entry.Name(),
+				Path:    fullPath,
+				Message: err.Error(),
+			}
+			_, errChild.Code = GetFtpErrorCode(List, errChild)
+			result.Children = append(result.Children, errChild)
+
+			continue
+		}
+
 		modTime := info.ModTime()
 		child := CommandResult{
-			Name:    entry.Name(),
-			Path:    fullPath,
-			Code:    returnCodes[List].Success,
-			ModTime: &modTime,
+			Name:             entry.Name(),
+			Path:             fullPath,
+			Code:             returnCodes[List].Success,
+			ModTime:          &modTime,
+			PermissionString: permString,
+			PermissionOctal:  permOctal,
+			Owner:            owner.Username,
+			Group:            group.Name,
 		}
 
 		if entry.IsDir() {
@@ -265,6 +315,30 @@ func (fc *FtpClient) listRecursive(path string, depth, current int, showHidden b
 		modTime := dirInfo.ModTime()
 		result.ModTime = &modTime
 		result.Code = returnCodes[List].Success
+		result.PermissionString = utils.FormatPermissions(dirInfo.Mode())
+		result.PermissionOctal = fmt.Sprintf("%o", dirInfo.Mode().Perm())
+
+		stat, ok := dirInfo.Sys().(*syscall.Stat_t)
+		if !ok {
+			result.Message = "Failed to get system stat information"
+		} else {
+			uid := fmt.Sprintf("%d", stat.Uid)
+			gid := fmt.Sprintf("%d", stat.Gid)
+			owner, err := user.LookupId(uid)
+			if err != nil {
+				result.Message = err.Error()
+				_, result.Code = GetFtpErrorCode(List, result)
+			}
+
+			group, err := user.LookupGroupId(gid)
+			if err != nil {
+				result.Message = err.Error()
+				_, result.Code = GetFtpErrorCode(List, result)
+			}
+
+			result.Owner = owner.Username
+			result.Group = group.Name
+		}
 	}
 
 	return result, nil

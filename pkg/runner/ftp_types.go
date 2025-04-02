@@ -64,15 +64,19 @@ type FtpResult struct {
 }
 
 type CommandResult struct {
-	Name     string          `json:"name,omitempty"`
-	Type     string          `json:"type,omitempty"`
-	Path     string          `json:"path,omitempty"`
-	Dst      string          `json:"dst,omitempty"`
-	Code     int             `json:"code,omitempty"`
-	Size     int64           `json:"size,omitempty"`
-	Children []CommandResult `json:"children,omitempty"`
-	ModTime  *time.Time      `json:"mod_time,omitempty"`
-	Message  string          `json:"message,omitempty"`
+	Name             string          `json:"name,omitempty"`
+	Type             string          `json:"type,omitempty"`
+	Path             string          `json:"path,omitempty"`
+	Dst              string          `json:"dst,omitempty"`
+	Code             int             `json:"code,omitempty"`
+	Size             int64           `json:"size,omitempty"`
+	Children         []CommandResult `json:"children,omitempty"`
+	ModTime          *time.Time      `json:"mod_time,omitempty"`
+	Message          string          `json:"message,omitempty"`
+	PermissionString string          `json:"permission_str,omitempty"`
+	PermissionOctal  string          `json:"permission_octal,omitempty"`
+	Owner            string          `json:"owner,omitempty"`
+	Group            string          `json:"group,omitempty"`
 }
 
 type returnCode struct {
