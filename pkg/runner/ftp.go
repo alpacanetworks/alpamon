@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/alpacanetworks/alpamon/pkg/logger"
 	"github.com/alpacanetworks/alpamon/pkg/utils"
@@ -199,112 +197,14 @@ func (fc *FtpClient) listRecursive(path string, depth, current int, showHidden b
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		errResult := CommandResult{
-			Name:    filepath.Base(path),
-			Path:    path,
-			Message: err.Error(),
-		}
-		_, errResult.Code = GetFtpErrorCode(List, errResult)
-
-		return errResult, nil
+		return fc.handleListErrorResult(path, err), nil
 	}
 
 	for _, entry := range entries {
-		if !showHidden && strings.HasPrefix(entry.Name(), ".") {
-			continue
+		child := fc.getDiretoryStructure(entry, path, depth, current, showHidden)
+		if child != nil {
+			result.Children = append(result.Children, *child)
 		}
-
-		fullPath := filepath.Join(path, entry.Name())
-		info, err := os.Lstat(fullPath)
-		if err != nil {
-			errChild := CommandResult{
-				Name:    entry.Name(),
-				Path:    fullPath,
-				Message: err.Error(),
-			}
-			_, errChild.Code = GetFtpErrorCode(List, errChild)
-			result.Children = append(result.Children, errChild)
-
-			continue
-		}
-
-		if info.Mode()&os.ModeSymlink != 0 {
-			continue
-		}
-
-		permString := utils.FormatPermissions(info.Mode())
-		permOctal := fmt.Sprintf("%o", info.Mode().Perm())
-
-		stat, ok := info.Sys().(*syscall.Stat_t)
-		if !ok {
-			errChild := CommandResult{
-				Name:    entry.Name(),
-				Path:    fullPath,
-				Message: "Failed to get system stat information",
-			}
-			_, errChild.Code = GetFtpErrorCode(List, errChild)
-			result.Children = append(result.Children, errChild)
-
-			continue
-		}
-
-		uid := fmt.Sprintf("%d", stat.Uid)
-		gid := fmt.Sprintf("%d", stat.Gid)
-		owner, err := user.LookupId(uid)
-		if err != nil {
-			errChild := CommandResult{
-				Name:    entry.Name(),
-				Path:    fullPath,
-				Message: err.Error(),
-			}
-			_, errChild.Code = GetFtpErrorCode(List, errChild)
-			result.Children = append(result.Children, errChild)
-
-			continue
-		}
-
-		group, err := user.LookupGroupId(gid)
-		if err != nil {
-			errChild := CommandResult{
-				Name:    entry.Name(),
-				Path:    fullPath,
-				Message: err.Error(),
-			}
-			_, errChild.Code = GetFtpErrorCode(List, errChild)
-			result.Children = append(result.Children, errChild)
-
-			continue
-		}
-
-		modTime := info.ModTime()
-		child := CommandResult{
-			Name:             entry.Name(),
-			Path:             fullPath,
-			Code:             returnCodes[List].Success,
-			ModTime:          &modTime,
-			PermissionString: permString,
-			PermissionOctal:  permOctal,
-			Owner:            owner.Username,
-			Group:            group.Name,
-		}
-
-		if entry.IsDir() {
-			child.Type = "folder"
-			if current < depth-1 {
-				childResult, err := fc.listRecursive(fullPath, depth, current+1, showHidden)
-				if err != nil {
-					result.Children = append(result.Children, childResult)
-					continue
-				}
-				child = childResult
-			}
-		} else {
-			child.Type = "file"
-			child.Code = returnCodes[List].Success
-			child.Size = info.Size()
-		}
-
-		result.Children = append(result.Children, child)
 	}
 
 	dirInfo, err := os.Stat(path)
@@ -313,35 +213,86 @@ func (fc *FtpClient) listRecursive(path string, depth, current int, showHidden b
 		_, result.Code = GetFtpErrorCode(List, result)
 	} else {
 		modTime := dirInfo.ModTime()
+		permString, permOctal, owner, group, err := utils.GetFileInfo(dirInfo, path)
+		if err != nil {
+			result.Message = err.Error()
+			_, result.Code = GetFtpErrorCode(List, result)
+		}
+
+		result.PermissionString = permString
+		result.PermissionOctal = permOctal
+		result.Owner = owner
+		result.Group = group
 		result.ModTime = &modTime
 		result.Code = returnCodes[List].Success
-		result.PermissionString = utils.FormatPermissions(dirInfo.Mode())
-		result.PermissionOctal = fmt.Sprintf("%o", dirInfo.Mode().Perm())
-
-		stat, ok := dirInfo.Sys().(*syscall.Stat_t)
-		if !ok {
-			result.Message = "Failed to get system stat information"
-		} else {
-			uid := fmt.Sprintf("%d", stat.Uid)
-			gid := fmt.Sprintf("%d", stat.Gid)
-			owner, err := user.LookupId(uid)
-			if err != nil {
-				result.Message = err.Error()
-				_, result.Code = GetFtpErrorCode(List, result)
-			}
-
-			group, err := user.LookupGroupId(gid)
-			if err != nil {
-				result.Message = err.Error()
-				_, result.Code = GetFtpErrorCode(List, result)
-			}
-
-			result.Owner = owner.Username
-			result.Group = group.Name
-		}
 	}
 
 	return result, nil
+}
+
+func (fc *FtpClient) getDiretoryStructure(entry os.DirEntry, path string, depth, current int, showHidden bool) *CommandResult {
+	if !showHidden && strings.HasPrefix(entry.Name(), ".") {
+		return nil
+	}
+
+	fullPath := filepath.Join(path, entry.Name())
+	info, err := os.Lstat(fullPath)
+	if err != nil {
+		result := fc.handleListErrorResult(fullPath, err)
+
+		return &result
+	}
+
+	if info.Mode()&os.ModeSymlink != 0 {
+		return nil
+	}
+
+	permString, permOctal, owner, group, err := utils.GetFileInfo(info, fullPath)
+	if err != nil {
+		result := fc.handleListErrorResult(fullPath, err)
+
+		return &result
+	}
+
+	modTime := info.ModTime()
+	child := &CommandResult{
+		Name:             entry.Name(),
+		Path:             fullPath,
+		Code:             returnCodes[List].Success,
+		ModTime:          &modTime,
+		PermissionString: permString,
+		PermissionOctal:  permOctal,
+		Owner:            owner,
+		Group:            group,
+	}
+
+	if entry.IsDir() {
+		child.Type = "folder"
+		if current < depth-1 {
+			childResult, err := fc.listRecursive(fullPath, depth, current+1, showHidden)
+			if err != nil {
+				return &childResult
+			}
+			child = &childResult
+		}
+	} else {
+		child.Type = "file"
+		child.Code = returnCodes[List].Success
+		child.Size = info.Size()
+	}
+
+	return child
+}
+
+func (fc *FtpClient) handleListErrorResult(path string, err error) CommandResult {
+	result := CommandResult{
+		Name:    filepath.Base(path),
+		Path:    path,
+		Message: err.Error(),
+	}
+	_, result.Code = GetFtpErrorCode(List, result)
+
+	return result
 }
 
 func (fc *FtpClient) mkd(path string) (CommandResult, error) {
