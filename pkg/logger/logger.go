@@ -100,11 +100,12 @@ func PrettyWriter(out io.Writer) zerolog.ConsoleWriter {
 	}
 }
 
+// Note : Always return nil error to avoid zerolog internal error logs
 func (w *logRecordWriter) Write(p []byte) (n int, err error) {
 	var entry ZerologEntry
 	err = json.Unmarshal(p, &entry)
 	if err != nil {
-		return 0, err
+		return 0, nil
 	}
 
 	n = len(p)
