@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,36 @@ const (
 	logFileName = "alpamon.log"
 	recordURL   = "/api/history/logs/"
 )
+
+type LogRecord struct {
+	Date    string `json:"date"`
+	Level   int    `json:"level"`
+	Program string `json:"program"`
+	Path    string `json:"path"`
+	Lineno  int    `json:"lineno"`
+	PID     int    `json:"pid"`
+	Msg     string `json:"msg"`
+}
+
+type ZerologEntry struct {
+	Level   string `json:"level"`
+	Time    string `json:"time"`
+	Caller  string `json:"caller"`
+	Message string `json:"message"`
+}
+
+type logRecordWriter struct{}
+
+// logRecordFileHandlers defines log level thresholds for specific files.
+// Only files listed here will have their logs sent to the remote server.
+// Logs from files not listed will be ignored entirely.
+// Logs below the specified level for a listed file will also be ignored.
+var logRecordFileHandlers = map[string]int{
+	"command.go": 30,
+	"commit.go":  20,
+	"pty.go":     30,
+	"shell.go":   30,
+}
 
 func InitLogger() *os.File {
 	fileName := fmt.Sprintf("%s/%s", logDir, logFileName)
@@ -67,70 +98,36 @@ func newPrettyWriter(out io.Writer) zerolog.ConsoleWriter {
 	}
 }
 
-type logRecord struct {
-	Date    string `json:"date"`
-	Level   int    `json:"level"`
-	Program string `json:"program"`
-	Path    string `json:"path"`
-	Lineno  int    `json:"lineno"`
-	PID     int    `json:"pid"`
-	Msg     string `json:"msg"`
-}
-
-type zerologEntry struct {
-	Level   string `json:"level"`
-	Time    string `json:"time"`
-	Caller  string `json:"caller"`
-	Message string `json:"message"`
-}
-
-type logRecordWriter struct{}
-
-// logRecordFileHandlers defines log level thresholds for specific files.
-// Only files listed here will have their logs sent to the remote server.
-// Logs from files not listed will be ignored entirely.
-// Logs below the specified level for a listed file will also be ignored.
-var logRecordFileHandlers = map[string]int{
-	"command.go": 30,
-	"commit.go":  20,
-	"pty.go":     30,
-	"shell.go":   30,
-}
-
 func (w *logRecordWriter) Write(p []byte) (n int, err error) {
-	var entry zerologEntry
+	var entry ZerologEntry
 	err = json.Unmarshal(p, &entry)
 	if err != nil {
-		return n, err
+		return 0, err
 	}
 
-	caller := entry.Caller
-	if caller == "" {
-		return len(p), nil
+	n = len(p)
+	if entry.Caller == "" {
+		return n, nil
 	}
 
-	lineno := 0
-	if parts := strings.Split(caller, ":"); len(parts) > 1 {
-		lineno, _ = strconv.Atoi(parts[1])
-	}
-
-	callerFileName := getCallerFileName(caller)
+	callerFileName, lineNo := ParseCaller(entry.Caller)
 
 	levelThreshold, exists := logRecordFileHandlers[callerFileName]
 	if !exists {
-		return len(p), nil
+		return n, nil
 	}
 
-	if convertLevelToNumber(entry.Level) < levelThreshold {
-		return len(p), nil
+	level := ConvertLevelToNumber(entry.Level)
+	if level < levelThreshold {
+		return n, nil
 	}
 
-	record := logRecord{
+	record := LogRecord{
 		Date:    entry.Time,
-		Level:   convertLevelToNumber(entry.Level),
+		Level:   level,
 		Program: "alpamon",
-		Path:    caller,
-		Lineno:  lineno,
+		Path:    entry.Caller,
+		Lineno:  lineNo,
 		PID:     os.Getpid(),
 		Msg:     entry.Message,
 	}
@@ -139,12 +136,12 @@ func (w *logRecordWriter) Write(p []byte) (n int, err error) {
 		scheduler.Rqueue.Post(recordURL, record, 90, time.Time{})
 	}()
 
-	return len(p), nil
+	return n, nil
 }
 
 // alpacon-server uses Python's logging package, which has different log levels from zerolog.
 // This function maps zerolog log levels to Python logging levels.
-func convertLevelToNumber(level string) int {
+func ConvertLevelToNumber(level string) int {
 	switch level {
 	case "fatal":
 		return 50 // CRITICAL, FATAL
@@ -161,12 +158,17 @@ func convertLevelToNumber(level string) int {
 	}
 }
 
-func getCallerFileName(caller string) string {
-	parts := strings.Split(caller, "/")
+func ParseCaller(caller string) (fileName string, lineno int) {
+	parts := strings.Split(caller, ":")
+	fileName = ""
+	lineno = 0
 	if len(parts) > 0 {
-		fileWithLine := parts[len(parts)-1]
-		fileParts := strings.Split(fileWithLine, ":")
-		return fileParts[0]
+		fileName = filepath.Base(parts[0])
 	}
-	return ""
+	if len(parts) > 1 {
+		if n, err := strconv.Atoi(parts[1]); err == nil {
+			lineno = n
+		}
+	}
+	return fileName, lineno
 }
