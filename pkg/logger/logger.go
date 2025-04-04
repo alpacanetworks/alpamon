@@ -50,6 +50,7 @@ var logRecordFileHandlers = map[string]int{
 	"commit.go":  20,
 	"pty.go":     30,
 	"shell.go":   30,
+	"server.go":  40, // logger/server.go
 }
 
 func InitLogger() *os.File {
@@ -69,16 +70,17 @@ func InitLogger() *os.File {
 	var output io.Writer
 	// In development, log to console; in production, log to file
 	if version.Version == "dev" {
-		output = zerolog.MultiLevelWriter(newPrettyWriter(os.Stderr), recordWriter)
+		output = zerolog.MultiLevelWriter(PrettyWriter(os.Stderr), recordWriter)
 	} else {
-		output = zerolog.MultiLevelWriter(newPrettyWriter(logFile), recordWriter)
+		output = zerolog.MultiLevelWriter(PrettyWriter(logFile), recordWriter)
 	}
 
 	log.Logger = zerolog.New(output).With().Timestamp().Caller().Logger()
+
 	return logFile
 }
 
-func newPrettyWriter(out io.Writer) zerolog.ConsoleWriter {
+func PrettyWriter(out io.Writer) zerolog.ConsoleWriter {
 	return zerolog.ConsoleWriter{
 		Out:          out,
 		TimeFormat:   time.RFC3339,
@@ -133,6 +135,9 @@ func (w *logRecordWriter) Write(p []byte) (n int, err error) {
 	}
 
 	go func() {
+		if scheduler.Rqueue == nil {
+			return
+		}
 		scheduler.Rqueue.Post(recordURL, record, 90, time.Time{})
 	}()
 
