@@ -53,10 +53,6 @@ func runAgent() {
 
 	// Logger
 	logFile := logger.InitLogger()
-	logServer := logger.NewLogServer()
-	if logServer != nil {
-		go logServer.StartLogServer()
-	}
 
 	// platform
 	utils.InitPlatform()
@@ -80,6 +76,12 @@ func runAgent() {
 
 	// Reporter
 	scheduler.StartReporters(session)
+
+	// Log server
+	logServer := logger.NewLogServer()
+	if logServer != nil {
+		go logServer.StartLogServer()
+	}
 
 	log.Info().Msg("alpamon initialized and running.")
 
