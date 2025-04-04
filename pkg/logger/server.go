@@ -43,6 +43,9 @@ func (ls *LogServer) StartLogServer() {
 		default:
 			conn, err := ls.listener.Accept()
 			if err != nil {
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
 				log.Error().Err(err).Msg("Failed to accept socket.")
 				continue
 			}
