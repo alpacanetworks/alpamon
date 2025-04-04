@@ -77,6 +77,12 @@ func runAgent() {
 	// Reporter
 	scheduler.StartReporters(session)
 
+	// Log server
+	logServer := logger.NewLogServer()
+	if logServer != nil {
+		go logServer.StartLogServer()
+	}
+
 	log.Info().Msg("alpamon initialized and running.")
 
 	// Commit
@@ -104,12 +110,12 @@ func runAgent() {
 	case <-wsClient.RestartChan:
 		log.Info().Msg("Restart command received. Restarting... ")
 		cancel()
-		gracefulShutdown(metricCollector, wsClient, logFile, pidFilePath)
+		gracefulShutdown(metricCollector, wsClient, logFile, logServer, pidFilePath)
 		restartAgent()
 		return
 	}
 
-	gracefulShutdown(metricCollector, wsClient, logFile, pidFilePath)
+	gracefulShutdown(metricCollector, wsClient, logFile, logServer, pidFilePath)
 }
 
 func restartAgent() {
@@ -121,18 +127,23 @@ func restartAgent() {
 
 	err = syscall.Exec(executable, os.Args, os.Environ())
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to restart the program.")
+		log.Error().Err(err).Msg("Failed to restart the alpamon.")
 	}
 }
 
-func gracefulShutdown(collector *collector.Collector, wsClient *runner.WebsocketClient, logFile *os.File, pidPath string) {
+func gracefulShutdown(collector *collector.Collector, wsClient *runner.WebsocketClient, logFile *os.File, logServer *logger.LogServer, pidPath string) {
 	if collector != nil {
 		collector.Stop()
 	}
 	if wsClient != nil {
 		wsClient.Close()
 	}
+	if logServer != nil {
+		logServer.Stop()
+	}
+
 	log.Debug().Msg("Bye.")
+
 	if logFile != nil {
 		_ = logFile.Close()
 	}
