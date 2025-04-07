@@ -540,6 +540,6 @@ func (fc *FtpClient) chownRecursive(path string, uid, gid int) error {
 			return nil
 		}
 
-		return os.Chown(path, uid, gid)
+		return os.Chown(p, uid, gid)
 	})
 }
