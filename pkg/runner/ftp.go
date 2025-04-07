@@ -465,10 +465,24 @@ func (fc *FtpClient) chmod(path string, mode string) (CommandResult, error) {
 	}, nil
 }
 
-func (fc *FtpClient) chown(path string, uid, gid int) (CommandResult, error) {
+func (fc *FtpClient) chown(path, uidStr, gidStr string) (CommandResult, error) {
 	path = fc.parsePath(path)
 
-	err := os.Chown(path, uid, gid)
+	uid, err := strconv.Atoi(uidStr)
+	if err != nil {
+		return CommandResult{
+			Message: err.Error(),
+		}, err
+	}
+
+	gid, err := strconv.Atoi(gidStr)
+	if err != nil {
+		return CommandResult{
+			Message: err.Error(),
+		}, err
+	}
+
+	err = os.Chown(path, uid, gid)
 	if err != nil {
 		return CommandResult{
 			Message: err.Error(),
