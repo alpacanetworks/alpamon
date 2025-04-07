@@ -83,7 +83,7 @@ func runAgent() {
 		go logServer.StartLogServer()
 	}
 
-	log.Info().Msg("alpamon initialized and running.")
+	log.Info().Msgf("%s initialized and running.", name)
 
 	// Commit
 	runner.CommitAsync(session, commissioned)
@@ -121,13 +121,13 @@ func runAgent() {
 func restartAgent() {
 	executable, err := os.Executable()
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to get executable path.")
+		log.Error().Err(err).Msgf("Failed to restart the %s.", name)
 		return
 	}
 
 	err = syscall.Exec(executable, os.Args, os.Environ())
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to restart the alpamon.")
+		log.Error().Err(err).Msgf("Failed to restart the %s.", name)
 	}
 }
 
