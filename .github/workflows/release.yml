@@ -72,10 +72,28 @@ jobs:
           packagecloud-distrib: any/any
           packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
 
+      - name: Upload ARM64 DEB to PackageCloud
+        uses: danielmundi/upload-packagecloud@v1
+        with:
+          package-name: alpamon_${{ github.ref_name }}_linux_arm64.deb
+          packagecloud-username: alpacax
+          packagecloud-repo: alpamon
+          packagecloud-distrib: any/any
+          packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
+
       - name: Upload AMD64 RPM to PackageCloud
         uses: danielmundi/upload-packagecloud@v1
         with:
           package-name: alpamon_${{ github.ref_name }}_linux_amd64.rpm
+          packagecloud-username: alpacax
+          packagecloud-repo: alpamon
+          packagecloud-distrib: rpm_any/rpm_any
+          packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
+
+      - name: Upload ARM64 RPM to PackageCloud
+        uses: danielmundi/upload-packagecloud@v1
+        with:
+          package-name: alpamon_${{ github.ref_name }}_linux_arm64.rpm
           packagecloud-username: alpacax
           packagecloud-repo: alpamon
           packagecloud-distrib: rpm_any/rpm_any
