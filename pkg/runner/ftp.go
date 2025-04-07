@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/alpacanetworks/alpamon/pkg/logger"
-	"github.com/alpacanetworks/alpamon/pkg/utils"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"github.com/alpacanetworks/alpamon/pkg/logger"
+	"github.com/alpacanetworks/alpamon/pkg/utils"
+	"github.com/gorilla/websocket"
 )
 
 type FtpClient struct {
@@ -149,6 +151,10 @@ func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (Command
 		return fc.mv(data.Src, data.Dst)
 	case Cp:
 		return fc.cp(data.Src, data.Dst)
+	case Chmod:
+		return fc.chmod(data.Path, data.Mode)
+	case Chown:
+		return fc.chown(data.Path, data.UID, data.GID)
 	default:
 		return CommandResult{}, fmt.Errorf("unknown FTP command: %s", command)
 	}
@@ -191,64 +197,14 @@ func (fc *FtpClient) listRecursive(path string, depth, current int, showHidden b
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		errResult := CommandResult{
-			Name:    filepath.Base(path),
-			Path:    path,
-			Message: err.Error(),
-		}
-		_, errResult.Code = GetFtpErrorCode(List, errResult)
-
-		return errResult, nil
+		return fc.handleListErrorResult(path, err), nil
 	}
 
 	for _, entry := range entries {
-		if !showHidden && strings.HasPrefix(entry.Name(), ".") {
-			continue
+		child := fc.getDiretoryStructure(entry, path, depth, current, showHidden)
+		if child != nil {
+			result.Children = append(result.Children, *child)
 		}
-
-		fullPath := filepath.Join(path, entry.Name())
-		info, err := os.Lstat(fullPath)
-		if err != nil {
-			errChild := CommandResult{
-				Name:    entry.Name(),
-				Path:    fullPath,
-				Message: err.Error(),
-			}
-			_, errChild.Code = GetFtpErrorCode(List, errChild)
-			result.Children = append(result.Children, errChild)
-
-			continue
-		}
-
-		if info.Mode()&os.ModeSymlink != 0 {
-			continue
-		}
-
-		modTime := info.ModTime()
-		child := CommandResult{
-			Name:    entry.Name(),
-			Path:    fullPath,
-			Code:    returnCodes[List].Success,
-			ModTime: &modTime,
-		}
-
-		if entry.IsDir() {
-			child.Type = "folder"
-			if current < depth-1 {
-				childResult, err := fc.listRecursive(fullPath, depth, current+1, showHidden)
-				if err != nil {
-					result.Children = append(result.Children, childResult)
-					continue
-				}
-				child = childResult
-			}
-		} else {
-			child.Type = "file"
-			child.Code = returnCodes[List].Success
-			child.Size = info.Size()
-		}
-
-		result.Children = append(result.Children, child)
 	}
 
 	dirInfo, err := os.Stat(path)
@@ -257,11 +213,86 @@ func (fc *FtpClient) listRecursive(path string, depth, current int, showHidden b
 		_, result.Code = GetFtpErrorCode(List, result)
 	} else {
 		modTime := dirInfo.ModTime()
+		permString, permOctal, owner, group, err := utils.GetFileInfo(dirInfo, path)
+		if err != nil {
+			result.Message = err.Error()
+			_, result.Code = GetFtpErrorCode(List, result)
+		}
+
+		result.PermissionString = permString
+		result.PermissionOctal = permOctal
+		result.Owner = owner
+		result.Group = group
 		result.ModTime = &modTime
 		result.Code = returnCodes[List].Success
 	}
 
 	return result, nil
+}
+
+func (fc *FtpClient) getDiretoryStructure(entry os.DirEntry, path string, depth, current int, showHidden bool) *CommandResult {
+	if !showHidden && strings.HasPrefix(entry.Name(), ".") {
+		return nil
+	}
+
+	fullPath := filepath.Join(path, entry.Name())
+	info, err := os.Lstat(fullPath)
+	if err != nil {
+		result := fc.handleListErrorResult(fullPath, err)
+
+		return &result
+	}
+
+	if info.Mode()&os.ModeSymlink != 0 {
+		return nil
+	}
+
+	permString, permOctal, owner, group, err := utils.GetFileInfo(info, fullPath)
+	if err != nil {
+		result := fc.handleListErrorResult(fullPath, err)
+
+		return &result
+	}
+
+	modTime := info.ModTime()
+	child := &CommandResult{
+		Name:             entry.Name(),
+		Path:             fullPath,
+		Code:             returnCodes[List].Success,
+		ModTime:          &modTime,
+		PermissionString: permString,
+		PermissionOctal:  permOctal,
+		Owner:            owner,
+		Group:            group,
+	}
+
+	if entry.IsDir() {
+		child.Type = "folder"
+		if current < depth-1 {
+			childResult, err := fc.listRecursive(fullPath, depth, current+1, showHidden)
+			if err != nil {
+				return &childResult
+			}
+			child = &childResult
+		}
+	} else {
+		child.Type = "file"
+		child.Code = returnCodes[List].Success
+		child.Size = info.Size()
+	}
+
+	return child
+}
+
+func (fc *FtpClient) handleListErrorResult(path string, err error) CommandResult {
+	result := CommandResult{
+		Name:    filepath.Base(path),
+		Path:    path,
+		Message: err.Error(),
+	}
+	_, result.Code = GetFtpErrorCode(List, result)
+
+	return result
 }
 
 func (fc *FtpClient) mkd(path string) (CommandResult, error) {
@@ -410,5 +441,55 @@ func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
 	return CommandResult{
 		Dst:     dst,
 		Message: fmt.Sprintf("Copy %s to %s.", src, dst),
+	}, nil
+}
+
+func (fc *FtpClient) chmod(path string, mode string) (CommandResult, error) {
+	path = fc.parsePath(path)
+	fileMode, err := strconv.ParseUint(mode, 8, 32)
+	if err != nil {
+		return CommandResult{
+			Message: err.Error(),
+		}, err
+	}
+
+	err = os.Chmod(path, os.FileMode(fileMode))
+	if err != nil {
+		return CommandResult{
+			Message: err.Error(),
+		}, err
+	}
+
+	return CommandResult{
+		Message: fmt.Sprintf("Changed permissions of %s to %o", path, fileMode),
+	}, nil
+}
+
+func (fc *FtpClient) chown(path, uidStr, gidStr string) (CommandResult, error) {
+	path = fc.parsePath(path)
+
+	uid, err := strconv.Atoi(uidStr)
+	if err != nil {
+		return CommandResult{
+			Message: err.Error(),
+		}, err
+	}
+
+	gid, err := strconv.Atoi(gidStr)
+	if err != nil {
+		return CommandResult{
+			Message: err.Error(),
+		}, err
+	}
+
+	err = os.Chown(path, uid, gid)
+	if err != nil {
+		return CommandResult{
+			Message: err.Error(),
+		}, err
+	}
+
+	return CommandResult{
+		Message: fmt.Sprintf("Changed owner of %s to UID: %d, GID: %d", path, uid, gid),
 	}, nil
 }

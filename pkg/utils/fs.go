@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 )
 
 func CopyFile(src, dst string) error {
@@ -77,4 +80,68 @@ func CopyDir(src, dst string) error {
 	}
 
 	return nil
+}
+
+func FormatPermissions(mode os.FileMode) string {
+	permissions := []byte{'-', '-', '-', '-', '-', '-', '-', '-', '-', '-'}
+
+	if mode.IsDir() {
+		permissions[0] = 'd'
+	}
+
+	rwxBits := []os.FileMode{0400, 0200, 0100, 0040, 0020, 0010, 0004, 0002, 0001}
+	rwxChars := []byte{'r', 'w', 'x'}
+
+	for i, bit := range rwxBits {
+		if mode&bit != 0 {
+			permissions[i+1] = rwxChars[i%3]
+		}
+	}
+
+	specialBits := []struct {
+		mask     os.FileMode
+		position int
+		execPos  int
+		char     byte
+	}{
+		{os.ModeSetuid, 3, 3, 's'},
+		{os.ModeSetgid, 6, 6, 's'},
+		{os.ModeSticky, 9, 9, 't'},
+	}
+
+	for _, sp := range specialBits {
+		if mode&sp.mask != 0 {
+			if permissions[sp.execPos] == 'x' {
+				permissions[sp.position] = sp.char
+			} else {
+				permissions[sp.position] = sp.char - ('x' - 'X')
+			}
+		}
+	}
+
+	return string(permissions)
+}
+
+func GetFileInfo(info os.FileInfo, path string) (permString, permOctal, owner, group string, err error) {
+	permString = FormatPermissions(info.Mode())
+	permOctal = fmt.Sprintf("%o", info.Mode().Perm())
+
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return "", "", "", "", fmt.Errorf("failed to get system stat information")
+	}
+
+	uidStr := strconv.Itoa(int(stat.Uid))
+	gidStr := strconv.Itoa(int(stat.Gid))
+
+	ownerInfo, err := user.LookupId(uidStr)
+	if err != nil {
+		return "", "", "", "", err
+	}
+	groupInfo, err := user.LookupGroupId(gidStr)
+	if err != nil {
+		return "", "", "", "", err
+	}
+
+	return permString, permOctal, ownerInfo.Username, groupInfo.Name, nil
 }

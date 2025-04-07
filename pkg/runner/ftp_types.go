@@ -10,14 +10,16 @@ import (
 type FtpCommand string
 
 const (
-	List FtpCommand = "list"
-	Mkd  FtpCommand = "mkd"
-	Cwd  FtpCommand = "cwd"
-	Pwd  FtpCommand = "pwd"
-	Dele FtpCommand = "dele"
-	Rmd  FtpCommand = "rmd"
-	Mv   FtpCommand = "mv"
-	Cp   FtpCommand = "cp"
+	List  FtpCommand = "list"
+	Mkd   FtpCommand = "mkd"
+	Cwd   FtpCommand = "cwd"
+	Pwd   FtpCommand = "pwd"
+	Dele  FtpCommand = "dele"
+	Rmd   FtpCommand = "rmd"
+	Mv    FtpCommand = "mv"
+	Cp    FtpCommand = "cp"
+	Chmod FtpCommand = "chmod"
+	Chown FtpCommand = "chown"
 )
 
 const (
@@ -44,6 +46,9 @@ type FtpData struct {
 	ShowHidden bool   `json:"show_hidden,omitempty"`
 	Src        string `json:"src,omitempty"`
 	Dst        string `json:"dst,omitempty"`
+	Mode       string `json:"mode,omitempty"`
+	UID        string `json:"uid,omitempty"`
+	GID        string `json:"gid,omitempty"`
 }
 
 type FtpContent struct {
@@ -59,15 +64,19 @@ type FtpResult struct {
 }
 
 type CommandResult struct {
-	Name     string          `json:"name,omitempty"`
-	Type     string          `json:"type,omitempty"`
-	Path     string          `json:"path,omitempty"`
-	Dst      string          `json:"dst,omitempty"`
-	Code     int             `json:"code,omitempty"`
-	Size     int64           `json:"size,omitempty"`
-	Children []CommandResult `json:"children,omitempty"`
-	ModTime  *time.Time      `json:"mod_time,omitempty"`
-	Message  string          `json:"message,omitempty"`
+	Name             string          `json:"name,omitempty"`
+	Type             string          `json:"type,omitempty"`
+	Path             string          `json:"path,omitempty"`
+	Dst              string          `json:"dst,omitempty"`
+	Code             int             `json:"code,omitempty"`
+	Size             int64           `json:"size,omitempty"`
+	Children         []CommandResult `json:"children,omitempty"`
+	ModTime          *time.Time      `json:"mod_time,omitempty"`
+	Message          string          `json:"message,omitempty"`
+	PermissionString string          `json:"permission_str,omitempty"`
+	PermissionOctal  string          `json:"permission_octal,omitempty"`
+	Owner            string          `json:"owner,omitempty"`
+	Group            string          `json:"group,omitempty"`
 }
 
 type returnCode struct {
@@ -148,6 +157,24 @@ var returnCodes = map[FtpCommand]returnCode{
 			ErrInvalidArgument:       452,
 			ErrNoSuchFileOrDirectory: 550,
 			ErrFileExists:            552,
+		},
+	},
+	Chmod: {
+		Success: 250,
+		Error: map[string]int{
+			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
+			ErrInvalidArgument:       452,
+			ErrNoSuchFileOrDirectory: 550,
+		},
+	},
+	Chown: {
+		Success: 250,
+		Error: map[string]int{
+			ErrPermissionDenied:      450,
+			ErrOperationNotPermitted: 450,
+			ErrInvalidArgument:       452,
+			ErrNoSuchFileOrDirectory: 550,
 		},
 	},
 }
