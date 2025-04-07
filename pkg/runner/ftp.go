@@ -455,7 +455,9 @@ func (fc *FtpClient) chmod(path, mode string, recursive bool) (CommandResult, er
 
 	modePerm := os.FileMode(fileMode)
 
+	msg := ""
 	if recursive {
+		msg = " recursively"
 		err = fc.chmodRecursive(path, modePerm)
 	} else {
 		err = os.Chmod(path, modePerm)
@@ -468,7 +470,7 @@ func (fc *FtpClient) chmod(path, mode string, recursive bool) (CommandResult, er
 	}
 
 	return CommandResult{
-		Message: fmt.Sprintf("Changed permissions of %s to %o", path, fileMode),
+		Message: fmt.Sprintf("Changed permissions of %s to %o%s", path, fileMode, msg),
 	}, nil
 }
 
@@ -508,7 +510,9 @@ func (fc *FtpClient) chown(path, uidStr, gidStr string, recursive bool) (Command
 		}, err
 	}
 
+	msg := ""
 	if recursive {
+		msg = " recursively"
 		err = fc.chownRecursive(path, uid, gid)
 	} else {
 		err = os.Chown(path, uid, gid)
@@ -521,7 +525,7 @@ func (fc *FtpClient) chown(path, uidStr, gidStr string, recursive bool) (Command
 	}
 
 	return CommandResult{
-		Message: fmt.Sprintf("Changed owner of %s to UID: %d, GID: %d", path, uid, gid),
+		Message: fmt.Sprintf("Changed owner of %s to UID: %d, GID: %d%s", path, uid, gid, msg),
 	}, nil
 }
 
