@@ -612,7 +612,7 @@ func (cr *CommandRunner) validateData(data interface{}) error {
 }
 
 func (cr *CommandRunner) openFtp(data openFtpData) error {
-	sysProcAttr, err := demote(data.Username, data.Groupname)
+	sysProcAttr, err := demoteFtp(data.Username, data.Groupname)
 	if err != nil {
 		log.Debug().Err(err).Msg("Failed to get demote permission")
 
