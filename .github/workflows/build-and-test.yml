@@ -39,4 +39,4 @@ jobs:
         working-directory: ./cmd/alpamon
 
       - name: Run Tests
-        run: go test -v ./...
+        run: go test -v ./... -p 1

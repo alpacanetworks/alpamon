@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/alpacanetworks/alpamon/pkg/db/ent"
@@ -62,18 +61,16 @@ func InitTestDB(path string) *ent.Client {
 		os.Exit(1)
 	}
 
+	sql.Register("sqlite3", &sqlite.Driver{})
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	var once sync.Once
-	once.Do(func() {
-		sql.Register("sqlite3", &sqlite.Driver{})
-		err = RunMigration(dbFile.Name(), ctx)
-		if err != nil {
-			log.Error().Err(err).Msgf("failed to migrate test db: %v.", err)
-			os.Exit(1)
-		}
-	})
+	err = RunMigration(dbFile.Name(), ctx)
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to migrate test db: %v.", err)
+		os.Exit(1)
+	}
 
 	dbManager := NewDBClientManager(dbFile.Name())
 	client, err := dbManager.GetClient()

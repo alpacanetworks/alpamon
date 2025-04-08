@@ -152,9 +152,9 @@ func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (Command
 	case Cp:
 		return fc.cp(data.Src, data.Dst)
 	case Chmod:
-		return fc.chmod(data.Path, data.Mode)
+		return fc.chmod(data.Path, data.Mode, data.Recursive)
 	case Chown:
-		return fc.chown(data.Path, data.UID, data.GID)
+		return fc.chown(data.Path, data.UID, data.GID, data.Recursive)
 	default:
 		return CommandResult{}, fmt.Errorf("unknown FTP command: %s", command)
 	}
@@ -444,7 +444,7 @@ func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
 	}, nil
 }
 
-func (fc *FtpClient) chmod(path string, mode string) (CommandResult, error) {
+func (fc *FtpClient) chmod(path, mode string, recursive bool) (CommandResult, error) {
 	path = fc.parsePath(path)
 	fileMode, err := strconv.ParseUint(mode, 8, 32)
 	if err != nil {
@@ -453,7 +453,16 @@ func (fc *FtpClient) chmod(path string, mode string) (CommandResult, error) {
 		}, err
 	}
 
-	err = os.Chmod(path, os.FileMode(fileMode))
+	modePerm := os.FileMode(fileMode)
+
+	msg := ""
+	if recursive {
+		msg = " recursively"
+		err = fc.chmodRecursive(path, modePerm)
+	} else {
+		err = os.Chmod(path, modePerm)
+	}
+
 	if err != nil {
 		return CommandResult{
 			Message: err.Error(),
@@ -461,11 +470,30 @@ func (fc *FtpClient) chmod(path string, mode string) (CommandResult, error) {
 	}
 
 	return CommandResult{
-		Message: fmt.Sprintf("Changed permissions of %s to %o", path, fileMode),
+		Message: fmt.Sprintf("Changed permissions of %s to %o%s", path, fileMode, msg),
 	}, nil
 }
 
-func (fc *FtpClient) chown(path, uidStr, gidStr string) (CommandResult, error) {
+func (fc *FtpClient) chmodRecursive(path string, fileMode os.FileMode) error {
+	return filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+
+		return os.Chmod(p, fileMode)
+	})
+}
+
+func (fc *FtpClient) chown(path, uidStr, gidStr string, recursive bool) (CommandResult, error) {
 	path = fc.parsePath(path)
 
 	uid, err := strconv.Atoi(uidStr)
@@ -482,7 +510,14 @@ func (fc *FtpClient) chown(path, uidStr, gidStr string) (CommandResult, error) {
 		}, err
 	}
 
-	err = os.Chown(path, uid, gid)
+	msg := ""
+	if recursive {
+		msg = " recursively"
+		err = fc.chownRecursive(path, uid, gid)
+	} else {
+		err = os.Chown(path, uid, gid)
+	}
+
 	if err != nil {
 		return CommandResult{
 			Message: err.Error(),
@@ -490,6 +525,25 @@ func (fc *FtpClient) chown(path, uidStr, gidStr string) (CommandResult, error) {
 	}
 
 	return CommandResult{
-		Message: fmt.Sprintf("Changed owner of %s to UID: %d, GID: %d", path, uid, gid),
+		Message: fmt.Sprintf("Changed owner of %s to UID: %d, GID: %d%s", path, uid, gid, msg),
 	}, nil
+}
+
+func (fc *FtpClient) chownRecursive(path string, uid, gid int) error {
+	return filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+
+		return os.Chown(p, uid, gid)
+	})
 }
