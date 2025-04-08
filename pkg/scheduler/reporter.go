@@ -75,7 +75,7 @@ func (r *Reporter) query(entry PriorityEntry) {
 		if statusCode == http.StatusBadRequest {
 			log.Error().Err(err).Msgf("%d Bad Request: %s", statusCode, resp)
 		} else {
-			log.Debug().Msgf("%s %s Error: %d %s", entry.method, entry.url, statusCode, resp)
+			log.Error().Msgf("%s %s: %d %s.", entry.method, entry.url, statusCode, resp)
 		}
 		success = false
 	}

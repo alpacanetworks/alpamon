@@ -1,12 +1,10 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"github.com/alpacanetworks/alpamon/cmd/alpamon/command/ftp"
 	"github.com/alpacanetworks/alpamon/cmd/alpamon/command/setup"
-	"os"
-	"syscall"
-
 	"github.com/alpacanetworks/alpamon/pkg/collector"
 	"github.com/alpacanetworks/alpamon/pkg/config"
 	"github.com/alpacanetworks/alpamon/pkg/db"
@@ -18,6 +16,9 @@ import (
 	"github.com/alpacanetworks/alpamon/pkg/version"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -39,6 +40,20 @@ func init() {
 }
 
 func runAgent() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-sigChan
+		cancel()
+	}()
+
+	// Logger
+	logFile := logger.InitLogger()
+
 	// platform
 	utils.InitPlatform()
 
@@ -48,9 +63,8 @@ func runAgent() {
 		_, _ = fmt.Fprintln(os.Stderr, "Failed to create PID file", err.Error())
 		os.Exit(1)
 	}
-	defer func() { _ = os.Remove(pidFilePath) }()
 
-	fmt.Printf("alpamon version %s starting.\n", version.Version)
+	log.Info().Msgf("Starting alpamon... (version: %s)", version.Version)
 
 	// Config & Settings
 	settings := config.LoadConfig(config.Files(name), wsPath)
@@ -58,15 +72,18 @@ func runAgent() {
 
 	// Session
 	session := scheduler.InitSession()
-	commissioned := session.CheckSession()
+	commissioned := session.CheckSession(ctx)
 
 	// Reporter
 	scheduler.StartReporters(session)
 
-	// Logger
-	logFile := logger.InitLogger()
-	defer func() { _ = logFile.Close() }()
-	log.Info().Msg("alpamon initialized and running.")
+	// Log server
+	logServer := logger.NewLogServer()
+	if logServer != nil {
+		go logServer.StartLogServer()
+	}
+
+	log.Info().Msgf("%s initialized and running.", name)
 
 	// Commit
 	runner.CommitAsync(session, commissioned)
@@ -77,28 +94,58 @@ func runAgent() {
 	// Collector
 	metricCollector := collector.InitCollector(session, client)
 	metricCollector.Start()
-	defer metricCollector.Stop()
 
 	// Websocket Client
 	wsClient := runner.NewWebsocketClient(session)
-	wsClient.RunForever()
+	go wsClient.RunForever(ctx)
 
-	if wsClient.RestartRequested {
-		if err = os.Remove(pidFilePath); err != nil {
-			log.Error().Err(err).Msg("Failed to remove PID file")
-			return
-		}
-
-		executable, err := os.Executable()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get executable path")
-			return
-		}
-
-		err = syscall.Exec(executable, os.Args, os.Environ())
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to restart the program")
-		}
+	select {
+	case <-ctx.Done():
+		log.Info().Msg("Received termination signal. Shutting down...")
+		break
+	case <-wsClient.ShutDownChan:
+		log.Info().Msg("Shutdown command received. Shutting down...")
+		cancel()
+		break
+	case <-wsClient.RestartChan:
+		log.Info().Msg("Restart command received. Restarting... ")
+		cancel()
+		gracefulShutdown(metricCollector, wsClient, logFile, logServer, pidFilePath)
+		restartAgent()
+		return
 	}
+
+	gracefulShutdown(metricCollector, wsClient, logFile, logServer, pidFilePath)
+}
+
+func restartAgent() {
+	executable, err := os.Executable()
+	if err != nil {
+		log.Error().Err(err).Msgf("Failed to restart the %s.", name)
+		return
+	}
+
+	err = syscall.Exec(executable, os.Args, os.Environ())
+	if err != nil {
+		log.Error().Err(err).Msgf("Failed to restart the %s.", name)
+	}
+}
+
+func gracefulShutdown(collector *collector.Collector, wsClient *runner.WebsocketClient, logFile *os.File, logServer *logger.LogServer, pidPath string) {
+	if collector != nil {
+		collector.Stop()
+	}
+	if wsClient != nil {
+		wsClient.Close()
+	}
+	if logServer != nil {
+		logServer.Stop()
+	}
+
 	log.Debug().Msg("Bye.")
+
+	if logFile != nil {
+		_ = logFile.Close()
+	}
+	_ = os.Remove(pidPath)
 }

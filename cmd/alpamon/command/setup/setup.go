@@ -36,7 +36,7 @@ func SetConfigPaths(serviceName string) {
 
 var SetupCmd = &cobra.Command{
 	Use:   "setup",
-	Short: fmt.Sprintf("Setup and configure the %s", name),
+	Short: fmt.Sprintf("Setup and configure the %s.", name),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Starting %s setup...\n", name)
 

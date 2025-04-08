@@ -26,11 +26,11 @@ const (
 )
 
 type WebsocketClient struct {
-	Conn             *websocket.Conn
-	requestHeader    http.Header
-	apiSession       *scheduler.Session
-	RestartRequested bool
-	QuitChan         chan struct{}
+	Conn          *websocket.Conn
+	requestHeader http.Header
+	apiSession    *scheduler.Session
+	RestartChan   chan struct{}
+	ShutDownChan  chan struct{}
 }
 
 func NewWebsocketClient(session *scheduler.Session) *WebsocketClient {
@@ -41,33 +41,34 @@ func NewWebsocketClient(session *scheduler.Session) *WebsocketClient {
 	}
 
 	return &WebsocketClient{
-		requestHeader:    headers,
-		apiSession:       session,
-		RestartRequested: false,
-		QuitChan:         make(chan struct{}),
+		requestHeader: headers,
+		apiSession:    session,
+		RestartChan:   make(chan struct{}),
+		ShutDownChan:  make(chan struct{}),
 	}
 }
 
-func (wc *WebsocketClient) RunForever() {
+func (wc *WebsocketClient) RunForever(ctx context.Context) {
 	wc.Connect()
-	defer wc.Close()
 
 	for {
 		select {
-		case <-wc.QuitChan:
+		case <-ctx.Done():
 			return
 		default:
 			err := wc.Conn.SetReadDeadline(time.Now().Add(ConnectionReadTimeout))
 			if err != nil {
-				wc.CloseAndReconnect()
+				wc.CloseAndReconnect(ctx)
+				continue
 			}
 			_, message, err := wc.ReadMessage()
 			if err != nil {
-				wc.CloseAndReconnect()
+				wc.CloseAndReconnect(ctx)
+				continue
 			}
 			// Sends "ping" query for Alpacon to verify WebSocket session status without error handling.
 			_ = wc.SendPingQuery()
-			wc.commandRequestHandler(message)
+			wc.CommandRequestHandler(message)
 		}
 	}
 }
@@ -129,7 +130,10 @@ func (wc *WebsocketClient) Connect() {
 	}
 }
 
-func (wc *WebsocketClient) CloseAndReconnect() {
+func (wc *WebsocketClient) CloseAndReconnect(ctx context.Context) {
+	if ctx.Err() != nil {
+		return
+	}
 	wc.Close()
 	wc.Connect()
 }
@@ -147,17 +151,15 @@ func (wc *WebsocketClient) Close() {
 	}
 }
 
-func (wc *WebsocketClient) Quit() {
-	wc.Close()
-	close(wc.QuitChan)
+func (wc *WebsocketClient) ShutDown() {
+	close(wc.ShutDownChan)
 }
 
 func (wc *WebsocketClient) Restart() {
-	wc.RestartRequested = true
-	wc.Quit()
+	close(wc.RestartChan)
 }
 
-func (wc *WebsocketClient) commandRequestHandler(message []byte) {
+func (wc *WebsocketClient) CommandRequestHandler(message []byte) {
 	var content Content
 	var data CommandData
 
@@ -167,14 +169,14 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 
 	err := json.Unmarshal(message, &content)
 	if err != nil {
-		log.Error().Err(err).Msgf("Inappropriate message: %s", string(message))
+		log.Warn().Err(err).Msgf("Inappropriate message: %s.", string(message))
 		return
 	}
 
 	if content.Command.Data != "" {
 		err = json.Unmarshal([]byte(content.Command.Data), &data)
 		if err != nil {
-			log.Error().Err(err).Msgf("Inappropriate message: %s", string(message))
+			log.Warn().Err(err).Msgf("Inappropriate message: %s.", string(message))
 			return
 		}
 	}
@@ -189,13 +191,13 @@ func (wc *WebsocketClient) commandRequestHandler(message []byte) {
 		commandRunner := NewCommandRunner(wc, content.Command, data)
 		go commandRunner.Run()
 	case "quit":
-		log.Debug().Msgf("Quit requested for reason: %s", content.Reason)
-		wc.Quit()
+		log.Debug().Msgf("Quit requested for reason: %s.", content.Reason)
+		wc.ShutDown()
 	case "reconnect":
-		log.Debug().Msgf("Reconnect requested for reason: %s", content.Reason)
+		log.Debug().Msgf("Reconnect requested for reason: %s.", content.Reason)
 		wc.Close()
 	default:
-		log.Warn().Msgf("Not implemented query: %s", content.Query)
+		log.Warn().Msgf("Not implemented query: %s.", content.Query)
 	}
 }
 

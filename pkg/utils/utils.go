@@ -30,10 +30,12 @@ func getPlatformLike() {
 	system := runtime.GOOS
 
 	switch system {
+	case "darwin":
+		PlatformLike = system
 	case "linux":
 		platformInfo, err := host.Info()
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to get platform information")
+			log.Error().Err(err).Msg("Failed to retrieve platform information.")
 			os.Exit(1)
 		}
 		switch platformInfo.Platform {
@@ -42,19 +44,17 @@ func getPlatformLike() {
 		case "centos", "rhel", "redhat", "amazon", "amzn", "fedora", "rocky", "oracle", "ol":
 			PlatformLike = "rhel"
 		default:
-			log.Fatal().Msgf("Platform %s not supported", platformInfo.Platform)
+			log.Fatal().Msgf("Platform %s not supported.", platformInfo.Platform)
 		}
-	case "windows", "darwin":
-		PlatformLike = system
 	default:
-		log.Fatal().Msgf("Platform %s not supported", system)
+		log.Fatal().Msgf("Unsupported os: %s.", runtime.GOOS)
 	}
 }
 
 func JoinPath(base string, paths ...string) string {
 	fullURL, err := url.JoinPath(base, paths...)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to join path")
+		log.Error().Err(err).Msg("Failed to join path.")
 		return ""
 	}
 

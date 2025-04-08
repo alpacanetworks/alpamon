@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+var dbFileName = "hourly_disk_usage.db"
+
 type HourlyDiskUsageCheckSuite struct {
 	suite.Suite
 	client *ent.Client
@@ -23,7 +25,7 @@ type HourlyDiskUsageCheckSuite struct {
 }
 
 func (suite *HourlyDiskUsageCheckSuite) SetupSuite() {
-	suite.client = db.InitTestDB()
+	suite.client = db.InitTestDB(dbFileName)
 	buffer := base.NewCheckBuffer(10)
 	args := &base.CheckArgs{
 		Type:     base.HOURLY_DISK_USAGE,
@@ -37,7 +39,7 @@ func (suite *HourlyDiskUsageCheckSuite) SetupSuite() {
 }
 
 func (suite *HourlyDiskUsageCheckSuite) TearDownSuite() {
-	err := os.Remove("alpamon.db")
+	err := os.Remove(dbFileName)
 	suite.Require().NoError(err, "failed to delete test db file")
 }
 
@@ -91,6 +93,5 @@ func (suite *HourlyDiskUsageCheckSuite) TestDeleteDiskUsage() {
 }
 
 func TestHourlyDiskUsageCheckSuite(t *testing.T) {
-	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(HourlyDiskUsageCheckSuite))
 }

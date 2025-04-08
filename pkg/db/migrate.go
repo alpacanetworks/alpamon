@@ -15,7 +15,7 @@ var migrations embed.FS
 
 func RunMigration(path string, ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
-		log.Error().Err(err).Msgf("context cancelled before migration: %v", err)
+		log.Error().Err(err).Msgf("context cancelled before migration: %v.", err)
 		return err
 	}
 
@@ -25,7 +25,7 @@ func RunMigration(path string, ctx context.Context) error {
 	default:
 		migrationFS, err := getMigrationDir()
 		if err != nil {
-			log.Error().Err(err).Msg("failed to get migration filesystem")
+			log.Error().Err(err).Msg("failed to get migration filesystem.")
 			return err
 		}
 
@@ -35,14 +35,14 @@ func RunMigration(path string, ctx context.Context) error {
 			),
 		)
 		if err != nil {
-			log.Error().Err(err).Msgf("failed to open migration dir: %v", err)
+			log.Error().Err(err).Msgf("failed to open migration dir: %v.", err)
 			return err
 		}
 		defer func() { _ = workDir.Close() }()
 
 		client, err := atlasexec.NewClient(workDir.Path(), "atlas")
 		if err != nil {
-			log.Error().Err(err).Msgf("failed to get atlas client: %v", err)
+			log.Error().Err(err).Msgf("failed to get atlas client: %v.", err)
 			return err
 		}
 
@@ -53,7 +53,7 @@ func RunMigration(path string, ctx context.Context) error {
 		})
 
 		if err != nil {
-			log.Error().Err(err).Msgf("failed to migrate db: %v", err)
+			log.Error().Err(err).Msgf("failed to migrate db: %v.", err)
 			return err
 		}
 

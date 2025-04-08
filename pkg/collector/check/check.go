@@ -16,11 +16,13 @@ import (
 	hourlydiskusage "github.com/alpacanetworks/alpamon/pkg/collector/check/batch/hourly/disk/usage"
 	hourlymemory "github.com/alpacanetworks/alpamon/pkg/collector/check/batch/hourly/memory"
 	hourlynet "github.com/alpacanetworks/alpamon/pkg/collector/check/batch/hourly/net"
+	"github.com/alpacanetworks/alpamon/pkg/collector/check/realtime/alert"
 	"github.com/alpacanetworks/alpamon/pkg/collector/check/realtime/cpu"
 	diskio "github.com/alpacanetworks/alpamon/pkg/collector/check/realtime/disk/io"
 	diskusage "github.com/alpacanetworks/alpamon/pkg/collector/check/realtime/disk/usage"
 	"github.com/alpacanetworks/alpamon/pkg/collector/check/realtime/memory"
 	"github.com/alpacanetworks/alpamon/pkg/collector/check/realtime/net"
+	"github.com/alpacanetworks/alpamon/pkg/collector/check/realtime/status"
 )
 
 var checkFactories = map[base.CheckType]newCheck{
@@ -42,6 +44,8 @@ var checkFactories = map[base.CheckType]newCheck{
 	base.HOURLY_NET:        hourlynet.NewCheck,
 	base.DAILY_NET:         dailynet.NewCheck,
 	base.CLEANUP:           cleanup.NewCheck,
+	base.ALERT:             alert.NewCheck,
+	base.STATUS:            status.NewCheck,
 }
 
 type Check interface {

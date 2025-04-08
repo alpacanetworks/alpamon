@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+var dbFileName = "net.db"
+
 type NetCheckSuite struct {
 	suite.Suite
 	client       *ent.Client
@@ -24,7 +26,7 @@ type NetCheckSuite struct {
 }
 
 func (suite *NetCheckSuite) SetupSuite() {
-	suite.client = db.InitTestDB()
+	suite.client = db.InitTestDB(dbFileName)
 	buffer := base.NewCheckBuffer(10)
 	collect_args := &base.CheckArgs{
 		Type:     base.NET_COLLECTOR,
@@ -46,7 +48,7 @@ func (suite *NetCheckSuite) SetupSuite() {
 }
 
 func (suite *NetCheckSuite) TearDownSuite() {
-	err := os.Remove("alpamon.db")
+	err := os.Remove(dbFileName)
 	suite.Require().NoError(err, "failed to delete test db file")
 }
 
@@ -90,6 +92,5 @@ func (suite *NetCheckSuite) TestGetTraffic() {
 }
 
 func TestNetCheckSuite(t *testing.T) {
-	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(NetCheckSuite))
 }

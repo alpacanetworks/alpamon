@@ -51,7 +51,7 @@ func (cr *CommandRunner) Run() {
 	var exitCode int
 	var result string
 
-	log.Debug().Msgf("Received command: %s> %s", cr.command.Shell, cr.command.Line)
+	log.Debug().Msgf("Received command: %s > %s", cr.command.Shell, cr.command.Line)
 
 	start := time.Now()
 	switch cr.command.Shell {
@@ -59,10 +59,6 @@ func (cr *CommandRunner) Run() {
 		exitCode, result = cr.handleInternalCmd()
 	case "system":
 		exitCode, result = cr.handleShellCmd(cr.command.Line, cr.command.User, cr.command.Group, cr.command.Env)
-	case "osquery": // TODO DEPRECATED: This case will be removed in a future release.
-		exitCode = 1
-		result = "alpamon does not use osquery. Please update alpacon-server."
-		log.Warn().Msg(result)
 	default:
 		exitCode = 1
 		result = "Invalid command shell argument."
@@ -192,9 +188,9 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		return 0, "Alpamon will restart in 1 second."
 	case "quit":
 		time.AfterFunc(1*time.Second, func() {
-			cr.wsClient.Quit()
+			cr.wsClient.ShutDown()
 		})
-		return 0, "Alpamon will quit in 1 second."
+		return 0, "Alpamon will shutdown in 1 second."
 	case "reboot":
 		log.Info().Msg("Reboot request received.")
 		time.AfterFunc(1*time.Second, func() {

@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+var dbFileName = "io.db"
+
 type DiskIOCheckSuite struct {
 	suite.Suite
 	client       *ent.Client
@@ -24,7 +26,7 @@ type DiskIOCheckSuite struct {
 }
 
 func (suite *DiskIOCheckSuite) SetupSuite() {
-	suite.client = db.InitTestDB()
+	suite.client = db.InitTestDB(dbFileName)
 	buffer := base.NewCheckBuffer(10)
 	collect_args := &base.CheckArgs{
 		Type:     base.DISK_IO_COLLECTOR,
@@ -46,7 +48,7 @@ func (suite *DiskIOCheckSuite) SetupSuite() {
 }
 
 func (suite *DiskIOCheckSuite) TearDownSuite() {
-	err := os.Remove("alpamon.db")
+	err := os.Remove(dbFileName)
 	suite.Require().NoError(err, "failed to delete test db file")
 }
 
@@ -86,6 +88,5 @@ func (suite *DiskIOCheckSuite) TestGetDiskIO() {
 }
 
 func TestDiskIOCheckSuite(t *testing.T) {
-	t.Setenv("GOMAXPROCS", "1")
 	suite.Run(t, new(DiskIOCheckSuite))
 }

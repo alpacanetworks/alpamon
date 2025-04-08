@@ -45,7 +45,7 @@ func (fc *FtpClient) RunFtpBackground() {
 	var err error
 	fc.conn, _, err = websocket.DefaultDialer.Dial(fc.url, fc.requestHeader)
 	if err != nil {
-		fc.log.Debug().Err(err).Msgf("Failed to connect to pty websocket at %s", fc.url)
+		fc.log.Debug().Err(err).Msgf("Failed to connect to pty websocket at %s.", fc.url)
 		return
 	}
 	defer fc.close()
@@ -70,7 +70,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 					return
 				}
 				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					fc.log.Debug().Err(err).Msg("Failed to read from ftp websocket")
+					fc.log.Debug().Err(err).Msg("Failed to read from ftp websocket.")
 				}
 				cancel()
 				return
@@ -79,7 +79,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 			var content FtpContent
 			err = json.Unmarshal(message, &content)
 			if err != nil {
-				fc.log.Debug().Err(err).Msg("Failed to unmarshal websocket message")
+				fc.log.Debug().Err(err).Msg("Failed to unmarshal websocket message.")
 				cancel()
 				return
 			}
@@ -103,7 +103,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 				if ctx.Err() != nil {
 					return
 				}
-				fc.log.Debug().Err(err).Msg("Failed to marshal response")
+				fc.log.Debug().Err(err).Msg("Failed to marshal response.")
 				cancel()
 				return
 			}
@@ -114,7 +114,7 @@ func (fc *FtpClient) read(ctx context.Context, cancel context.CancelFunc) {
 					return
 				}
 				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					fc.log.Debug().Err(err).Msg("Failed to send websocket message")
+					fc.log.Debug().Err(err).Msg("Failed to send websocket message.")
 				}
 				cancel()
 				return
@@ -306,7 +306,7 @@ func (fc *FtpClient) mkd(path string) (CommandResult, error) {
 	}
 
 	return CommandResult{
-		Message: fmt.Sprintf("Make %s successfully", path),
+		Message: fmt.Sprintf("Make %s successfully.", path),
 	}, nil
 }
 
@@ -329,13 +329,13 @@ func (fc *FtpClient) cwd(path string) (CommandResult, error) {
 	fc.workingDirectory = path
 
 	return CommandResult{
-		Message: fmt.Sprintf("Change working directory to %s", path),
+		Message: fmt.Sprintf("Change working directory to %s.", path),
 	}, nil
 }
 
 func (fc *FtpClient) pwd() (CommandResult, error) {
 	return CommandResult{
-		Message: fmt.Sprintf("Current working directory: %s", fc.workingDirectory),
+		Message: fmt.Sprintf("Current working directory: %s.", fc.workingDirectory),
 		Path:    fc.workingDirectory,
 	}, nil
 }
@@ -351,7 +351,7 @@ func (fc *FtpClient) dele(path string) (CommandResult, error) {
 	}
 
 	return CommandResult{
-		Message: fmt.Sprintf("Delete %s successfully", path),
+		Message: fmt.Sprintf("Delete %s successfully.", path),
 	}, nil
 }
 
@@ -378,7 +378,7 @@ func (fc *FtpClient) rmd(path string, recursive bool) (CommandResult, error) {
 	}
 
 	return CommandResult{
-		Message: fmt.Sprintf("Delete %s successfully", path),
+		Message: fmt.Sprintf("Delete %s successfully.", path),
 	}, nil
 }
 
@@ -395,7 +395,7 @@ func (fc *FtpClient) mv(src, dst string) (CommandResult, error) {
 
 	return CommandResult{
 		Dst:     dst,
-		Message: fmt.Sprintf("Move %s to %s", src, dst),
+		Message: fmt.Sprintf("Move %s to %s.", src, dst),
 	}, nil
 }
 
@@ -426,7 +426,7 @@ func (fc *FtpClient) cpDir(src, dst string) (CommandResult, error) {
 
 	return CommandResult{
 		Dst:     dst,
-		Message: fmt.Sprintf("Copy %s to %s", src, dst),
+		Message: fmt.Sprintf("Copy %s to %s.", src, dst),
 	}, nil
 }
 
@@ -440,7 +440,7 @@ func (fc *FtpClient) cpFile(src, dst string) (CommandResult, error) {
 
 	return CommandResult{
 		Dst:     dst,
-		Message: fmt.Sprintf("Copy %s to %s", src, dst),
+		Message: fmt.Sprintf("Copy %s to %s.", src, dst),
 	}, nil
 }
 
