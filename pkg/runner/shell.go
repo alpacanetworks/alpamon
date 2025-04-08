@@ -3,8 +3,6 @@ package runner
 import (
 	"context"
 	"fmt"
-	"github.com/alpacanetworks/alpamon/pkg/utils"
-	"github.com/rs/zerolog/log"
 	"os"
 	"os/exec"
 	"os/user"
@@ -12,6 +10,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/alpacanetworks/alpamon/pkg/utils"
+	"github.com/rs/zerolog/log"
 )
 
 func demote(username, groupname string) (*syscall.SysProcAttr, error) {
@@ -47,12 +48,27 @@ func demote(username, groupname string) (*syscall.SysProcAttr, error) {
 		return nil, err
 	}
 
+	groupIds, err := usr.GroupIds()
+	if err != nil {
+		return nil, err
+	}
+
+	groups := make([]uint32, 0, len(groupIds))
+	for _, gidStr := range groupIds {
+		gidInt, err := strconv.Atoi(gidStr)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, uint32(gidInt))
+	}
+
 	log.Debug().Msgf("Demote permission to match user: %s, group: %s.", username, groupname)
 
 	return &syscall.SysProcAttr{
 		Credential: &syscall.Credential{
-			Uid: uint32(uid),
-			Gid: uint32(gid),
+			Uid:    uint32(uid),
+			Gid:    uint32(gid),
+			Groups: groups,
 		},
 	}, nil
 }
