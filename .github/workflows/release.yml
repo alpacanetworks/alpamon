@@ -41,11 +41,23 @@ jobs:
           name: alpamon_${{ github.ref_name }}_linux_amd64.deb
           path: dist/alpamon_${{ github.ref_name }}_linux_amd64.deb
 
+      - name: Upload ARM64 DEB artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpamon_${{ github.ref_name }}_linux_arm64.deb
+          path: dist/alpamon_${{ github.ref_name }}_linux_arm64.deb
+
       - name: Upload AMD64 RPM artifacts
         uses: actions/upload-artifact@v4
         with:
           name: alpamon_${{ github.ref_name }}_linux_amd64.rpm
           path: dist/alpamon_${{ github.ref_name }}_linux_amd64.rpm
+
+      - name: Upload ARM64 RPM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpamon_${{ github.ref_name }}_linux_arm64.rpm
+          path: dist/alpamon_${{ github.ref_name }}_linux_arm64.rpm
 
   packagecloud-deploy:
     needs: [goreleaser]
@@ -56,10 +68,20 @@ jobs:
         with:
           name: alpamon_${{ github.ref_name }}_linux_amd64.deb
 
+      - name: Download ARM64 DEB Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: alpamon_${{ github.ref_name }}_linux_arm64.deb
+
       - name: Download AMD64 RPM Artifacts
         uses: actions/download-artifact@v4
         with:
           name: alpamon_${{ github.ref_name }}_linux_amd64.rpm
+
+      - name: Download ARM64 RPM Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: alpamon_${{ github.ref_name }}_linux_arm64.rpm
 
       - run: ls
 
