@@ -93,26 +93,20 @@ func writeConfig() error {
 		return fmt.Errorf("environment variables ALPACON_URL, PLUGIN_ID, PLUGIN_KEY must be set")
 	}
 
-	tmpFile, err := os.CreateTemp("", fmt.Sprintf("%s.conf", name))
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %v", err)
-	}
-	defer func() { _ = tmpFile.Close() }()
-
-	err = tmpl.Execute(tmpFile, configData)
-	if err != nil {
-		_ = os.Remove(tmpFile.Name())
-		return fmt.Errorf("failed to execute template: %v", err)
-	}
-
 	err = os.MkdirAll(filepath.Dir(configTarget), 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create config directory: %v", err)
 	}
 
-	err = os.Rename(tmpFile.Name(), configTarget)
+	targetFile, err := os.Create(configTarget)
 	if err != nil {
-		return fmt.Errorf("failed to move temp file to target: %v", err)
+		return fmt.Errorf("failed to create target config file: %v", err)
+	}
+	defer func() { _ = targetFile.Close() }()
+
+	err = tmpl.Execute(targetFile, configData)
+	if err != nil {
+		return fmt.Errorf("failed to execute template into target file: %v", err)
 	}
 
 	return nil
