@@ -34,7 +34,7 @@ func NewLogServer() *LogServer {
 }
 
 func (ls *LogServer) StartLogServer() {
-	log.Debug().Msgf("Started log server on %s", address)
+	log.Debug().Msgf("Started log server on %s.", address)
 
 	for {
 		select {
