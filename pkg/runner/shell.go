@@ -150,18 +150,13 @@ func runCmdWithOutput(args []string, username, groupname string, env map[string]
 	defer cancel()
 
 	var cmd *exec.Cmd
-	if username == "root" {
-		if containsShellOperator(args) {
-			cmd = exec.CommandContext(ctx, "bash", "-c", strings.Join(args, " "))
-		} else {
-			cmd = exec.CommandContext(ctx, args[0], args[1:]...)
-		}
+	if containsShellOperator(args) {
+		cmd = exec.CommandContext(ctx, "bash", "-c", strings.Join(args, " "))
 	} else {
-		if containsShellOperator(args) {
-			cmd = exec.CommandContext(ctx, "bash", "-c", strings.Join(args, " "))
-		} else {
-			cmd = exec.CommandContext(ctx, args[0], args[1:]...)
-		}
+		cmd = exec.CommandContext(ctx, args[0], args[1:]...)
+	}
+
+	if username != "root" {
 		sysProcAttr, err := demote(username, groupname)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to demote user.")
