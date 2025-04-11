@@ -178,10 +178,10 @@ func runCmdWithOutput(args []string, username, groupname string, env map[string]
 	cmd.Dir = usr.HomeDir
 
 	log.Debug().Msgf("Executing command as user '%s' (group: '%s') -> '%s'", username, groupname, strings.Join(args, " "))
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			return exitError.ExitCode(), err.Error()
+			return exitError.ExitCode(), string(output)
 		}
 		return -1, err.Error()
 	}
