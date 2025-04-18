@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
@@ -52,7 +51,7 @@ func InitCollector(session *session.Session, client *ent.Client) *Collector {
 	conf, err := fetchConfig(session)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to fetch collector config.")
-		os.Exit(1)
+		return nil
 	}
 
 	checkFactory := &check.DefaultCheckFactory{}
@@ -69,7 +68,7 @@ func InitCollector(session *session.Session, client *ent.Client) *Collector {
 	collector, err := NewCollector(args)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create collector.")
-		os.Exit(1)
+		return nil
 	}
 
 	return collector
@@ -81,7 +80,7 @@ func fetchConfig(session *session.Session) ([]collectConf, error) {
 		return nil, err
 	}
 	if statusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get collection config: %d status code.", statusCode)
+		return nil, fmt.Errorf("failed to get collection config: %d status code", statusCode)
 	}
 
 	var conf []collectConf
@@ -135,6 +134,8 @@ func (c *Collector) initTasks(args collectorArgs) error {
 }
 
 func (c *Collector) Start() {
+	log.Debug().Msg("Started collector")
+
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 
 	go c.scheduler.Start(c.ctx, c.buffer.Capacity)
