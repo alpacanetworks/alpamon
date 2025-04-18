@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/alpacanetworks/alpamon/pkg/config"
 	"github.com/alpacanetworks/alpamon/pkg/scheduler"
 	"github.com/alpacanetworks/alpamon/pkg/utils"
 	"github.com/cenkalti/backoff"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
-	"net/http"
-	"os"
-	"time"
 )
 
 const (
@@ -26,11 +27,12 @@ const (
 )
 
 type WebsocketClient struct {
-	Conn          *websocket.Conn
-	requestHeader http.Header
-	apiSession    *scheduler.Session
-	RestartChan   chan struct{}
-	ShutDownChan  chan struct{}
+	Conn                 *websocket.Conn
+	requestHeader        http.Header
+	apiSession           *scheduler.Session
+	RestartChan          chan struct{}
+	ShutDownChan         chan struct{}
+	CollectorRestartChan chan struct{}
 }
 
 func NewWebsocketClient(session *scheduler.Session) *WebsocketClient {
@@ -41,10 +43,11 @@ func NewWebsocketClient(session *scheduler.Session) *WebsocketClient {
 	}
 
 	return &WebsocketClient{
-		requestHeader: headers,
-		apiSession:    session,
-		RestartChan:   make(chan struct{}),
-		ShutDownChan:  make(chan struct{}),
+		requestHeader:        headers,
+		apiSession:           session,
+		RestartChan:          make(chan struct{}),
+		ShutDownChan:         make(chan struct{}),
+		CollectorRestartChan: make(chan struct{}, 1),
 	}
 }
 
@@ -157,6 +160,14 @@ func (wc *WebsocketClient) ShutDown() {
 
 func (wc *WebsocketClient) Restart() {
 	close(wc.RestartChan)
+}
+
+func (wc *WebsocketClient) RestartCollector() {
+	select {
+	case wc.CollectorRestartChan <- struct{}{}:
+	default:
+		log.Info().Msg("Collector restart already requested, skipping duplicate signal.")
+	}
 }
 
 func (wc *WebsocketClient) CommandRequestHandler(message []byte) {

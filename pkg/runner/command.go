@@ -218,6 +218,11 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		}
 
 		return cr.handleShellCmd(cmd, "root", "root", nil)
+	case "restartcoll":
+		log.Info().Msg("Restart collector.")
+		cr.wsClient.RestartCollector()
+
+		return 0, "Collector will be restarted."
 	case "help":
 		helpMessage := `
 		Available commands:
