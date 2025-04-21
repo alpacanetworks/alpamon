@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type PtyClient struct {
@@ -84,7 +85,6 @@ func (pc *PtyClient) RunPtyBackground() {
 	pc.ptmx, err = pty.StartWithSize(pc.cmd, initialSize)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to start pty.")
-		pc.close()
 		return
 	}
 
@@ -197,8 +197,20 @@ func (pc *PtyClient) close() {
 	}
 
 	if pc.conn != nil {
-		_ = pc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		_ = pc.conn.Close()
+		err := pc.conn.WriteControl(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
+			time.Now().Add(5*time.Second),
+		)
+		if err != nil {
+			log.Debug().Err(err).Msg("Failed to write close message to pty websocket.")
+			return
+		}
+
+		err = pc.conn.Close()
+		if err != nil {
+			log.Debug().Err(err).Msg("Failed to close pty websocket connection.")
+		}
 	}
 
 	if terminals[pc.sessionID] != nil {
