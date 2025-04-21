@@ -142,12 +142,36 @@ func (wc *WebsocketClient) CloseAndReconnect(ctx context.Context) {
 // Do not close quitChan, as the purpose here is to disconnect the WebSocket,
 // not to terminate RunForever.
 func (wc *WebsocketClient) Close() {
-	if wc.Conn != nil {
-		err := wc.Conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		if err != nil {
-			log.Debug().Err(err).Msg("Failed to write close message to websocket.")
+	if wc.Conn == nil {
+		return
+	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	err := wc.Conn.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
+		deadline,
+	)
+
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to write close message to websocket.")
+		return
+	}
+
+	_ = wc.Conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	for {
+		_, _, err = wc.Conn.NextReader()
+		if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+			break
 		}
-		_ = wc.Conn.Close()
+		if err != nil {
+			break
+		}
+	}
+
+	err = wc.Conn.Close()
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to close websocket connection.")
 	}
 }
 
