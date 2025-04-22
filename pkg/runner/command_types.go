@@ -1,6 +1,9 @@
 package runner
 
-import "gopkg.in/go-playground/validator.v9"
+import (
+	"github.com/alpacanetworks/alpamon/pkg/scheduler"
+	"gopkg.in/go-playground/validator.v9"
+)
 
 type Content struct {
 	Query   string  `json:"query"`
@@ -54,11 +57,12 @@ type CommandData struct {
 }
 
 type CommandRunner struct {
-	name      string
-	command   Command
-	wsClient  *WebsocketClient
-	data      CommandData
-	validator *validator.Validate
+	name       string
+	command    Command
+	wsClient   *WebsocketClient
+	apiSession *scheduler.Session
+	data       CommandData
+	validator  *validator.Validate
 }
 
 // Structs defining the required input data for command validation purposes. //

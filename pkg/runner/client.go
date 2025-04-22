@@ -152,7 +152,6 @@ func (wc *WebsocketClient) Close() {
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
 		deadline,
 	)
-
 	if err != nil {
 		log.Debug().Err(err).Msg("Failed to write close message to websocket.")
 		return
@@ -212,7 +211,7 @@ func (wc *WebsocketClient) CommandRequestHandler(message []byte) {
 			10,
 			time.Time{},
 		)
-		commandRunner := NewCommandRunner(wc, content.Command, data)
+		commandRunner := NewCommandRunner(wc, wc.apiSession, content.Command, data)
 		go commandRunner.Run()
 	case "quit":
 		log.Debug().Msgf("Quit requested for reason: %s.", content.Reason)
