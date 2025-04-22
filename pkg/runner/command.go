@@ -181,11 +181,24 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		}
 		return 1, "Invalid session ID"
 	case "restart":
-		time.AfterFunc(1*time.Second, func() {
-			cr.wsClient.Restart()
-		})
+		target := "alpamon"
+		message := "Alpamon will restart in 1 second."
+		if len(args) >= 2 {
+			target = args[1]
+		}
 
-		return 0, "Alpamon will restart in 1 second."
+		switch target {
+		case "collector":
+			log.Info().Msg("Restart collector.")
+			cr.wsClient.RestartCollector()
+			message = "Collector will be restarted."
+		default:
+			time.AfterFunc(1*time.Second, func() {
+				cr.wsClient.Restart()
+			})
+		}
+
+		return 0, message
 	case "quit":
 		time.AfterFunc(1*time.Second, func() {
 			cr.wsClient.ShutDown()
@@ -218,6 +231,11 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		}
 
 		return cr.handleShellCmd(cmd, "root", "root", nil)
+	case "restartcoll":
+		log.Info().Msg("Restart collector.")
+		cr.wsClient.RestartCollector()
+
+		return 0, "Collector will be restarted."
 	case "help":
 		helpMessage := `
 		Available commands:

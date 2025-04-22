@@ -3,6 +3,10 @@ package command
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/alpacanetworks/alpamon/cmd/alpamon/command/ftp"
 	"github.com/alpacanetworks/alpamon/cmd/alpamon/command/setup"
 	"github.com/alpacanetworks/alpamon/pkg/collector"
@@ -16,9 +20,6 @@ import (
 	"github.com/alpacanetworks/alpamon/pkg/version"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 const (
@@ -93,29 +94,38 @@ func runAgent() {
 
 	// Collector
 	metricCollector := collector.InitCollector(session, client)
-	metricCollector.Start()
+	if metricCollector != nil {
+		metricCollector.Start()
+	}
 
 	// Websocket Client
 	wsClient := runner.NewWebsocketClient(session)
 	go wsClient.RunForever(ctx)
 
-	select {
-	case <-ctx.Done():
-		log.Info().Msg("Received termination signal. Shutting down...")
-		break
-	case <-wsClient.ShutDownChan:
-		log.Info().Msg("Shutdown command received. Shutting down...")
-		cancel()
-		break
-	case <-wsClient.RestartChan:
-		log.Info().Msg("Restart command received. Restarting... ")
-		cancel()
-		gracefulShutdown(metricCollector, wsClient, logFile, logServer, pidFilePath)
-		restartAgent()
-		return
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info().Msg("Received termination signal. Shutting down...")
+			gracefulShutdown(metricCollector, wsClient, logFile, logServer, pidFilePath)
+			return
+		case <-wsClient.ShutDownChan:
+			log.Info().Msg("Shutdown command received. Shutting down...")
+			cancel()
+			gracefulShutdown(metricCollector, wsClient, logFile, logServer, pidFilePath)
+			return
+		case <-wsClient.RestartChan:
+			log.Info().Msg("Restart command received. Restarting...")
+			cancel()
+			gracefulShutdown(metricCollector, wsClient, logFile, logServer, pidFilePath)
+			restartAgent()
+			return
+		case <-wsClient.CollectorRestartChan:
+			log.Info().Msg("Collector restart command received. Restarting Collector...")
+			metricCollector.Stop()
+			metricCollector = collector.InitCollector(session, client)
+			metricCollector.Start()
+		}
 	}
-
-	gracefulShutdown(metricCollector, wsClient, logFile, logServer, pidFilePath)
 }
 
 func restartAgent() {
