@@ -90,12 +90,12 @@ func (pc *PtyClient) initializePtySession() error {
 
 func (pc *PtyClient) RunPtyBackground() {
 	log.Debug().Msg("Opening websocket for pty session.")
+	defer pc.close()
 
 	err := pc.initializePtySession()
 	if err != nil {
 		return
 	}
-	defer pc.close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
