@@ -244,6 +244,10 @@ func (pc *PtyClient) close() {
 		_ = pc.cmd.Wait()
 	}
 
+	if terminals[pc.sessionID] != nil {
+		delete(terminals, pc.sessionID)
+	}
+
 	if pc.conn != nil {
 		err := pc.conn.WriteControl(
 			websocket.CloseMessage,
@@ -259,10 +263,6 @@ func (pc *PtyClient) close() {
 		if err != nil {
 			log.Debug().Err(err).Msg("Failed to close pty websocket connection.")
 		}
-	}
-
-	if terminals[pc.sessionID] != nil {
-		delete(terminals, pc.sessionID)
 	}
 
 	log.Debug().Msg("Websocket connection for pty has been closed.")
