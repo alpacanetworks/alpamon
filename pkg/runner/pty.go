@@ -88,7 +88,7 @@ func (pc *PtyClient) initializePtySession() error {
 	return nil
 }
 
-func (pc *PtyClient) RunPtyBackground() {
+func (pc *PtyClient) RunPtyBackground(globalCtx context.Context) {
 	log.Debug().Msg("Opening websocket for pty session.")
 	defer pc.close()
 
@@ -109,6 +109,8 @@ func (pc *PtyClient) RunPtyBackground() {
 
 	for {
 		select {
+		case <-globalCtx.Done():
+			return
 		case <-ctx.Done():
 			return
 		case <-recoveryChan:
@@ -235,6 +237,7 @@ func (pc *PtyClient) resize(rows, cols uint16) error {
 // close terminates the PTY session and cleans up resources.
 // It ensures that the PTY, command, and WebSocket connection are properly closed.
 func (pc *PtyClient) close() {
+	fmt.Println("pty 에서 close 가 호출됨.")
 	if pc.ptmx != nil {
 		_ = pc.ptmx.Close()
 	}

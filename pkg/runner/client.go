@@ -68,7 +68,7 @@ func (wc *WebsocketClient) RunForever(ctx context.Context) {
 			}
 			// Sends "ping" query for Alpacon to verify WebSocket session status without error handling.
 			_ = wc.SendPingQuery()
-			wc.CommandRequestHandler(message)
+			wc.CommandRequestHandler(ctx, message)
 		}
 	}
 }
@@ -182,7 +182,7 @@ func (wc *WebsocketClient) Restart() {
 	close(wc.RestartChan)
 }
 
-func (wc *WebsocketClient) CommandRequestHandler(message []byte) {
+func (wc *WebsocketClient) CommandRequestHandler(globalCtx context.Context, message []byte) {
 	var content Content
 	var data CommandData
 
@@ -212,7 +212,7 @@ func (wc *WebsocketClient) CommandRequestHandler(message []byte) {
 			time.Time{},
 		)
 		commandRunner := NewCommandRunner(wc, wc.apiSession, content.Command, data)
-		go commandRunner.Run()
+		go commandRunner.Run(globalCtx)
 	case "quit":
 		log.Debug().Msgf("Quit requested for reason: %s.", content.Reason)
 		wc.ShutDown()

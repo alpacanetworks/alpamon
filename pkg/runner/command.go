@@ -3,6 +3,7 @@ package runner
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -48,7 +49,7 @@ func NewCommandRunner(wsClient *WebsocketClient, apiSession *scheduler.Session, 
 	}
 }
 
-func (cr *CommandRunner) Run() {
+func (cr *CommandRunner) Run(globalCtx context.Context) {
 	var exitCode int
 	var result string
 
@@ -57,7 +58,7 @@ func (cr *CommandRunner) Run() {
 	start := time.Now()
 	switch cr.command.Shell {
 	case "internal":
-		exitCode, result = cr.handleInternalCmd()
+		exitCode, result = cr.handleInternalCmd(globalCtx)
 	case "system":
 		exitCode, result = cr.handleShellCmd(cr.command.Line, cr.command.User, cr.command.Group, cr.command.Env)
 	default:
@@ -77,7 +78,7 @@ func (cr *CommandRunner) Run() {
 	}
 }
 
-func (cr *CommandRunner) handleInternalCmd() (int, string) {
+func (cr *CommandRunner) handleInternalCmd(globalCtx context.Context) (int, string) {
 	args := strings.Fields(cr.command.Line)
 	if len(args) == 0 {
 		return 1, "No command provided"
@@ -150,7 +151,7 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		}
 
 		ptyClient := NewPtyClient(cr.data, cr.apiSession)
-		go ptyClient.RunPtyBackground()
+		go ptyClient.RunPtyBackground(globalCtx)
 
 		return 0, "Spawned a pty terminal."
 	case "openftp":
