@@ -269,7 +269,7 @@ func (pc *PtyClient) close() {
 }
 
 // recovery reconnects the WebSocket while keeping the PTY session alive.
-// Note: recovery don't close the existing conn explicitly to avoid breaking the session.
+// Note: recovery doesn't close the existing conn explicitly to avoid breaking the session.
 // The goal is to replace a broken connection, not perform a graceful shutdown.
 func (pc *PtyClient) recovery() error {
 	data := map[string]interface{}{
@@ -293,7 +293,7 @@ func (pc *PtyClient) recovery() error {
 
 	err = json.Unmarshal(body, &resp)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to parse response when reissuing pty websocket url.")
+		log.Error().Err(err).Msg("Failed to parse pty websocket reissue response.")
 		return err
 	}
 
@@ -301,7 +301,7 @@ func (pc *PtyClient) recovery() error {
 	// Assign to pc.conn only if reconnect succeeds to avoid nil panic in concurrent reads/writes.
 	tempConn, _, err := websocket.DefaultDialer.Dial(pc.url, pc.requestHeader)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to reconnect to pty websocket after recovery.")
+		log.Error().Err(err).Msg("Failed to reconnect to pty websocket during recovery.")
 		return err
 	}
 	pc.conn = tempConn
