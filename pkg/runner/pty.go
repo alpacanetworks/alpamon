@@ -88,7 +88,7 @@ func (pc *PtyClient) initializePtySession() error {
 	return nil
 }
 
-func (pc *PtyClient) RunPtyBackground(globalCtx context.Context) {
+func (pc *PtyClient) RunPtyBackground() {
 	log.Debug().Msg("Opening websocket for pty session.")
 	defer pc.close()
 
@@ -109,8 +109,6 @@ func (pc *PtyClient) RunPtyBackground(globalCtx context.Context) {
 
 	for {
 		select {
-		case <-globalCtx.Done():
-			return
 		case <-ctx.Done():
 			return
 		case <-recoveryChan:
