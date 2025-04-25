@@ -32,18 +32,19 @@ const (
 	fileUploadTimeout = 60 * 10
 )
 
-func NewCommandRunner(wsClient *WebsocketClient, command Command, data CommandData) *CommandRunner {
+func NewCommandRunner(wsClient *WebsocketClient, apiSession *scheduler.Session, command Command, data CommandData) *CommandRunner {
 	var name string
 	if command.ID != "" {
 		name = fmt.Sprintf("CommandRunner-%s", strings.Split(command.ID, "-")[0])
 	}
 
 	return &CommandRunner{
-		name:      name,
-		command:   command,
-		data:      data,
-		wsClient:  wsClient,
-		validator: validator.New(),
+		name:       name,
+		command:    command,
+		data:       data,
+		wsClient:   wsClient,
+		apiSession: apiSession,
+		validator:  validator.New(),
 	}
 }
 
@@ -148,7 +149,7 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 			return 1, fmt.Sprintf("openpty: Not enough information. %s", err.Error())
 		}
 
-		ptyClient := NewPtyClient(cr.data)
+		ptyClient := NewPtyClient(cr.data, cr.apiSession)
 		go ptyClient.RunPtyBackground()
 
 		return 0, "Spawned a pty terminal."

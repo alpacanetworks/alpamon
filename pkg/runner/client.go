@@ -145,12 +145,34 @@ func (wc *WebsocketClient) CloseAndReconnect(ctx context.Context) {
 // Do not close quitChan, as the purpose here is to disconnect the WebSocket,
 // not to terminate RunForever.
 func (wc *WebsocketClient) Close() {
-	if wc.Conn != nil {
-		err := wc.Conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		if err != nil {
-			log.Debug().Err(err).Msg("Failed to write close message to websocket.")
+	if wc.Conn == nil {
+		return
+	}
+
+	err := wc.Conn.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
+		time.Now().Add(5*time.Second),
+	)
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to write close message to websocket.")
+		return
+	}
+
+	_ = wc.Conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	for {
+		_, _, err = wc.Conn.NextReader()
+		if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+			break
 		}
-		_ = wc.Conn.Close()
+		if err != nil {
+			break
+		}
+	}
+
+	err = wc.Conn.Close()
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to close websocket connection.")
 	}
 }
 
@@ -199,7 +221,7 @@ func (wc *WebsocketClient) CommandRequestHandler(message []byte) {
 			10,
 			time.Time{},
 		)
-		commandRunner := NewCommandRunner(wc, content.Command, data)
+		commandRunner := NewCommandRunner(wc, wc.apiSession, content.Command, data)
 		go commandRunner.Run()
 	case "quit":
 		log.Debug().Msgf("Quit requested for reason: %s.", content.Reason)
