@@ -235,7 +235,6 @@ func (pc *PtyClient) resize(rows, cols uint16) error {
 // close terminates the PTY session and cleans up resources.
 // It ensures that the PTY, command, and WebSocket connection are properly closed.
 func (pc *PtyClient) close() {
-	fmt.Println("pty 에서 close 가 호출됨.")
 	if pc.ptmx != nil {
 		_ = pc.ptmx.Close()
 	}
