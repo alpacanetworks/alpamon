@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Only effective on Debian-based systems where "purge" is supported.
+# No effect on RHEL-based systems.
+
 FILES_TO_REMOVE="
   /etc/alpamon/alpamon.conf
   /usr/lib/tmpfiles.d/alpamon.conf

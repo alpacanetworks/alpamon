@@ -1,6 +1,7 @@
 #!/bin/sh
 
-if [ "$1" = 'remove' ]; then
+# For RPM (0 = remove) and DEB ("remove")
+if [ "$1" = "remove" ] || [ "$1" -eq 0 ] 2>/dev/null; then
     echo 'Stopping and disabling Alpamon service...'
 
     if command -v systemctl >/dev/null; then
