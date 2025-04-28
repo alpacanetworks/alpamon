@@ -76,13 +76,25 @@ cleanup_tmpl_files() {
   fi
 }
 
+# debain
+# Initial installation: $1 == configure
+# Upgrade: $1 == configure, $2 == old version
 
+# rhel
+# Initial installation: $1 == 1
+# Upgrade: $1 == 2, and configured to restart on upgrade
 is_upgrade() {
-  if [ -n "$2" ]; then
-    return 0  # Upgrade
-  else
-    return 1  # First install
-  fi
+    # RHEL
+    if [ "$1" -eq 2 ] 2>/dev/null; then
+      return 0  # Upgrade
+    fi
+
+    # Debian
+    if [ "$1" = "configure" ] && [ -n "$2" ]; then
+      return 0  # Upgrade
+    fi
+
+    return 1 # Initial installation
 }
 
 # Exit on error
