@@ -125,6 +125,13 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		return cr.delGroup()
 	case "ping":
 		return 0, time.Now().Format(time.RFC3339)
+	case "chmod":
+		if len(args) < 3 {
+			return 1, "chmod: Insufficient arguments. Usage: chmod <mode> <path/file>"
+		}
+		mode := args[1]
+		path := args[2]
+		return cr.chmod(mode, path)
 	//case "debug":
 	//	TODO : getReporterStats()
 	case "download":
@@ -663,6 +670,36 @@ func (cr *CommandRunner) openFtp(data openFtpData) error {
 	}
 
 	return nil
+}
+
+// chmod changes the permissions of a file or directory.
+// It takes mode (e.g., "755", "u+x") and path as arguments.
+func (cr *CommandRunner) chmod(mode string, path string) (exitCode int, result string) {
+	data := chmodCmdData{
+		Mode: mode,
+		Path: path,
+	}
+
+	err := cr.validateData(data)
+	if err != nil {
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			var fieldErrors []string
+			for _, fe := range validationErrors {
+				fieldErrors = append(fieldErrors, fmt.Sprintf("field '%s' failed on the '%s' tag (value: '%v')", fe.Field(), fe.Tag(), fe.Value()))
+			}
+			return 1, fmt.Sprintf("chmod: Invalid arguments. %s", strings.Join(fieldErrors, "; "))
+		}
+		return 1, fmt.Sprintf("chmod: Invalid arguments. %v", err)
+	}
+
+	cmdArgs := []string{"/bin/chmod", data.Mode, data.Path}
+	exitCode, cmdResult := runCmdWithOutput(cmdArgs, "root", "", nil, 60)
+	if exitCode != 0 {
+		return exitCode, fmt.Sprintf("chmod: Failed to change permissions for '%s' to '%s' on platform '%s'. Exit code: %d, Output: %s", data.Path, data.Mode, utils.PlatformLike, exitCode, cmdResult)
+	}
+
+	return 0, fmt.Sprintf("Successfully changed permissions for '%s' to '%s' on platform '%s'.", data.Path, data.Mode, utils.PlatformLike)
 }
 
 func getFileData(data CommandData) ([]byte, error) {

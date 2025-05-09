@@ -143,3 +143,9 @@ var nonZipExt = map[string]bool{
 	".nupkg": true,
 	".kmz":   true,
 }
+
+// chmodCmdData holds the validated arguments for the chmod command.
+type chmodCmdData struct {
+	Mode string `validate:"required"`
+	Path string `validate:"required"`
+}
