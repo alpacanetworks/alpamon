@@ -2,11 +2,11 @@
 
 mkdir -p bin
 
-ARCH=$(uname -m)
+ARCH=${GOARCH}
 
-if [ "$ARCH" = "x86_64" ]; then
+if [ "$ARCH" = "amd64" ]; then
   curl -L -o bin/atlas https://release.ariga.io/atlas/atlas-community-linux-amd64-latest
-elif [ "$ARCH" = "aarch64" ]; then
+elif [ "$ARCH" = "arm64" ]; then
   curl -L -o bin/atlas https://release.ariga.io/atlas/atlas-community-linux-arm64-latest
 fi
 
