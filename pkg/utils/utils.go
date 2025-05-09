@@ -39,7 +39,7 @@ func getPlatformLike() {
 			os.Exit(1)
 		}
 		switch platformInfo.Platform {
-		case "ubuntu", "debian":
+		case "ubuntu", "debian", "raspbian":
 			PlatformLike = "debian"
 		case "centos", "rhel", "redhat", "amazon", "amzn", "fedora", "rocky", "oracle", "ol":
 			PlatformLike = "rhel"
