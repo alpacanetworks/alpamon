@@ -7,7 +7,6 @@ before:
     - go run -mod=mod entgo.io/ent/cmd/ent@v0.14.0 generate --feature sql/modifier --target ./pkg/db/ent ./pkg/db/schema
     - go mod tidy
     - chmod +x ./scripts/install_atlas.sh
-    - ./scripts/install_atlas.sh
 
 builds:
   - main: ./cmd/alpamon
@@ -21,6 +20,9 @@ builds:
     goarch:
       - amd64
       - arm64
+    hooks:
+      pre: 
+        - ./scripts/install_atlas.sh
 
 checksum:
   name_template: "{{ .ProjectName }}-{{ .Version }}-checksums.sha256"
