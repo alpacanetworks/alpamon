@@ -672,12 +672,6 @@ func (cr *CommandRunner) openFtp(data openFtpData) error {
 	return nil
 }
 
-// chmodCmdData holds the validated arguments for the chmod command.
-type chmodCmdData struct {
-	Mode string `validate:"required"`
-	Path string `validate:"required"`
-}
-
 // chmod changes the permissions of a file or directory.
 // It takes mode (e.g., "755", "u+x") and path as arguments.
 func (cr *CommandRunner) chmod(mode string, path string) (exitCode int, result string) {
@@ -696,20 +690,10 @@ func (cr *CommandRunner) chmod(mode string, path string) (exitCode int, result s
 			}
 			return 1, fmt.Sprintf("chmod: Invalid arguments. %s", strings.Join(fieldErrors, "; "))
 		}
-		return 1, fmt.Sprintf("chmod: Invalid arguments. %s", err.Error())
+		return 1, fmt.Sprintf("chmod: Invalid arguments. %v", err)
 	}
 
-	var cmdArgs []string
-
-	if utils.PlatformLike == "debian" || utils.PlatformLike == "rhel" || utils.PlatformLike == "darwin" {
-		cmdArgs = []string{"/bin/chmod", data.Mode, data.Path}
-	} else { 
-		// For other OS like Windows, we would add specific implementations here
-		// Even though the command might be the same for some platforms,
-		// we use if-else statements to allow for future OS-specific implementations
-		return 1, fmt.Sprintf("chmod: Platform '%s' is not currently supported for the chmod operation.", utils.PlatformLike)
-	}
-
+	cmdArgs := []string{"/bin/chmod", data.Mode, data.Path}
 	exitCode, cmdResult := runCmdWithOutput(cmdArgs, "root", "", nil, 60)
 	if exitCode != 0 {
 		return exitCode, fmt.Sprintf("chmod: Failed to change permissions for '%s' to '%s' on platform '%s'. Exit code: %d, Output: %s", data.Path, data.Mode, utils.PlatformLike, exitCode, cmdResult)
