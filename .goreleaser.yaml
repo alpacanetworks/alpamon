@@ -44,6 +44,7 @@ nfpms:
       - rpm
     dependencies:
       - zip
+      - sqlite3
     bindir: /usr/local/bin/
 
     contents:
