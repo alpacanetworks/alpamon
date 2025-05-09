@@ -247,7 +247,6 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 	case "help":
 		helpMessage := `
 		Available commands:
-		chmod <mode> <path>: change file/directory permissions
 		package install <package name>: install a system package
 		package uninstall <package name>: remove a system package
 		upgrade: upgrade alpamon
