@@ -33,27 +33,28 @@ type File struct {
 }
 
 type CommandData struct {
-	SessionID      string   `json:"session_id"`
-	URL            string   `json:"url"`
-	Rows           uint16   `json:"rows"`
-	Cols           uint16   `json:"cols"`
-	Username       string   `json:"username"`
-	Groupname      string   `json:"groupname"`
-	HomeDirectory  string   `json:"home_directory"`
-	UID            uint64   `json:"uid"`
-	GID            uint64   `json:"gid"`
-	Comment        string   `json:"comment"`
-	Shell          string   `json:"shell"`
-	Groups         []uint64 `json:"groups"`
-	Type           string   `json:"type"`
-	Content        string   `json:"content"`
-	Path           string   `json:"path"`
-	Paths          []string `json:"paths"`
-	Files          []File   `json:"files,omitempty"`
-	AllowOverwrite bool     `json:"allow_overwrite,omitempty"`
-	AllowUnzip     bool     `json:"allow_unzip,omitempty"`
-	UseBlob        bool     `json:"use_blob,omitempty"`
-	Keys           []string `json:"keys"`
+	SessionID               string   `json:"session_id"`
+	URL                     string   `json:"url"`
+	Rows                    uint16   `json:"rows"`
+	Cols                    uint16   `json:"cols"`
+	Username                string   `json:"username"`
+	Groupname               string   `json:"groupname"`
+	HomeDirectory           string   `json:"home_directory"`
+	HomeDirectoryPermission string   `json:"home_directory_permission"`
+	UID                     uint64   `json:"uid"`
+	GID                     uint64   `json:"gid"`
+	Comment                 string   `json:"comment"`
+	Shell                   string   `json:"shell"`
+	Groups                  []uint64 `json:"groups"`
+	Type                    string   `json:"type"`
+	Content                 string   `json:"content"`
+	Path                    string   `json:"path"`
+	Paths                   []string `json:"paths"`
+	Files                   []File   `json:"files,omitempty"`
+	AllowOverwrite          bool     `json:"allow_overwrite,omitempty"`
+	AllowUnzip              bool     `json:"allow_unzip,omitempty"`
+	UseBlob                 bool     `json:"use_blob,omitempty"`
+	Keys                    []string `json:"keys"`
 }
 
 type CommandRunner struct {
@@ -68,13 +69,14 @@ type CommandRunner struct {
 // Structs defining the required input data for command validation purposes. //
 
 type addUserData struct {
-	Username      string `validate:"required"`
-	UID           uint64 `validate:"required"`
-	GID           uint64 `validate:"required"`
-	Comment       string `validate:"required"`
-	HomeDirectory string `validate:"required"`
-	Shell         string `validate:"required"`
-	Groupname     string `validate:"required"`
+	Username                string `validate:"required"`
+	UID                     uint64 `validate:"required"`
+	GID                     uint64 `validate:"required"`
+	Comment                 string `validate:"required"`
+	HomeDirectory           string `validate:"required"`
+	HomeDirectoryPermission string `validate:"required"`
+	Shell                   string `validate:"required"`
+	Groupname               string `validate:"required"`
 }
 
 type addGroupData struct {
@@ -142,10 +144,4 @@ var nonZipExt = map[string]bool{
 	".ipk":   true,
 	".nupkg": true,
 	".kmz":   true,
-}
-
-// chmodCmdData holds the validated arguments for the chmod command.
-type chmodCmdData struct {
-	Mode string `validate:"required"`
-	Path string `validate:"required"`
 }
