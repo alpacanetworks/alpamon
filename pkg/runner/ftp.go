@@ -2,8 +2,10 @@ package runner
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/alpacanetworks/alpamon/pkg/config"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -43,7 +45,12 @@ func (fc *FtpClient) RunFtpBackground() {
 	fc.log.Debug().Msg("Opening websocket for ftp session.")
 
 	var err error
-	fc.conn, _, err = websocket.DefaultDialer.Dial(fc.url, fc.requestHeader)
+	dialer := websocket.Dialer{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: !config.GlobalSettings.SSLVerify,
+		},
+	}
+	fc.conn, _, err = dialer.Dial(fc.url, fc.requestHeader)
 	if err != nil {
 		fc.log.Debug().Err(err).Msgf("Failed to connect to pty websocket at %s.", fc.url)
 		return

@@ -41,7 +41,7 @@ func InitSession() *Session {
 		tlsConfig.RootCAs = caCertPool
 	}
 
-	tlsConfig.InsecureSkipVerify = config.GlobalSettings.SSLVerify
+	tlsConfig.InsecureSkipVerify = !config.GlobalSettings.SSLVerify
 	client.Transport = &http.Transport{
 		TLSClientConfig: tlsConfig,
 	}

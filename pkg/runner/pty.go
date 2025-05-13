@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -298,8 +299,13 @@ func (pc *PtyClient) recovery() error {
 	}
 
 	pc.url = strings.Replace(config.GlobalSettings.ServerURL, "http", "ws", 1) + resp.WebsocketURL
+	dialer := websocket.Dialer{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: !config.GlobalSettings.SSLVerify,
+		},
+	}
 	// Assign to pc.conn only if reconnect succeeds to avoid nil panic in concurrent reads/writes.
-	tempConn, _, err := websocket.DefaultDialer.Dial(pc.url, pc.requestHeader)
+	tempConn, _, err := dialer.Dial(pc.url, pc.requestHeader)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to reconnect to pty websocket during recovery.")
 		return err

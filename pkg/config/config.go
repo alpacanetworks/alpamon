@@ -113,8 +113,8 @@ func validateConfig(config Config, wsPath string) (bool, Settings) {
 		valid = false
 	}
 
+	settings.SSLVerify = config.SSL.Verify
 	if settings.UseSSL {
-		settings.SSLVerify = config.SSL.Verify
 		caCert := config.SSL.CaCert
 		if !settings.SSLVerify {
 			log.Warn().Msg(

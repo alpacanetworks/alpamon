@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -113,7 +114,12 @@ func (wc *WebsocketClient) Connect() {
 			log.Error().Msg("Maximum retry duration reached. Shutting down.")
 			return ctx.Err()
 		default:
-			conn, _, err := websocket.DefaultDialer.Dial(config.GlobalSettings.WSPath, wc.requestHeader)
+			dialer := websocket.Dialer{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: !config.GlobalSettings.SSLVerify,
+				},
+			}
+			conn, _, err := dialer.Dial(config.GlobalSettings.WSPath, wc.requestHeader)
 			if err != nil {
 				nextInterval := wsBackoff.NextBackOff()
 				log.Debug().Err(err).Msgf("Failed to connect to %s, will try again in %ds.", config.GlobalSettings.WSPath, int(nextInterval.Seconds()))
