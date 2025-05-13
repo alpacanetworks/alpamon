@@ -393,9 +393,14 @@ func (cr *CommandRunner) addUser() (exitCode int, result string) {
 		return 1, "Not implemented 'adduser' command for this platform."
 	}
 
+	// Set default permission for home directory if not provided
+	if data.HomeDirectoryPermission == "" {
+		data.HomeDirectoryPermission = "700"
+	}
+
 	exitCode, result = runCmdWithOutput(
 		[]string{
-			"chmod", cr.data.HomeDirectoryPermission, cr.data.HomeDirectory,
+			"chmod", data.HomeDirectoryPermission, data.HomeDirectory,
 		},
 		"root", "", nil, 60,
 	)
