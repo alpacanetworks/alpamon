@@ -74,7 +74,7 @@ type addUserData struct {
 	GID                     uint64 `validate:"required"`
 	Comment                 string `validate:"required"`
 	HomeDirectory           string `validate:"required"`
-	HomeDirectoryPermission string `validate:"required"`
+	HomeDirectoryPermission string `validate:"omitempty"` // Use omitempty for backward compatibility
 	Shell                   string `validate:"required"`
 	Groupname               string `validate:"required"`
 }
