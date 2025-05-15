@@ -2,9 +2,15 @@ package utils
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"io"
 	"net/http"
+	"os"
 	"time"
+
+	"github.com/alpacanetworks/alpamon/pkg/config"
+	"github.com/rs/zerolog/log"
 )
 
 func Put(url string, body bytes.Buffer, timeout time.Duration) ([]byte, int, error) {
@@ -14,6 +20,22 @@ func Put(url string, body bytes.Buffer, timeout time.Duration) ([]byte, int, err
 	}
 
 	client := &http.Client{Timeout: timeout}
+
+	tlsConfig := &tls.Config{}
+	if config.GlobalSettings.CaCert != "" {
+		caCertPool := x509.NewCertPool()
+		caCert, err := os.ReadFile(config.GlobalSettings.CaCert)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to read CA certificate.")
+		}
+		caCertPool.AppendCertsFromPEM(caCert)
+		tlsConfig.RootCAs = caCertPool
+	}
+
+	tlsConfig.InsecureSkipVerify = !config.GlobalSettings.SSLVerify
+	client.Transport = &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
