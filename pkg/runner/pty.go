@@ -67,7 +67,12 @@ func NewPtyClient(data CommandData, apiSession *scheduler.Session) *PtyClient {
 
 func (pc *PtyClient) initializePtySession() error {
 	var err error
-	pc.conn, _, err = websocket.DefaultDialer.Dial(pc.url, pc.requestHeader)
+	dialer := websocket.Dialer{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: !config.GlobalSettings.SSLVerify,
+		},
+	}
+	pc.conn, _, err = dialer.Dial(pc.url, pc.requestHeader)
 	if err != nil {
 		return fmt.Errorf("failed to connect pty websocket: %w", err)
 	}
