@@ -101,7 +101,7 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 
 		if utils.PlatformLike == "debian" {
 			cmd = "apt-get update -y && " +
-				"apt-get install --only-upgrade alpamon"
+				"apt-get install --only-upgrade alpamon -y"
 		} else if utils.PlatformLike == "rhel" {
 			cmd = "yum update -y alpamon"
 		} else {
