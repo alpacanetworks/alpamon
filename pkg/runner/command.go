@@ -692,7 +692,7 @@ func getFileData(data CommandData) ([]byte, error) {
 			return nil, fmt.Errorf("failed to parse URL '%s': %w", data.Content, err)
 		}
 
-		req, err := http.NewRequest("GET", parsedRequestURL.String(), nil)
+		req, err := http.NewRequest(http.MethodGet, parsedRequestURL.String(), nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
