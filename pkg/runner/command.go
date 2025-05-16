@@ -3,6 +3,8 @@ package runner
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -690,7 +692,7 @@ func getFileData(data CommandData) ([]byte, error) {
 			return nil, fmt.Errorf("failed to parse URL '%s': %w", data.Content, err)
 		}
 
-		req, err := http.NewRequest("GET", parsedRequestURL.String(), nil)
+		req, err := http.NewRequest(http.MethodGet, parsedRequestURL.String(), nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
@@ -706,6 +708,23 @@ func getFileData(data CommandData) ([]byte, error) {
 		}
 
 		client := http.Client{}
+
+		tlsConfig := &tls.Config{}
+		if config.GlobalSettings.CaCert != "" {
+			caCertPool := x509.NewCertPool()
+			caCert, err := os.ReadFile(config.GlobalSettings.CaCert)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to read CA certificate.")
+			}
+			caCertPool.AppendCertsFromPEM(caCert)
+			tlsConfig.RootCAs = caCertPool
+		}
+
+		tlsConfig.InsecureSkipVerify = !config.GlobalSettings.SSLVerify
+		client.Transport = &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
+
 		resp, err := client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("failed to download content from URL: %w", err)
