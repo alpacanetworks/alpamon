@@ -26,7 +26,7 @@ func Put(url string, body bytes.Buffer, timeout time.Duration) ([]byte, int, err
 		caCertPool := x509.NewCertPool()
 		caCert, err := os.ReadFile(config.GlobalSettings.CaCert)
 		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to read CA certificate.")
+			log.Error().Err(err).Msg("Failed to read CA certificate.")
 		}
 		caCertPool.AppendCertsFromPEM(caCert)
 		tlsConfig.RootCAs = caCertPool

@@ -714,7 +714,7 @@ func getFileData(data CommandData) ([]byte, error) {
 			caCertPool := x509.NewCertPool()
 			caCert, err := os.ReadFile(config.GlobalSettings.CaCert)
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to read CA certificate.")
+				log.Error().Err(err).Msg("Failed to read CA certificate.")
 			}
 			caCertPool.AppendCertsFromPEM(caCert)
 			tlsConfig.RootCAs = caCertPool
