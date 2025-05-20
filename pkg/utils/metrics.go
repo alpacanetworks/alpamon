@@ -142,11 +142,11 @@ func ParseDiskName(device string) string {
 }
 
 func GetDiskBaseName(name string) string {
-	if matches := linuxDiskNamePattern.FindStringSubmatch(name); len(matches) == 2 {
+	if matches := linuxDiskNamePattern.FindStringSubmatch(name); len(matches) >= 2 {
 		return matches[1]
 	}
 
-	if matches := macDiskNamePattern.FindStringSubmatch(name); len(matches) == 2 {
+	if matches := macDiskNamePattern.FindStringSubmatch(name); len(matches) >= 2 {
 		return matches[1]
 	}
 
