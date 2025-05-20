@@ -46,8 +46,9 @@ var (
 		"zram": true,
 	}
 	loopFileSystemPrefix = "/dev/loop"
-	linuxDiskNamePattern = regexp.MustCompile(`^([a-z]+[0-9]*)(p[0-9]+)?$`)
-	macDiskNamePattern   = regexp.MustCompile(`^(disk[0-9]+)(s[0-9]+)?$`)
+	diskPattern          = regexp.MustCompile(
+		`^(nvme\d+n\d+|xvd[a-z]+|vd[a-z]+|sd[a-z]+|disk\d+)(?:p\d+|s\d+|\d+)?$`,
+	)
 )
 
 func CalculateNetworkBps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputBps float64, outputBps float64) {
@@ -142,11 +143,7 @@ func ParseDiskName(device string) string {
 }
 
 func GetDiskBaseName(name string) string {
-	if matches := linuxDiskNamePattern.FindStringSubmatch(name); len(matches) >= 2 {
-		return matches[1]
-	}
-
-	if matches := macDiskNamePattern.FindStringSubmatch(name); len(matches) >= 2 {
+	if matches := diskPattern.FindStringSubmatch(name); len(matches) >= 2 {
 		return matches[1]
 	}
 
