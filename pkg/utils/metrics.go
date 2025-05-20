@@ -38,7 +38,16 @@ var (
 		"/dev":  true,
 	}
 	virtualMountPointPattern = "^/(sys|proc|run|dev/)"
-	loopFileSystemPrefix     = "/dev/loop"
+	virtaulDisk              = map[string]bool{
+		"loop": true,
+		"ram":  true,
+		"fd":   true,
+		"sr":   true,
+		"zram": true,
+	}
+	loopFileSystemPrefix = "/dev/loop"
+	linuxDiskNamePattern = regexp.MustCompile(`^([a-z]+[0-9]*)(p[0-9]+)?$`)
+	macDiskNamePattern   = regexp.MustCompile(`^(disk[0-9]+)(s[0-9]+)?$`)
 )
 
 func CalculateNetworkBps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputBps float64, outputBps float64) {
@@ -107,6 +116,14 @@ func IsVirtualFileSystem(device string, fstype string, mountPoint string) bool {
 	return false
 }
 
+func IsVirtualDisk(name string) bool {
+	if virtaulDisk[name] {
+		return true
+	}
+
+	return false
+}
+
 func ParseDiskName(device string) string {
 	device = strings.TrimPrefix(device, "/dev/")
 
@@ -122,4 +139,16 @@ func ParseDiskName(device string) string {
 	}
 
 	return device
+}
+
+func GetDiskBaseName(name string) string {
+	if matches := linuxDiskNamePattern.FindStringSubmatch(name); len(matches) == 2 {
+		return matches[1]
+	}
+
+	if matches := macDiskNamePattern.FindStringSubmatch(name); len(matches) == 2 {
+		return matches[1]
+	}
+
+	return name
 }
