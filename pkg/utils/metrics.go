@@ -46,9 +46,11 @@ var (
 		"zram": true,
 	}
 	loopFileSystemPrefix = "/dev/loop"
-	diskPattern          = regexp.MustCompile(
-		`^(nvme\d+n\d+|xvd[a-z]+|vd[a-z]+|sd[a-z]+|disk\d+)(?:p\d+|s\d+|\d+)?$`,
-	)
+	nvmeDiskPattern      = regexp.MustCompile(`^(nvme\d+n\d+)(p\d+)?$`)
+	scsiDiskPattern      = regexp.MustCompile(`^([a-z]+)(\d+)?$`)
+	mmcDiskPattern       = regexp.MustCompile(`^(mmcblk\d+)(p\d+)?$`)
+	lvmDiskPattern       = regexp.MustCompile(`^(dm-\d+)$`)
+	macDiskPattern       = regexp.MustCompile(`^(disk\d+)(s\d+)?$`)
 )
 
 func CalculateNetworkBps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputBps float64, outputBps float64) {
@@ -143,8 +145,27 @@ func ParseDiskName(device string) string {
 }
 
 func GetDiskBaseName(name string) string {
-	if matches := diskPattern.FindStringSubmatch(name); len(matches) >= 2 {
-		return matches[1]
+	switch {
+	case strings.HasPrefix(name, "nvme"):
+		if m := nvmeDiskPattern.FindStringSubmatch(name); len(m) >= 2 {
+			return m[1]
+		}
+	case strings.HasPrefix(name, "mmcb"):
+		if m := mmcDiskPattern.FindStringSubmatch(name); len(m) >= 2 {
+			return m[1]
+		}
+	case strings.HasPrefix(name, "disk"):
+		if m := macDiskPattern.FindStringSubmatch(name); len(m) >= 2 {
+			return m[1]
+		}
+	case strings.HasPrefix(name, "dm-"):
+		if m := lvmDiskPattern.FindStringSubmatch(name); len(m) >= 2 {
+			return m[1]
+		}
+	default:
+		if m := scsiDiskPattern.FindStringSubmatch(name); len(m) >= 2 {
+			return m[1]
+		}
 	}
 
 	return name
