@@ -466,6 +466,11 @@ func getNetworkInterfaces() ([]Interface, error) {
 		if mac == "" {
 			continue
 		}
+
+		if utils.VirtualIfacePattern.MatchString(iface.Name) {
+			continue
+		}
+
 		interfaces = append(interfaces, Interface{
 			Name:      iface.Name,
 			Flags:     getFlags(iface),
