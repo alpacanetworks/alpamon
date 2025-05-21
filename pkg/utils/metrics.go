@@ -45,12 +45,17 @@ var (
 		"sr":   true,
 		"zram": true,
 	}
+	virtualInterfaceFlags = map[string]bool{
+		"flagloopback":     true,
+		"flagpointtopoint": true,
+	}
 	loopFileSystemPrefix = "/dev/loop"
 	nvmeDiskPattern      = regexp.MustCompile(`^(nvme\d+n\d+)(p\d+)?$`)
 	scsiDiskPattern      = regexp.MustCompile(`^([a-z]+)(\d+)?$`)
 	mmcDiskPattern       = regexp.MustCompile(`^(mmcblk\d+)(p\d+)?$`)
 	lvmDiskPattern       = regexp.MustCompile(`^(dm-\d+)$`)
 	macDiskPattern       = regexp.MustCompile(`^(disk\d+)(s\d+)?$`)
+	VirtualIfacePattern  = regexp.MustCompile(`^(lo|docker|veth|br-|virbr|vmnet|tap|tun|wl|wg|zt|tailscale|enp0s|cni)`)
 )
 
 func CalculateNetworkBps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputBps float64, outputBps float64) {
@@ -165,4 +170,33 @@ func GetDiskBaseName(name string) string {
 	}
 
 	return name
+}
+
+func FilterVirtualInterface(ifaces net.InterfaceStatList) map[string]net.InterfaceStat {
+	interfaces := make(map[string]net.InterfaceStat)
+	for _, iface := range ifaces {
+		if iface.HardwareAddr == "" {
+			continue
+		}
+
+		if VirtualIfacePattern.MatchString(iface.Name) {
+			continue
+		}
+
+		isVirtualFlag := false
+		for _, flag := range iface.Flags {
+			if virtualInterfaceFlags[strings.ToLower(flag)] {
+				isVirtualFlag = true
+				break
+			}
+		}
+
+		if isVirtualFlag {
+			continue
+		}
+
+		interfaces[iface.Name] = iface
+	}
+
+	return interfaces
 }
