@@ -44,8 +44,19 @@ func (c *CollectCheck) collectAndSaveDiskIO(ctx context.Context) error {
 
 func (c *CollectCheck) parseDiskIO(ioCounters map[string]disk.IOCountersStat) []base.CheckResult {
 	var data []base.CheckResult
+	seen := make(map[string]bool)
 	for name, ioCounter := range ioCounters {
 		var readBps, writeBps float64
+
+		if utils.IsVirtualDisk(name) {
+			continue
+		}
+
+		baseName := utils.GetDiskBaseName(name)
+		if seen[baseName] {
+			continue
+		}
+		seen[baseName] = true
 
 		if lastCounter, exist := c.lastMetric[name]; exist {
 			readBps, writeBps = utils.CalculateDiskIOBps(ioCounter, lastCounter, c.GetInterval())
@@ -57,7 +68,7 @@ func (c *CollectCheck) parseDiskIO(ioCounters map[string]disk.IOCountersStat) []
 		c.lastMetric[name] = ioCounter
 		data = append(data, base.CheckResult{
 			Timestamp: time.Now(),
-			Device:    name,
+			Device:    baseName,
 			ReadBps:   &readBps,
 			WriteBps:  &writeBps,
 		})

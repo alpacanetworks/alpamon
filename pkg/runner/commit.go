@@ -466,6 +466,11 @@ func getNetworkInterfaces() ([]Interface, error) {
 		if mac == "" {
 			continue
 		}
+
+		if utils.VirtualIfacePattern.MatchString(iface.Name) {
+			continue
+		}
+
 		interfaces = append(interfaces, Interface{
 			Name:      iface.Name,
 			Flags:     getFlags(iface),
@@ -650,12 +655,24 @@ func getRpmPackage(path string) ([]SystemPackageData, error) {
 
 func getDisks() ([]Disk, error) {
 	ioCounters, err := disk.IOCounters()
+	seen := make(map[string]bool)
+
 	if err != nil {
 		return []Disk{}, err
 	}
 
 	disks := []Disk{}
 	for name, ioCounter := range ioCounters {
+		if utils.IsVirtualDisk(name) {
+			continue
+		}
+
+		baseName := utils.GetDiskBaseName(name)
+		if seen[baseName] {
+			continue
+		}
+		seen[baseName] = true
+
 		disks = append(disks, Disk{
 			Name:         name,
 			SerialNumber: ioCounter.SerialNumber,
@@ -674,6 +691,10 @@ func getPartitions() ([]Partition, error) {
 	}
 
 	for _, partition := range partitions {
+		if utils.IsVirtualFileSystem(partition.Device, partition.Fstype, partition.Mountpoint) {
+			continue
+		}
+
 		if value, exists := seen[partition.Device]; exists {
 			value.MountPoints = append(value.MountPoints, partition.Mountpoint)
 			seen[partition.Device] = value

@@ -38,7 +38,24 @@ var (
 		"/dev":  true,
 	}
 	virtualMountPointPattern = "^/(sys|proc|run|dev/)"
-	loopFileSystemPrefix     = "/dev/loop"
+	virtaulDisk              = map[string]bool{
+		"loop": true,
+		"ram":  true,
+		"fd":   true,
+		"sr":   true,
+		"zram": true,
+	}
+	virtualInterfaceFlags = map[string]bool{
+		"flagloopback":     true,
+		"flagpointtopoint": true,
+	}
+	loopFileSystemPrefix = "/dev/loop"
+	nvmeDiskPattern      = regexp.MustCompile(`^(nvme\d+n\d+)(p\d+)?$`)
+	scsiDiskPattern      = regexp.MustCompile(`^([a-z]+)(\d+)?$`)
+	mmcDiskPattern       = regexp.MustCompile(`^(mmcblk\d+)(p\d+)?$`)
+	lvmDiskPattern       = regexp.MustCompile(`^(dm-\d+)$`)
+	macDiskPattern       = regexp.MustCompile(`^(disk\d+)(s\d+)?$`)
+	VirtualIfacePattern  = regexp.MustCompile(`^(lo|docker|veth|br-|virbr|vmnet|tap|tun|wl|wg|zt|tailscale|enp0s|cni)`)
 )
 
 func CalculateNetworkBps(current net.IOCountersStat, last net.IOCountersStat, interval time.Duration) (inputBps float64, outputBps float64) {
@@ -107,10 +124,14 @@ func IsVirtualFileSystem(device string, fstype string, mountPoint string) bool {
 	return false
 }
 
+func IsVirtualDisk(name string) bool {
+	return virtaulDisk[name]
+}
+
 func ParseDiskName(device string) string {
 	device = strings.TrimPrefix(device, "/dev/")
 
-	re := regexp.MustCompile(`^[a-zA-Z]+\d*`)
+	re := regexp.MustCompile(`^[a-zA-Z]+`)
 	if match := re.FindString(device); match != "" {
 		return match
 	}
@@ -122,4 +143,60 @@ func ParseDiskName(device string) string {
 	}
 
 	return device
+}
+
+func GetDiskBaseName(name string) string {
+	switch {
+	case strings.HasPrefix(name, "nvme"):
+		if m := nvmeDiskPattern.FindStringSubmatch(name); len(m) >= 2 {
+			return m[1]
+		}
+	case strings.HasPrefix(name, "mmcb"):
+		if m := mmcDiskPattern.FindStringSubmatch(name); len(m) >= 2 {
+			return m[1]
+		}
+	case strings.HasPrefix(name, "disk"):
+		if m := macDiskPattern.FindStringSubmatch(name); len(m) >= 2 {
+			return m[1]
+		}
+	case strings.HasPrefix(name, "dm-"):
+		if m := lvmDiskPattern.FindStringSubmatch(name); len(m) >= 2 {
+			return m[1]
+		}
+	default:
+		if m := scsiDiskPattern.FindStringSubmatch(name); len(m) >= 2 {
+			return m[1]
+		}
+	}
+
+	return name
+}
+
+func FilterVirtualInterface(ifaces net.InterfaceStatList) map[string]net.InterfaceStat {
+	interfaces := make(map[string]net.InterfaceStat)
+	for _, iface := range ifaces {
+		if iface.HardwareAddr == "" {
+			continue
+		}
+
+		if VirtualIfacePattern.MatchString(iface.Name) {
+			continue
+		}
+
+		isVirtualFlag := false
+		for _, flag := range iface.Flags {
+			if virtualInterfaceFlags[strings.ToLower(flag)] {
+				isVirtualFlag = true
+				break
+			}
+		}
+
+		if isVirtualFlag {
+			continue
+		}
+
+		interfaces[iface.Name] = iface
+	}
+
+	return interfaces
 }

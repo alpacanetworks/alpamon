@@ -92,14 +92,7 @@ func (c *CollectCheck) collectInterfaces() (map[string]net.InterfaceStat, error)
 		return nil, err
 	}
 
-	interfaces := map[string]net.InterfaceStat{}
-	for _, iface := range ifaces {
-		mac := iface.HardwareAddr
-		if mac == "" {
-			continue
-		}
-		interfaces[iface.Name] = iface
-	}
+	interfaces := utils.FilterVirtualInterface(ifaces)
 
 	return interfaces, nil
 }
