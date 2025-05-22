@@ -37,7 +37,8 @@ const (
 	passwdFilePath = "/etc/passwd"
 	groupFilePath  = "/etc/group"
 
-	dpkgDbPath = "/var/lib/dpkg/status"
+	dpkgDbPath     = "/var/lib/dpkg/status"
+	dpkgBufferSize = 1024 * 1024
 
 	IFF_UP          = 1 << 0 // Interface is up
 	IFF_LOOPBACK    = 1 << 3 // Loopback interface
@@ -578,6 +579,9 @@ func getDpkgPackage() ([]SystemPackageData, error) {
 	scanner := bufio.NewScanner(fd)
 	scanner.Split(utils.ScanBlock)
 
+	buf := make([]byte, 0, dpkgBufferSize)
+	scanner.Buffer(buf, dpkgBufferSize)
+
 	pkgNamePrefix := []byte("Package:")
 	for scanner.Scan() {
 		chunk := scanner.Bytes()
@@ -598,7 +602,8 @@ func getDpkgPackage() ([]SystemPackageData, error) {
 		reader := textproto.NewReader(bufio.NewReader(bytes.NewReader(chunk)))
 		header, err := reader.ReadMIMEHeader()
 		if err != nil && !errors.Is(err, io.EOF) {
-			return nil, err
+			log.Error().Err(err).Msgf("Failed to parse package %s", pkgName)
+			continue
 		}
 
 		pkg := SystemPackageData{
@@ -608,10 +613,16 @@ func getDpkgPackage() ([]SystemPackageData, error) {
 			Arch:    header.Get("Architecture"),
 		}
 
+		if pkg.Name == "" || pkg.Version == "" {
+			log.Error().Msgf("Skip malformed package entry: %s", chunk)
+			continue
+		}
+
 		packages = append(packages, pkg)
 	}
 
 	if err = scanner.Err(); err != nil {
+		log.Error().Err(err).Msg("Error occurred while scanning dpkg status file.")
 		return nil, err
 	}
 
