@@ -614,7 +614,7 @@ func getDpkgPackage() ([]SystemPackageData, error) {
 		}
 
 		if pkg.Name == "" || pkg.Version == "" {
-			log.Error().Msgf("Skip malformed package entry: %s", chunk)
+			log.Debug().Msgf("Skip malformed package entry: %s", chunk)
 			continue
 		}
 
