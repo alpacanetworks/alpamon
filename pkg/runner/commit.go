@@ -497,6 +497,11 @@ func getNetworkAddresses() ([]Address, error) {
 		if mac == "" {
 			continue
 		}
+
+		if utils.VirtualIfacePattern.MatchString(iface.Name) {
+			continue
+		}
+
 		addrs, err := iface.Addrs()
 		if err != nil {
 			return nil, err
