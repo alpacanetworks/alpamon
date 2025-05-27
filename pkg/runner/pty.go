@@ -9,6 +9,7 @@ import (
 	"github.com/alpacanetworks/alpamon/pkg/config"
 	"github.com/alpacanetworks/alpamon/pkg/scheduler"
 	"github.com/alpacanetworks/alpamon/pkg/utils"
+	"github.com/cenkalti/backoff"
 	"github.com/creack/pty"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
@@ -38,7 +39,10 @@ type PtyClient struct {
 	isRecovering  atomic.Bool // default : false
 }
 
-const reissuePtyWebsocketURL = "/api/websh/pty-channels/"
+const (
+	maxRecoveryTimeout     = 1 * time.Minute
+	reissuePtyWebsocketURL = "/api/websh/pty-channels/"
+)
 
 var terminals map[string]*PtyClient
 
@@ -278,44 +282,61 @@ func (pc *PtyClient) close() {
 // Note: recovery doesn't close the existing conn explicitly to avoid breaking the session.
 // The goal is to replace a broken connection, not perform a graceful shutdown.
 func (pc *PtyClient) recovery() error {
-	data := map[string]interface{}{
-		"session": pc.sessionID,
+	ctx, cancel := context.WithTimeout(context.Background(), maxRecoveryTimeout)
+	defer cancel()
+
+	retryBackoff := backoff.NewExponentialBackOff()
+	retryBackoff.InitialInterval = 1 * time.Second
+	retryBackoff.MaxInterval = 30 * time.Second
+	retryBackoff.MaxElapsedTime = 0 // until ctx timeout
+	retryBackoff.RandomizationFactor = 0
+
+	operation := func() error {
+		select {
+		case <-ctx.Done():
+			log.Error().Msg("PTY recovery aborted: timeout reached.")
+			return backoff.Permanent(ctx.Err())
+		default:
+			data := map[string]interface{}{
+				"session": pc.sessionID,
+			}
+			body, statusCode, err := pc.apiSession.Post(reissuePtyWebsocketURL, data, 5)
+			if err != nil || statusCode != http.StatusCreated {
+				nextInterval := retryBackoff.NextBackOff()
+				log.Warn().Err(err).Msgf("Failed to reissue pty websocket (status: %d), will try again in %ds.", statusCode, int(nextInterval.Seconds()))
+				return fmt.Errorf("reissue failed: %w", err)
+			}
+
+			var resp struct {
+				WebsocketURL string `json:"websocket_url"`
+			}
+			if err = json.Unmarshal(body, &resp); err != nil {
+				log.Warn().Err(err).Msg("Failed to parse reissue response.")
+				return fmt.Errorf("unmarshal error: %w", err)
+			}
+			pc.url = strings.Replace(config.GlobalSettings.ServerURL, "http", "ws", 1) + resp.WebsocketURL
+
+			dialer := websocket.Dialer{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: !config.GlobalSettings.SSLVerify,
+				},
+			}
+			conn, _, err := dialer.Dial(pc.url, pc.requestHeader)
+			if err != nil {
+				log.Warn().Err(err).Msg("PTY websocket reconnection failed.")
+				return err
+			}
+
+			pc.conn = conn
+			log.Info().Msg("PTY WebSocket reconnected successfully.")
+			return nil
+		}
 	}
-	body, statusCode, err := pc.apiSession.Post(reissuePtyWebsocketURL, data, 5)
+
+	err := backoff.Retry(operation, backoff.WithContext(retryBackoff, ctx))
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to request pty websocket reissue.")
 		return err
 	}
-
-	if statusCode != http.StatusCreated {
-		err = fmt.Errorf("unexpected status code: %d", statusCode)
-		log.Error().Err(err).Msg("Failed to request pty websocket reissue.")
-		return err
-	}
-
-	var resp struct {
-		WebsocketURL string `json:"websocket_url"`
-	}
-
-	err = json.Unmarshal(body, &resp)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to parse pty websocket reissue response.")
-		return err
-	}
-
-	pc.url = strings.Replace(config.GlobalSettings.ServerURL, "http", "ws", 1) + resp.WebsocketURL
-	dialer := websocket.Dialer{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: !config.GlobalSettings.SSLVerify,
-		},
-	}
-	// Assign to pc.conn only if reconnect succeeds to avoid nil panic in concurrent reads/writes.
-	tempConn, _, err := dialer.Dial(pc.url, pc.requestHeader)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to reconnect to pty websocket during recovery.")
-		return err
-	}
-	pc.conn = tempConn
 
 	return nil
 }
