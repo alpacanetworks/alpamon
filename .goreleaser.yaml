@@ -44,9 +44,6 @@ nfpms:
     formats:
       - deb
       - rpm
-    dependencies:
-      - zip
-      - sqlite3
     bindir: /usr/local/bin/
 
     contents:
@@ -73,6 +70,16 @@ nfpms:
       preremove: "scripts/preremove.sh"
       postremove: "scripts/postremove.sh"
 
+    overrides:
+      deb:
+        dependencies:
+          - zip
+          - sqlite3
+      rpm:
+        dependencies:
+          - zip
+          - sqlite
+      
 changelog:
   sort: asc
   filters:
