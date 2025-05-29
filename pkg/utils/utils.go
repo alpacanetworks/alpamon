@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/alpacanetworks/alpamon/pkg/version"
-	"github.com/google/go-github/github"
-	"github.com/rs/zerolog/log"
-	"github.com/shirou/gopsutil/v4/host"
 	"net/url"
 	"os"
 	"os/user"
@@ -15,6 +11,11 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/alpacanetworks/alpamon/pkg/version"
+	"github.com/google/go-github/github"
+	"github.com/rs/zerolog/log"
+	"github.com/shirou/gopsutil/v4/host"
 )
 
 var (
@@ -157,4 +158,22 @@ func GetLatestVersion() string {
 
 func GetUserAgent(name string) string {
 	return fmt.Sprintf("%s/%s", name, version.Version)
+}
+
+func LookUpUID(username string) (int, error) {
+	usr, err := user.Lookup(username)
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.Atoi(usr.Uid)
+}
+
+func LookUpGID(groupname string) (int, error) {
+	group, err := user.LookupGroup(groupname)
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.Atoi(group.Gid)
 }

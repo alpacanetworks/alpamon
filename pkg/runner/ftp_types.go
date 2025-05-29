@@ -47,8 +47,8 @@ type FtpData struct {
 	Src        string `json:"src,omitempty"`
 	Dst        string `json:"dst,omitempty"`
 	Mode       string `json:"mode,omitempty"`
-	UID        string `json:"uid,omitempty"`
-	GID        string `json:"gid,omitempty"`
+	Username   string `json:"username,omitempty"`
+	Groupname  string `json:"groupname,omitempty"`
 }
 
 type FtpContent struct {

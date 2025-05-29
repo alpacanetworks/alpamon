@@ -161,7 +161,7 @@ func (fc *FtpClient) handleFtpCommand(command FtpCommand, data FtpData) (Command
 	case Chmod:
 		return fc.chmod(data.Path, data.Mode, data.Recursive)
 	case Chown:
-		return fc.chown(data.Path, data.UID, data.GID, data.Recursive)
+		return fc.chown(data.Path, data.Username, data.Groupname, data.Recursive)
 	default:
 		return CommandResult{}, fmt.Errorf("unknown FTP command: %s", command)
 	}
@@ -500,17 +500,17 @@ func (fc *FtpClient) chmodRecursive(path string, fileMode os.FileMode) error {
 	})
 }
 
-func (fc *FtpClient) chown(path, uidStr, gidStr string, recursive bool) (CommandResult, error) {
+func (fc *FtpClient) chown(path, username, groupname string, recursive bool) (CommandResult, error) {
 	path = fc.parsePath(path)
 
-	uid, err := strconv.Atoi(uidStr)
+	uid, err := utils.LookUpUID(username)
 	if err != nil {
 		return CommandResult{
 			Message: err.Error(),
 		}, err
 	}
 
-	gid, err := strconv.Atoi(gidStr)
+	gid, err := utils.LookUpGID(groupname)
 	if err != nil {
 		return CommandResult{
 			Message: err.Error(),
