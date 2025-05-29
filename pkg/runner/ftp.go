@@ -5,13 +5,13 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/alpacanetworks/alpamon/pkg/config"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/alpacanetworks/alpamon/pkg/config"
 	"github.com/alpacanetworks/alpamon/pkg/logger"
 	"github.com/alpacanetworks/alpamon/pkg/utils"
 	"github.com/gorilla/websocket"
@@ -391,7 +391,7 @@ func (fc *FtpClient) rmd(path string, recursive bool) (CommandResult, error) {
 
 func (fc *FtpClient) mv(src, dst string) (CommandResult, error) {
 	src = fc.parsePath(src)
-	dst = filepath.Join(fc.parsePath(dst), filepath.Base(src))
+	dst = fc.parsePath(dst)
 
 	err := os.Rename(src, dst)
 	if err != nil {
