@@ -83,19 +83,20 @@ func InitLogger() *os.File {
 func PrettyWriter(out io.Writer) zerolog.ConsoleWriter {
 	return zerolog.ConsoleWriter{
 		Out:          out,
+		NoColor:      true,
 		TimeFormat:   time.RFC3339,
 		TimeLocation: time.Local,
 		FormatLevel: func(i interface{}) string {
-			return "[" + strings.ToUpper(i.(string)) + "]"
+			return "[" + strings.ToUpper(fmt.Sprint(i)) + "]"
 		},
 		FormatMessage: func(i interface{}) string {
-			return " " + i.(string)
+			return " " + fmt.Sprint(i)
 		},
 		FormatFieldName: func(i interface{}) string {
-			return "(" + i.(string) + ")"
+			return "(" + fmt.Sprint(i) + ")"
 		},
 		FormatFieldValue: func(i interface{}) string {
-			return i.(string)
+			return fmt.Sprint(i)
 		},
 	}
 }
