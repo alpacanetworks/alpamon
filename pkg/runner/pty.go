@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/alpacanetworks/alpamon/pkg/config"
 	"github.com/alpacanetworks/alpamon/pkg/scheduler"
@@ -13,7 +12,6 @@ import (
 	"github.com/creack/pty"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
-	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -36,12 +34,16 @@ type PtyClient struct {
 	groupname     string
 	homeDirectory string
 	sessionID     string
+	wsToPty       chan []byte
+	ptyToWs       chan []byte
 	isRecovering  atomic.Bool // default : false
 }
 
 const (
 	maxRecoveryTimeout     = 1 * time.Minute
 	reissuePtyWebsocketURL = "/api/websh/pty-channels/"
+
+	sessionCloseCode = 4000
 )
 
 var terminals map[string]*PtyClient
@@ -66,6 +68,8 @@ func NewPtyClient(data CommandData, apiSession *scheduler.Session) *PtyClient {
 		groupname:     data.Groupname,
 		homeDirectory: data.HomeDirectory,
 		sessionID:     data.SessionID,
+		wsToPty:       make(chan []byte, 256),
+		ptyToWs:       make(chan []byte, 256),
 	}
 }
 
@@ -114,8 +118,11 @@ func (pc *PtyClient) RunPtyBackground() {
 	recoveredWsChan := make(chan struct{}, 1)
 	recoveredPtyChan := make(chan struct{}, 1)
 
+	go pc.readFromPty(ctx, cancel)
+	go pc.writeToWebsocket(ctx, cancel, recoveryChan, recoveredPtyChan)
+
 	go pc.readFromWebsocket(ctx, cancel, recoveryChan, recoveredWsChan)
-	go pc.readFromPTY(ctx, cancel, recoveryChan, recoveredPtyChan)
+	go pc.writeToPty(ctx, cancel)
 
 	for {
 		select {
@@ -142,14 +149,12 @@ func (pc *PtyClient) readFromWebsocket(ctx context.Context, cancel context.Cance
 		case <-ctx.Done():
 			return
 		default:
-			_, message, err := pc.conn.ReadMessage()
+			_, msg, err := pc.conn.ReadMessage()
 			if err != nil {
-				// Double-check ctx.Err() to handle cancellation during blocking read
 				if ctx.Err() != nil {
 					return
 				}
-
-				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, sessionCloseCode) {
 					log.Debug().Msg("Pty websocket connection closed by peer.")
 					cancel()
 					return
@@ -165,15 +170,19 @@ func (pc *PtyClient) readFromWebsocket(ctx context.Context, cancel context.Cance
 					return
 				}
 			}
-			_, err = pc.ptmx.Write(message)
+			pc.wsToPty <- msg
+		}
+	}
+}
+
+func (pc *PtyClient) writeToPty(ctx context.Context, cancel context.CancelFunc) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-pc.wsToPty:
+			_, err := pc.ptmx.Write(msg)
 			if err != nil {
-				// Double-check ctx.Err() to handle cancellation during blocking write
-				if ctx.Err() != nil {
-					return
-				}
-				if !errors.Is(err, os.ErrClosed) {
-					log.Debug().Err(err).Msg("Failed to write to pty.")
-				}
 				cancel()
 				return
 			}
@@ -181,9 +190,8 @@ func (pc *PtyClient) readFromWebsocket(ctx context.Context, cancel context.Cance
 	}
 }
 
-func (pc *PtyClient) readFromPTY(ctx context.Context, cancel context.CancelFunc, recoveryChan, recoveredChan chan struct{}) {
+func (pc *PtyClient) readFromPty(ctx context.Context, cancel context.CancelFunc) {
 	buf := make([]byte, 2048)
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -191,23 +199,26 @@ func (pc *PtyClient) readFromPTY(ctx context.Context, cancel context.CancelFunc,
 		default:
 			n, err := pc.ptmx.Read(buf)
 			if err != nil {
-				if ctx.Err() != nil {
-					return
-				}
-				if err == io.EOF {
-					log.Debug().Msg("pty session exited.")
-				} else {
-					log.Debug().Err(err).Msg("Failed to read from pty.")
-				}
 				cancel()
 				return
 			}
-			err = pc.conn.WriteMessage(websocket.TextMessage, buf[:n])
+			pc.ptyToWs <- append([]byte(nil), buf[:n]...)
+		}
+	}
+}
+
+func (pc *PtyClient) writeToWebsocket(ctx context.Context, cancel context.CancelFunc, recoveryChan, recoveredChan chan struct{}) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-pc.ptyToWs:
+			err := pc.conn.WriteMessage(websocket.TextMessage, msg)
 			if err != nil {
 				if ctx.Err() != nil {
 					return
 				}
-				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, sessionCloseCode) {
 					log.Debug().Msg("Pty websocket connection closed by peer.")
 					cancel()
 					return
