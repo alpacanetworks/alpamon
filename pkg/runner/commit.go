@@ -59,7 +59,10 @@ var syncMutex sync.Mutex
 
 func CommitAsync(session *scheduler.Session, commissioned bool) {
 	if commissioned {
-		go syncSystemInfo(session, nil)
+		go func() {
+			time.Sleep(5 * time.Second)
+			syncSystemInfo(session, nil)
+		}()
 	} else {
 		go commitSystemInfo()
 	}
