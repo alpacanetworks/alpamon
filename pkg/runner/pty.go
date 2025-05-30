@@ -58,10 +58,14 @@ func NewPtyClient(data CommandData, apiSession *scheduler.Session) *PtyClient {
 		"Origin":        {config.GlobalSettings.ServerURL},
 	}
 
+	wsURL := strings.Replace(config.GlobalSettings.ServerURL, "http", "ws", 1)
+	wsURL = strings.Replace(wsURL, ":8000", ":8080", 1) // Testing golang websocket server
+
 	return &PtyClient{
 		apiSession:    apiSession,
 		requestHeader: headers,
-		url:           strings.Replace(config.GlobalSettings.ServerURL, "http", "ws", 1) + data.URL,
+		url:           wsURL + data.URL,
+		// url:           strings.Replace(config.GlobalSettings.ServerURL, "http", "ws", 1) + data.URL,
 		rows:          data.Rows,
 		cols:          data.Cols,
 		username:      data.Username,
@@ -136,7 +140,6 @@ func (pc *PtyClient) RunPtyBackground() {
 				cancel()
 				return
 			}
-			log.Debug().Msg("Pty websocket reconnected successfully.")
 			recoveredWsChan <- struct{}{}
 			recoveredPtyChan <- struct{}{}
 		}
@@ -339,7 +342,7 @@ func (pc *PtyClient) recovery() error {
 			}
 
 			pc.conn = conn
-			log.Info().Msg("PTY WebSocket reconnected successfully.")
+			log.Debug().Msg("Pty websocket reconnected successfully.")
 			return nil
 		}
 	}
