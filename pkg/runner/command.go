@@ -125,6 +125,8 @@ func (cr *CommandRunner) handleInternalCmd() (int, string) {
 		return cr.delUser()
 	case "delgroup":
 		return cr.delGroup()
+	case "moduser":
+		return cr.modUser()
 	case "ping":
 		return 0, time.Now().Format(time.RFC3339)
 	//case "debug":
@@ -535,6 +537,49 @@ func (cr *CommandRunner) delGroup() (exitCode int, result string) {
 
 	cr.sync([]string{"groups", "users"})
 	return 0, "Successfully deleted the group."
+}
+
+func (cr *CommandRunner) modUser() (exitCode int, result string) {
+	data := modUserData{
+		Username: cr.data.Username,
+		Comment:  cr.data.Comment,
+	}
+
+	err := cr.validateData(data)
+	if err != nil {
+		return 1, fmt.Sprintf("adduser: Not enough information. %s", err)
+	}
+
+	if utils.PlatformLike == "debian" {
+		exitCode, result = runCmdWithOutput(
+			[]string{
+				"usr/sbin/usermod",
+				"--comment", data.Comment,
+				data.Username,
+			},
+			"root", "", nil, 60,
+		)
+		if exitCode != 0 {
+			return exitCode, result
+		}
+	} else if utils.PlatformLike == "rhel" {
+		exitCode, result = runCmdWithOutput(
+			[]string{
+				"/usr/sbin/usermod",
+				"--comment", data.Comment,
+				data.Username,
+			},
+			"root", "", nil, 60,
+		)
+		if exitCode != 0 {
+			return exitCode, result
+		}
+	} else {
+		return 1, "Not implemented 'moduser' command for this platform."
+	}
+
+	cr.sync([]string{"groups", "users"})
+	return 0, "Successfully modified user information."
 }
 
 func (cr *CommandRunner) runFileUpload(fileName string) (exitCode int, result string) {

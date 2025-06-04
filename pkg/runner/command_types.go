@@ -92,6 +92,11 @@ type deleteGroupData struct {
 	Groupname string `validate:"required"`
 }
 
+type modUserData struct {
+	Username string `validate:"required"`
+	Comment  string `validate:"required"`
+}
+
 type openPtyData struct {
 	SessionID     string `validate:"required"`
 	URL           string `validate:"required"`
