@@ -42,6 +42,7 @@ type PtyClient struct {
 const (
 	maxRecoveryTimeout     = 1 * time.Minute
 	reissuePtyWebsocketURL = "/api/websh/pty-channels/"
+	bufferSize             = 8192
 
 	sessionCloseCode = 4000
 )
@@ -57,23 +58,18 @@ func NewPtyClient(data CommandData, apiSession *scheduler.Session) *PtyClient {
 		"Authorization": {fmt.Sprintf(`id="%s", key="%s"`, config.GlobalSettings.ID, config.GlobalSettings.Key)},
 		"Origin":        {config.GlobalSettings.ServerURL},
 	}
-
-	wsURL := strings.Replace(config.GlobalSettings.ServerURL, "http", "ws", 1)
-	wsURL = strings.Replace(wsURL, ":8000", ":8080", 1) // Testing golang websocket server
-
 	return &PtyClient{
 		apiSession:    apiSession,
 		requestHeader: headers,
-		url:           wsURL + data.URL,
-		// url:           strings.Replace(config.GlobalSettings.ServerURL, "http", "ws", 1) + data.URL,
+		url:           strings.Replace(config.GlobalSettings.ServerURL, "http", "ws", 1) + data.URL,
 		rows:          data.Rows,
 		cols:          data.Cols,
 		username:      data.Username,
 		groupname:     data.Groupname,
 		homeDirectory: data.HomeDirectory,
 		sessionID:     data.SessionID,
-		wsToPty:       make(chan []byte, 256),
-		ptyToWs:       make(chan []byte, 256),
+		wsToPty:       make(chan []byte, bufferSize),
+		ptyToWs:       make(chan []byte, bufferSize),
 	}
 }
 
@@ -194,7 +190,7 @@ func (pc *PtyClient) writeToPty(ctx context.Context, cancel context.CancelFunc) 
 }
 
 func (pc *PtyClient) readFromPty(ctx context.Context, cancel context.CancelFunc) {
-	buf := make([]byte, 2048)
+	buf := make([]byte, bufferSize)
 	for {
 		select {
 		case <-ctx.Done():
@@ -216,7 +212,7 @@ func (pc *PtyClient) writeToWebsocket(ctx context.Context, cancel context.Cancel
 		case <-ctx.Done():
 			return
 		case msg := <-pc.ptyToWs:
-			err := pc.conn.WriteMessage(websocket.TextMessage, msg)
+			err := pc.conn.WriteMessage(websocket.BinaryMessage, msg)
 			if err != nil {
 				if ctx.Err() != nil {
 					return
