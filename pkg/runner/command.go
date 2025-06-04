@@ -555,6 +555,7 @@ func (cr *CommandRunner) modUser() (exitCode int, result string) {
 			[]string{
 				"usr/sbin/usermod",
 				"--comment", data.Comment,
+				"-G", utils.JoinUint64s(cr.data.Groups),
 				data.Username,
 			},
 			"root", "", nil, 60,
@@ -567,6 +568,7 @@ func (cr *CommandRunner) modUser() (exitCode int, result string) {
 			[]string{
 				"/usr/sbin/usermod",
 				"--comment", data.Comment,
+				"-G", utils.JoinUint64s(cr.data.Groups),
 				data.Username,
 			},
 			"root", "", nil, 60,
