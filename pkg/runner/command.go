@@ -547,13 +547,13 @@ func (cr *CommandRunner) modUser() (exitCode int, result string) {
 
 	err := cr.validateData(data)
 	if err != nil {
-		return 1, fmt.Sprintf("adduser: Not enough information. %s", err)
+		return 1, fmt.Sprintf("moduser: Not enough information. %s", err)
 	}
 
 	if utils.PlatformLike == "debian" {
 		exitCode, result = runCmdWithOutput(
 			[]string{
-				"usr/sbin/usermod",
+				"/usr/sbin/usermod",
 				"--comment", data.Comment,
 				"-G", utils.JoinUint64s(cr.data.Groups),
 				data.Username,
