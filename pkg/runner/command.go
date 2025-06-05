@@ -563,19 +563,6 @@ func (cr *CommandRunner) modUser() (exitCode int, result string) {
 		if exitCode != 0 {
 			return exitCode, result
 		}
-	} else if utils.PlatformLike == "rhel" {
-		exitCode, result = runCmdWithOutput(
-			[]string{
-				"/usr/sbin/usermod",
-				"--comment", data.Comment,
-				"-G", utils.JoinUint64s(cr.data.Groups),
-				data.Username,
-			},
-			"root", "", nil, 60,
-		)
-		if exitCode != 0 {
-			return exitCode, result
-		}
 	} else {
 		return 1, "Not implemented 'moduser' command for this platform."
 	}
