@@ -550,7 +550,7 @@ func (cr *CommandRunner) modUser() (exitCode int, result string) {
 		return 1, fmt.Sprintf("moduser: Not enough information. %s", err)
 	}
 
-	if utils.PlatformLike == "debian" {
+	if utils.PlatformLike == "debian" || utils.PlatformLike == "rhel" {
 		exitCode, result = runCmdWithOutput(
 			[]string{
 				"/usr/sbin/usermod",
