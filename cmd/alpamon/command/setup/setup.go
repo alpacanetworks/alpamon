@@ -2,15 +2,16 @@ package setup
 
 import (
 	"fmt"
-	cli "github.com/alpacanetworks/alpacon-cli/utils"
-	"github.com/alpacanetworks/alpamon/pkg/utils"
-	"github.com/spf13/cobra"
-	"golang.org/x/term"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
 	"text/template"
+
+	cli "github.com/alpacanetworks/alpacon-cli/utils"
+	"github.com/alpacanetworks/alpamon/pkg/utils"
+	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var (
@@ -43,8 +44,14 @@ var SetupCmd = &cobra.Command{
 		var isOverwrite bool
 		configExists := fileExists(configTarget)
 
-		if configExists && term.IsTerminal(syscall.Stdin) {
+		if configExists {
 			fmt.Println("A configuration file already exists at:", configTarget)
+			fmt.Println("When setting up non-interactively, the existing configuration file will be used.")
+
+			if !term.IsTerminal(syscall.Stdin) {
+				return nil
+			}
+
 			isOverwrite = cli.PromptForBool("Do you want to overwrite it with a new configuration?: ")
 			if !isOverwrite {
 				fmt.Println("Keeping the existing configuration file. Skipping configuration update.")
