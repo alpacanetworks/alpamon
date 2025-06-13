@@ -212,7 +212,7 @@ func (pc *PtyClient) writeToWebsocket(ctx context.Context, cancel context.Cancel
 		case <-ctx.Done():
 			return
 		case msg := <-pc.ptyToWs:
-			err := pc.conn.WriteMessage(websocket.BinaryMessage, msg)
+			err := pc.conn.WriteMessage(websocket.TextMessage, msg)
 			if err != nil {
 				if ctx.Err() != nil {
 					return
