@@ -149,13 +149,7 @@ func runCmdWithOutput(args []string, username, groupname string, env map[string]
 	}
 	defer cancel()
 
-	var cmd *exec.Cmd
-	if containsShellOperator(args) {
-		cmd = exec.CommandContext(ctx, "bash", "-c", strings.Join(args, " "))
-	} else {
-		cmd = exec.CommandContext(ctx, args[0], args[1:]...)
-	}
-
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	if username != "root" {
 		sysProcAttr, err := demote(username, groupname)
 		if err != nil {
@@ -187,14 +181,4 @@ func runCmdWithOutput(args []string, username, groupname string, env map[string]
 	}
 
 	return 0, string(output)
-}
-
-// && and || operators are handled separately in handleShellCmd
-func containsShellOperator(args []string) bool {
-	for _, arg := range args {
-		if strings.Contains(arg, "|") || strings.Contains(arg, ">") {
-			return true
-		}
-	}
-	return false
 }
