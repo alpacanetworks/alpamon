@@ -541,8 +541,9 @@ func (cr *CommandRunner) delGroup() (exitCode int, result string) {
 
 func (cr *CommandRunner) modUser() (exitCode int, result string) {
 	data := modUserData{
-		Username: cr.data.Username,
-		Comment:  cr.data.Comment,
+		Username:   cr.data.Username,
+		Groupnames: cr.data.Groupnames,
+		Comment:    cr.data.Comment,
 	}
 
 	err := cr.validateData(data)
@@ -550,12 +551,21 @@ func (cr *CommandRunner) modUser() (exitCode int, result string) {
 		return 1, fmt.Sprintf("moduser: Not enough information. %s", err)
 	}
 
+	var gids []uint64
+	for _, groupname := range data.Groupnames {
+		gid, err := utils.LookUpGID(groupname)
+		if err != nil {
+			return 0, fmt.Sprintf("Failed to lookup GID for group '%s'. %s", groupname, err.Error())
+		}
+		gids = append(gids, uint64(gid))
+	}
+
 	if utils.PlatformLike == "debian" || utils.PlatformLike == "rhel" {
 		exitCode, result = runCmdWithOutput(
 			[]string{
 				"/usr/sbin/usermod",
 				"--comment", data.Comment,
-				"-G", utils.JoinUint64s(cr.data.Groups),
+				"-G", utils.JoinUint64s(gids),
 				data.Username,
 			},
 			"root", "", nil, 60,
