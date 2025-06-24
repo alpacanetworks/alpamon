@@ -555,7 +555,7 @@ func (cr *CommandRunner) modUser() (exitCode int, result string) {
 	for _, groupname := range data.Groupnames {
 		gid, err := utils.LookUpGID(groupname)
 		if err != nil {
-			return 0, fmt.Sprintf("Failed to lookup GID for group '%s'. %s", groupname, err.Error())
+			return 0, fmt.Sprintf("Failed to lookup GID for group '%s'. %s", groupname, err)
 		}
 		gids = append(gids, uint64(gid))
 	}
