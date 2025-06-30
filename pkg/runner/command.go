@@ -67,7 +67,7 @@ func (cr *CommandRunner) Run() {
 		result = "Invalid command shell argument."
 	}
 
-	if result != "" && cr.command.ID != "" {
+	if cr.command.ID != "" {
 		finURL := fmt.Sprintf(eventCommandFinURL, cr.command.ID)
 
 		payload := &commandFin{
