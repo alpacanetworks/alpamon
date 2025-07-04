@@ -492,7 +492,7 @@ func (cr *CommandRunner) delUser() (exitCode int, result string) {
 		timestamp := time.Now().UTC().Format(time.RFC3339)
 		backupDir := fmt.Sprintf("/home/deleted_users/%s_%s", data.Username, timestamp)
 
-		err = os.MkdirAll("/home/deleted_users", 0755)
+		err = os.MkdirAll("/home/deleted_users", 0700)
 		if err != nil {
 			return 1, fmt.Sprintf("Failed to create backup directory: %v", err)
 		}
