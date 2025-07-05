@@ -40,7 +40,7 @@ git clone https://github.com/alpacanetworks/alpamon.git
 #### Generate Ent Schema Code with Entgo
 To generate Ent schema code with custom features, navigate to the root of the project and use the following command:
 ```bash
-go run -mod=mod entgo.io/ent/cmd/ent@v0.14.0 generate --feature sql/modifier --target ./pkg/db/ent ./pkg/db/schema
+go run -mod=mod entgo.io/ent/cmd/ent@v0.14.2 generate --feature sql/modifier --target ./pkg/db/ent ./pkg/db/schema
 ```
 
 #### Install Atlas CLI
