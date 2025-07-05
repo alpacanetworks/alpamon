@@ -551,21 +551,12 @@ func (cr *CommandRunner) modUser() (exitCode int, result string) {
 		return 1, fmt.Sprintf("moduser: Not enough information. %s", err)
 	}
 
-	var gids []uint64
-	for _, groupname := range data.Groupnames {
-		gid, err := utils.LookUpGID(groupname)
-		if err != nil {
-			return 0, fmt.Sprintf("Failed to lookup GID for group '%s'. %s", groupname, err)
-		}
-		gids = append(gids, uint64(gid))
-	}
-
 	if utils.PlatformLike == "debian" || utils.PlatformLike == "rhel" {
 		exitCode, result = runCmdWithOutput(
 			[]string{
 				"/usr/sbin/usermod",
 				"--comment", data.Comment,
-				"-G", utils.JoinUint64s(gids),
+				"-G", strings.Join(data.Groupnames, ","),
 				data.Username,
 			},
 			"root", "", nil, 60,
